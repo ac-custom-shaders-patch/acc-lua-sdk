@@ -1,0 +1,1 @@
+--[[? return inc('.templates/list.tpl.lua', [ 'ac.fireworks', 'ac.Firework' ]); ?]]

@@ -1,0 +1,11 @@
+tests/_out.lua
+tests/data/*
+.out/*
+.extra/*
+.verify/*
+
+# internal modules not yet ready for public release
+ac_tfx.*
+ac_module_*
+
+csp-lua-libs.code-workspace

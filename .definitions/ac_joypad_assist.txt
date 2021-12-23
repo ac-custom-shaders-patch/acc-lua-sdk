@@ -1,0 +1,21 @@
+ac.getJoypadState(): ac.StateJoypadData
+
+struct ac.StateJoypadData {
+	const float steerLock;
+	const float speedKmh;
+	const float ffb;
+	const float mzForce;
+	const float steerRatio;
+	const float steerLinearRatio;
+	const float steerStick;
+	const float localSpeedX;
+	const float gas;
+	const float brake;
+	const float steer;
+	const float clutch;
+	const float handbrake;
+	const bool gearUp;
+	const bool gearDown;
+	const bool shifterSupported;
+	const int requestedGearIndex;
+}

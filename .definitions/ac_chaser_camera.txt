@@ -1,0 +1,30 @@
+ac.getCarPosition(): vec3
+ac.getCarDirection(): vec3
+ac.getCarUp(): vec3
+ac.getCarVelocity(): vec3
+ac.getCarAngularVelocity(): vec3
+ac.getCarLocalVelocity(): vec3
+ac.getCarLocalAngularVelocity(): vec3
+ac.getCarGForces(): vec3
+ac.isGearGrinding(): boolean
+ac.getTurboBoost(): number
+ac.getEngineLifeLeft(): number
+ac.getCGHeight(): number
+ac.getTyreSlip(tyre: integer): number
+ac.getTyreSlipRatio(tyre: integer): number
+ac.getTyreSlipAngle(tyre: integer): number
+ac.getTyreAngularSpeed(tyre: integer): number
+ac.getTyreContactPoint(tyre: integer): vec3
+ac.getTyrePosition(tyre: integer): vec3
+ac.getTyreDirection(tyre: integer): vec3
+ac.getDamageLevel(side: integer): number
+ac.getSteer(): number
+ac.getGas(): number
+ac.getBrake(): number
+ac.getClutch(): number
+ac.getGear(): integer
+ac.looksLeft(): boolean
+ac.looksRight(): boolean
+ac.looksBehind(): boolean
+ac.loadSoundbank(soundbank: string, guids: string): boolean // Returns `true` if both files were found. 
+ac.isAudioReady(): boolean
