@@ -355,7 +355,7 @@ ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
   TextActive = 49
 })
 
-ui.Icons = __enum({ override = 'ui.icon24/iconID:*', underlying = 'string' }, {
+ui.Icons = __enum({ override = 'ui.*con24/iconID:*', underlying = 'string' }, {
   --[[? out($.readText(`${process.env['CSP_ROOT']}/source/imgui/icons.h`).split('\n')
     .map(x => /ICON_24_(\w+)/.test(x) && RegExp.$1).filter(x => x)
     .map(x => `${x.toLowerCase().replace(/^(?:gps|fm)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.ru/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
@@ -940,13 +940,28 @@ typedef struct {
 } mmfholder;
 ]]
 
+--[[? if (ctx.ldoc) out(]]
+
+---Checks if system supports these media players (Microsoft Media Foundation framework was added in Windows 8). If it’s not supported,
+---you can still use API, but it would fail to load any video or audio.
+---@return boolean
+function ui.MediaPlayer.supported() end
+
 ---@param source string|nil @URL or a filename. Optional, can be set later with `player:setSource()`.
 ---@return ui.MediaPlayer
-function ui.MediaPlayer(source) 
-  local r = ffi.gc(ffi.C.lj_mmfholder_new__ui(), ffi.C.lj_mmfholder_gc__ui)
-  if source ~= nil then r:setSource(source) end
-  return r
-end
+function ui.MediaPlayer(source) end
+
+--[[) ?]]
+
+ui.MediaPlayer = setmetatable({
+  supported = ffi.C.lj_mmfholder_supported__ui
+}, { 
+  __call = function (source) 
+    local r = ffi.gc(ffi.C.lj_mmfholder_new__ui(), ffi.C.lj_mmfholder_gc__ui)
+    if source ~= nil then r:setSource(source) end
+    return r
+  end 
+})
 
 ---Media player which can load a video and be used as a texture in calls like `ui.drawImage()`, `ui.beginTextureShade()` or `display.image()`. Also, it can load an audio
 ---file and play it offscreen.
@@ -968,6 +983,11 @@ end
 ffi.metatype('mmfholder', { 
   __tostring = function (s) return string.format('$ui.MediaPlayer://?id=%d', s._id) end,
   __index = {
+    ---Checks if system supports these media players (Microsoft Media Foundation framework was added in Windows 8). If it’s not supported,
+    ---you can still use API, but it would fail to load any video or audio.
+    ---@return boolean
+    supported = function() return ffi.C.lj_mmfholder_supported__ui() end,
+
     ---Sets file name or URL for video player to play. URL can lead to a remote resource.
     ---@param url string @URL or a filename.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.

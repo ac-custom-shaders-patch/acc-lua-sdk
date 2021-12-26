@@ -183,9 +183,16 @@ ac.SkyRegion = __enum({ cpp = 'sky_side', passThrough = true }, {
   All = 3
 })
 
-ac.AudioChannel = __enum({ override = 'ac.getAudioVolume/key', underlying = 'string' }, {
+ac.AudioChannel = __enum({ override = 'ac.*/audioChannelKey:*', underlying = 'string' }, {
   Main = 'main',
   Rain = 'rain',
+})
+
+ac.SpawnSet = __enum({ override = '*.*/spawnSet:*', underlying = 'string' }, {
+  Start = 'START',
+  Pits = 'PIT',
+  HotlapStart = 'HOTLAP_START',
+  TimeAttack = 'TIME_ATTACK',  -- Careful: most tracks might not have that spawn set
 })
 
 ---At the moment, most of those flag types are never shown, but more flags will be added later.

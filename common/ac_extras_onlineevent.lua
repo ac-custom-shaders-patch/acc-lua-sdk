@@ -5,6 +5,17 @@ require('./ac_struct_item')
 local _created = {}
 local _fficdef = ffi.cdef
 
+function __script.connectionOnlineCallback(key, carIndex)
+  local car = ac.getCar(carIndex)
+  local registered = _created[tonumber(key)]
+  if registered == nil then
+    ac.error(string.format('Unexpected Lua online event: key=%s', key))
+    return
+  end
+  local data = ac.StructItem.__proxy(registered.layout, ffi.cast(registered.name..'*', ffi.C.lj_connectonline_get(key)))
+  table.forEach(registered.callbacks, function (c) __util.cbCall(c, car, data) end)
+end
+
 ---Creates a new type of online event to exchange between scripts running on different clients in an online
 ---race. Example:
 ---```
@@ -43,7 +54,7 @@ function ac.OnlineEvent(layout, callback)
   local key = ffi.C.lj_connectonline_key(layoutStr)
   local name = '__coo_'..tostring(key)
 
-  local created = _created[name]
+  local created = _created[tonumber(key)]
   if created ~= nil then
     table.insert(created.callbacks, callback)
     return created.sendFn
@@ -63,16 +74,11 @@ function ac.OnlineEvent(layout, callback)
       end
       ffi.C.lj_connectonline_send(key, instance, size, repeatForNewConnections == true)
     end,
-    callbacks = { callback }
+    callbacks = { callback },
+    layout = layout,
+    name = name
   }
   _created[tonumber(key)] = created
-  if not __script.connectionOnlineCallback then
-    __script.connectionOnlineCallback = function (key, carIndex)
-      local car = ac.getCar(carIndex)
-      local data = ac.StructItem.__proxy(layout, ffi.cast(name..'*', ffi.C.lj_connectonline_get(key)))
-      table.forEach(_created[tonumber(key)].callbacks, function (c) __util.cbCall(c, car, data) end)
-    end
-  end
   ffi.C.lj_connectonline_listen(key)
   return created.sendFn
 end

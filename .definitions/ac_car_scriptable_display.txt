@@ -42,6 +42,7 @@ ui.textWrapped(text: string, wrapPos: number = 0)
 ui.textColored(text: string, color: rgbm)
 ui.labelText(label: string, text: string)
 ui.textDisabled(text: string)
+ui.isKnownIcon24(iconID: string): boolean
 ui.icon24(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
 ui.icon32(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
 ui.icon64(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))

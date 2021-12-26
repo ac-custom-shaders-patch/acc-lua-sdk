@@ -1,5 +1,7 @@
 __source 'lua/api_secure.cpp'
 
+if not __allowIO__ then
+
 -- Disable adding new FFI bindings
 ffi.C = nil
 
@@ -51,4 +53,6 @@ local _load = load
 function load(chunk, chunkname, mode, env)
   if mode == 'b' then return nil, 'Not allowed' end
   return _load(chunk, chunkname, 't', env)
+end
+
 end

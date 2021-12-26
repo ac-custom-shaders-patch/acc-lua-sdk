@@ -373,9 +373,11 @@ function convertLDocDefaultValue(value){
   return `\`${value}\``;
 }
 
+const enumOverrides = [];
+
 function findLDocType(arg, enumDefs, namespace, fnName){
   let type = arg.typeInfo.name;
-  for (let d of enumDefs){
+  for (let d of enumOverrides){
     if (d.params.override && d.params.override.test(`${namespace}.${fnName}/${arg.niceName}:${type}`)){
       type = d.params.name;
       break;
@@ -400,7 +402,7 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
   }
 
   let defaultValue = arg.default;
-  for (let d of enumDefs){
+  for (let d of enumOverrides){
     if (d.params.override && d.params.override.test(`${namespace}.${fnName}/${arg.niceName}:${type}`)){
       type = d.params.name;
       if (defaultValue){
@@ -1057,6 +1059,8 @@ function solveFlags(code, flags){
   });
 }
 
+// const contextBase = null;
+
 function resolveRequires(code, filename, context = null) {
   const refDir = filename ? filename.replace(/[\/\\][^\/\\]+$/, '') : null;
 
@@ -1210,6 +1214,7 @@ function resolveRequires(code, filename, context = null) {
         $.fail(`failed to find enum values: ${args[0].name}`);
       }
       context.definitions.enumDefs.push({ params: args[0], values: args[1], comments });
+      if (args[0].override) enumOverrides.push(context.definitions.enumDefs[context.definitions.enumDefs.length - 1]);
       return p;
     }
 
@@ -1508,7 +1513,13 @@ function finalizeLDoc(content, type){
     });
 
   for (let n in renames){
-    content = content.replace(new RegExp(`(?<=function )\\b${renames[n].replace(/\./g, '\\.')}\\b(?=[:.])`, 'g'), n);
+    content = content.replace(new RegExp(`(?<=function )\\b${renames[n].replace(/\./g, '\\.')}\\b(?=[:])`, 'g'), n);
+
+    // Do not rename static methods!
+    // content = content.replace(new RegExp(`(?<=function )\\b${renames[n].replace(/\./g, '\\.')}\\b(?=[.])`, 'g'), _ => {
+    //   $.echo('REPLACE: ' + n);
+    //   return n;
+    // });
   }
 
   if (/\bio\s*=\s*nil\b/.test(content)){
@@ -1850,7 +1861,7 @@ function processTarget(filename) {
 
 const version = (await luaJit('-v', { output: true })).split('--')[0].trim();
 const description = `Lua libraries for AC CSP, precompiled with ${version} to speed up Lua initialization. All source code is available here:
-<https://github.com/ac-custom-shaders-patch/acc-extension-config/tree/master/lua/.src>
+<https://github.com/ac-custom-shaders-patch/acc-lua-sdk>
 
 File “ini_std” is from a different INIpp project, used for expressions when parsing INIpp files:
 <https://github.com/ac-custom-shaders-patch/inipp>

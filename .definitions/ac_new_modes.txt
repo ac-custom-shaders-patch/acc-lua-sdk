@@ -31,6 +31,7 @@ ui.textWrapped(text: string, wrapPos: number = 0)
 ui.textColored(text: string, color: rgbm)
 ui.labelText(label: string, text: string)
 ui.textDisabled(text: string)
+ui.isKnownIcon24(iconID: string): boolean
 ui.icon24(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
 ui.icon32(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
 ui.icon64(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
@@ -279,7 +280,7 @@ ac.setWeatherTimeOffset(offset: number)
 ac.setVAOMode(mode: ac.VAODebugMode)
 ac.getVAOMode(): ac.VAODebugMode
 ac.setWiperSpeed(carIndex: integer, wiperSpeed: integer)
-ac.setAudioVolume(key: string, value: number) // value from 0 to 1
+ac.setAudioVolume(audioChannelKey: string, value: number)
 ac.markLapAsSpoiled()
 ac.setTrackCondition(key: string, value: number)
 ac.setReplayPosition(frameIndex: integer, playCounter: number)

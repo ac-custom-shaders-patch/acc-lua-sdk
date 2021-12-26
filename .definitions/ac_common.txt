@@ -38,7 +38,7 @@ ac.isInReplayMode(): boolean
 ac.getSoundSpeedMs(): number
 ac.getLastError(): string
 ac.lapTimeToString(time: number, allowHours: boolean = false): string
-ac.getAudioVolume(key: string): number // value from 0 to 1
+ac.getAudioVolume(audioChannelKey: string): number // value from 0 to 1
 ac.getCarSpeedKmh(carIndex: integer): number
 ac.getGroundYApproximation(): number
 ac.getDeltaT(): number // seconds
@@ -115,6 +115,9 @@ os.openInExplorer(directory: string)
 os.findAssociatedExecutable(filename: string): string
 os.openTextFile(filename: string, line: integer)
 os.openURL(url: string)
+ac.mediaNextTrack()
+ac.mediaPreviousTrack()
+ac.mediaPlayPause()
 ac.getSimState(): ac.StateSim
 ac.getUiState(): ac.StateUi
 ac.getCarState(index: integer): ac.StateCar

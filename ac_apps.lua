@@ -8,10 +8,11 @@ require './common/ac_render'
 require './common/ac_ray'
 require './common/ac_positioning_helper'
 require './common/ac_ui'
-require './common/ac_apps'
 require './common/ac_scene'
-require './common/ac_car_control'
+require './common/ac_physics'
 require './common/ac_game'
+require './common/ac_car_control'
+require './common/ac_apps'
 
 ---Draw virtual mirror.
 ---@param pos vec2
