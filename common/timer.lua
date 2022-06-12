@@ -9,13 +9,13 @@ local _tremove = table.remove
 ---would be 0.016 s, and anything lower that you’d set would still act like 0.016 s. Also, intervals would only be called once
 ---per frame.
 ---@param callback fun()
----@param delay number @Delay time in seconds.
+---@param delay number? @Delay time in seconds. Default value: 0.
 ---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
 ---@return integer
 function setTimeout(callback, delay, uniqueKey)
   if uniqueKey ~= nil then
     for i = 1, _timeoutsN do
-      if _timeouts[i].key == uniqueKey then return end
+      if _timeouts[i].key == uniqueKey then return nil end
     end
   end
 
@@ -34,13 +34,13 @@ end
 ---would be 0.016 s, and anything lower that you’d set would still act like 0.016 s. Also, intervals would only be called once
 ---per frame.
 ---@param callback fun()
----@param period number @Period time in seconds.
+---@param period number? @Period time in seconds. Default value: 0.
 ---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
 ---@return integer
 function setInterval(callback, period, uniqueKey)
   if uniqueKey ~= nil then
     for i = 1, _timeoutsN do
-      if _timeouts[i].key == uniqueKey then return end
+      if _timeouts[i].key == uniqueKey then return nil end
     end
   end
 
@@ -54,9 +54,10 @@ function setInterval(callback, period, uniqueKey)
 end
 
 ---Stops timeout.
----@param cancellationID integer @Value earlier retuned by `setTimeout()`.
+---@param cancellationID integer @Value earlier retuned by `setTimeout()`. If a non-numerical value is passed (like a `nil`), call is ignored and returns `false`.
 ---@return boolean @True if timeout with such ID has been found and stopped.
 function clearTimeout(cancellationID)
+  if type(cancellationID) ~= 'number' then return false end
   local n = _timeoutsN
   for i = 1, n do
     if _timeouts[i].id == cancellationID then

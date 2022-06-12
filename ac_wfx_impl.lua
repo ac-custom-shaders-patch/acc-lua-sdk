@@ -6,7 +6,9 @@ require './common/ac_audio'
 require './common/ac_color_corrections'
 require './common/ac_light'
 require './common/ac_render'
+require './common/ac_ui'
 require './common/ac_scene'
+require './common/ac_particles'
 require './common/ac_ray'
 require './wfx_common/ac_weatherconditions'
 require './wfx_impl/ac_clouds'
@@ -46,6 +48,18 @@ function script.update(dt) end
 ---whole AC would pause waiting for it.
 ---@param dt number @Same time as was just passed to `update()`.
 function script.asyncUpdate(dt) end
+
+---Called right after the sky (and sky covers) were rendered. Use `ac.enableRenderCallback()` to activate.
+---@param passID render.PassID 
+---@param frameIndex integer
+---@param uniqueKey integer
+function script.renderSky(passID, frameIndex, uniqueKey) end
+
+---Called right after the clouds. Use `ac.enableRenderCallback()` to activate.
+---@param passID render.PassID 
+---@param frameIndex integer
+---@param uniqueKey integer
+function script.renderClouds(passID, frameIndex, uniqueKey) end
 
 --[[) ?]]
 

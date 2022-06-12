@@ -6,8 +6,6 @@ ac.getSunDirection(): vec3
 ac.getSunDirectionTo(r: vec3)
 ac.getMoonDirection(): vec3
 ac.getMoonDirectionTo(r: vec3)
-ac.getMoonFraction(): number
-ac.getAltitude(): number
 ac.getSunAltitude(): number
 ac.getTrackCoordinates(): vec2
 ac.getInputDate(): integer

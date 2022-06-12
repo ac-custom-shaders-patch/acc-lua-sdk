@@ -91,9 +91,10 @@ end
   timeout: integer = nil "Timeout in milliseconds. If above zero, process will be killed after given time has passed.",
   environment: table = nil "If set to a table, values from that table will be used as environment variables instead of inheriting ones from AC process",
   stdin: string = nil "Optional data to pass to a process in stdin pipe",
-  separateStderr: boolean = nil "Store stderr data in a separate string"
+  separateStderr: boolean = nil "Store stderr data in a separate string",
+  terminateWithScript: boolean = nil "Terminate process if this Lua script were to terminate (for example, during reload)"
 }]]
----@param callback fun(err: string, data: os.ConsoleProcessResult)
+---@param callback nil|fun(err: string, data: os.ConsoleProcessResult)
 function os.runConsoleProcess(params, callback)
   ffi.C.lj_run_console__os(__util.json(params), __util.expectReply(callback))
 end

@@ -20,7 +20,7 @@ ac.ColorCorrectionNegative = function () return ffi.gc(ffi.C.lj_cc_negative_new(
 ---Sepia filter.
 ---@class ac.ColorCorrectionSepiaTone : ac.ColorCorrectionBase
 ---@field value number @Intensity from 0 to 1.
----@constructor fun(t: { value: number } "Table with parameters."): ac.ColorCorrectionSepiaTone
+---@constructor fun(t: nil|{ value: number } "Table with parameters."): ac.ColorCorrectionSepiaTone
 ffi.cdef [[ typedef struct { void* __vfptr; float value; } cc_sepiatone; ]]
 ffi.metatype('cc_sepiatone', { __index = {} })
 ac.ColorCorrectionSepiaTone = function (t) 
@@ -33,7 +33,7 @@ end
 ---Brightness filter.
 ---@class ac.ColorCorrectionBrightness : ac.ColorCorrectionBase
 ---@field value number @Brightness, 1 for normal.
----@constructor fun(t: { value: number } "Table with parameters."): ac.ColorCorrectionBrightness
+---@constructor fun(t: nil|{ value: number } "Table with parameters."): ac.ColorCorrectionBrightness
 ffi.cdef [[ typedef struct { void* __vfptr; float value; } cc_brightness; ]]
 ffi.metatype('cc_brightness', { __index = {} })
 ac.ColorCorrectionBrightness = function (t) 
@@ -46,7 +46,7 @@ end
 ---Saturation filter.
 ---@class ac.ColorCorrectionSaturation : ac.ColorCorrectionBase
 ---@field value number @Saturation, 1 for normal.
----@constructor fun(t: { value: number } "Table with parameters."): ac.ColorCorrectionSaturation
+---@constructor fun(t: nil|{ value: number } "Table with parameters."): ac.ColorCorrectionSaturation
 ffi.cdef [[ typedef struct { void* __vfptr; float value; } cc_saturation; ]]
 ffi.metatype('cc_saturation', { __index = {} })
 ac.ColorCorrectionSaturation = function (t) 
@@ -59,7 +59,7 @@ end
 ---Contrast filter.
 ---@class ac.ColorCorrectionContrast : ac.ColorCorrectionBase
 ---@field value number @Contrast, 1 for normal.
----@constructor fun(t: { value: number } "Table with parameters."): ac.ColorCorrectionContrast
+---@constructor fun(t: nil|{ value: number } "Table with parameters."): ac.ColorCorrectionContrast
 ffi.cdef [[ typedef struct { void* __vfptr; float value; } cc_contrast; ]]
 ffi.metatype('cc_contrast', { __index = {} })
 ac.ColorCorrectionContrast = function (t) 
@@ -72,7 +72,7 @@ end
 ---Bias filter (shifts color values: result=original+value).
 ---@class ac.ColorCorrectionBias : ac.ColorCorrectionBase
 ---@field value number @Value, 0 for no shift.
----@constructor fun(t: { value: number } "Table with parameters."): ac.ColorCorrectionBias
+---@constructor fun(t: nil|{ value: number } "Table with parameters."): ac.ColorCorrectionBias
 ffi.cdef [[ typedef struct { void* __vfptr; float value; } cc_bias; ]]
 ffi.metatype('cc_bias', { __index = {} })
 ac.ColorCorrectionBias = function (t) 
@@ -85,7 +85,7 @@ end
 ---Modulation (RGB) filter (multiplies color values: result=original*color).
 ---@class ac.ColorCorrectionModulationRgb : ac.ColorCorrectionBase
 ---@field color rgb @Value, 1 by default.
----@constructor fun(t: { color: rgb } "Table with parameters."): ac.ColorCorrectionModulationRgb
+---@constructor fun(t: nil|{ color: rgb } "Table with parameters."): ac.ColorCorrectionModulationRgb
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; } cc_modulation_rgb; ]]
 ffi.metatype('cc_modulation_rgb', { __index = {} })
 ac.ColorCorrectionModulationRgb = function (t) 
@@ -98,7 +98,7 @@ end
 ---Saturation (color) filter.
 ---@class ac.ColorCorrectionSaturationRgb : ac.ColorCorrectionBase
 ---@field color rgb @Value, 1 by default.
----@constructor fun(t: { color: rgb } "Table with parameters."): ac.ColorCorrectionSaturationRgb
+---@constructor fun(t: nil|{ color: rgb } "Table with parameters."): ac.ColorCorrectionSaturationRgb
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; } cc_saturation_rgb; ]]
 ffi.metatype('cc_saturation_rgb', { __index = {} })
 ac.ColorCorrectionSaturationRgb = function (t) 
@@ -111,7 +111,7 @@ end
 ---Contrast (color) filter.
 ---@class ac.ColorCorrectionContrastRgb : ac.ColorCorrectionBase
 ---@field color rgb @Value, 1 by default.
----@constructor fun(t: { color: rgb } "Table with parameters."): ac.ColorCorrectionContrastRgb
+---@constructor fun(t: nil|{ color: rgb } "Table with parameters."): ac.ColorCorrectionContrastRgb
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; } cc_contrast_rgb; ]]
 ffi.metatype('cc_contrast_rgb', { __index = {} })
 ac.ColorCorrectionContrastRgb = function (t) 
@@ -124,7 +124,7 @@ end
 ---Bias (color) filter.
 ---@class ac.ColorCorrectionBiasRgb : ac.ColorCorrectionBase
 ---@field color rgb @Value, 0 by default.
----@constructor fun(t: { color: rgb } "Table with parameters."): ac.ColorCorrectionBiasRgb
+---@constructor fun(t: nil|{ color: rgb } "Table with parameters."): ac.ColorCorrectionBiasRgb
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; } cc_bias_rgb; ]]
 ffi.metatype('cc_bias_rgb', { __index = {} })
 ac.ColorCorrectionBiasRgb = function (t) 
@@ -138,7 +138,7 @@ end
 ---@class ac.ColorCorrectionMonotoneRgb : ac.ColorCorrectionBase
 ---@field color rgb @Value, 1 by default.
 ---@field effectRatio number @Effect ratio, 1 by default.
----@constructor fun(t: { color: rgb, effectRatio: number } "Table with parameters."): ac.ColorCorrectionMonotoneRgb
+---@constructor fun(t: nil|{ color: rgb, effectRatio: number } "Table with parameters."): ac.ColorCorrectionMonotoneRgb
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; float effectRatio; } cc_monotone_rgb; ]]
 ffi.metatype('cc_monotone_rgb', { __index = {} })
 ac.ColorCorrectionMonotoneRgb = function (t) 
@@ -154,7 +154,7 @@ end
 ---@field color rgb @Value, 1 by default.
 ---@field saturation number @Saturation, 1 by default.
 ---@field modulation number @Modulation, 1 by default.
----@constructor fun(t: { color: rgb, saturation: number, modulation: number } "Table with parameters."): ac.ColorCorrectionMonotoneRgbSatMod
+---@constructor fun(t: nil|{ color: rgb, saturation: number, modulation: number } "Table with parameters."): ac.ColorCorrectionMonotoneRgbSatMod
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; float saturation; float modulation; } cc_monotone_rgbsatmod; ]]
 ffi.metatype('cc_monotone_rgbsatmod', { __index = {} })
 ac.ColorCorrectionMonotoneRgbSatMod = function (t) 
@@ -170,7 +170,7 @@ end
 ---@class ac.ColorCorrectionFadeRgb : ac.ColorCorrectionBase
 ---@field color rgb @Value, 1 by default.
 ---@field effectRatio number @Effect ratio, 1 by default.
----@constructor fun(t: { color: rgb, effectRatio: number } "Table with parameters."): ac.ColorCorrectionFadeRgb
+---@constructor fun(t: nil|{ color: rgb, effectRatio: number } "Table with parameters."): ac.ColorCorrectionFadeRgb
 ffi.cdef [[ typedef struct { void* __vfptr; rgb color; float effectRatio; } cc_fade_rgb; ]]
 ffi.metatype('cc_fade_rgb', { __index = {} })
 ac.ColorCorrectionFadeRgb = function (t) 
@@ -185,7 +185,7 @@ end
 ---@class ac.ColorCorrectionHue : ac.ColorCorrectionBase
 ---@field hue number @Hue offset, 0 by default.
 ---@field keepLuminance boolean @Ensure luminance wouldn’t change, true by default.
----@constructor fun(t: { hue: number, keepLuminance: boolean } "Table with parameters."): ac.ColorCorrectionHue
+---@constructor fun(t: nil|{ hue: number, keepLuminance: boolean } "Table with parameters."): ac.ColorCorrectionHue
 ffi.cdef [[ typedef struct { void* __vfptr; float hue; bool keepLuminance; } cc_hue; ]]
 ffi.metatype('cc_hue', { __index = {} })
 ac.ColorCorrectionHue = function (t) 
@@ -201,7 +201,7 @@ end
 ---@field hue number @Hue offset, 0 by default.
 ---@field saturation number @Saturation, 1 by default.
 ---@field brightness number @Brightness, 1 by default.
----@constructor fun(t: { hue: number, saturation: number, brightness: number } "Table with parameters."): ac.ColorCorrectionHsb
+---@constructor fun(t: nil|{ hue: number, saturation: number, brightness: number } "Table with parameters."): ac.ColorCorrectionHsb
 ffi.cdef [[ typedef struct { void* __vfptr; float hue; float saturation; float brightness; } cc_hsb; ]]
 ffi.metatype('cc_hsb', { __index = {} })
 ac.ColorCorrectionHsb = function (t) 
@@ -217,7 +217,7 @@ end
 ---@class ac.ColorCorrectionTemperature : ac.ColorCorrectionBase
 ---@field temperature number @Temperature, 6500 by default.
 ---@field luminance number @Luminance, 0 by default.
----@constructor fun(t: { temperature: number, luminance: number } "Table with parameters."): ac.ColorCorrectionTemperature
+---@constructor fun(t: nil|{ temperature: number, luminance: number } "Table with parameters."): ac.ColorCorrectionTemperature
 ffi.cdef [[ typedef struct { void* __vfptr; float temperature; float luminance; } cc_temperature; ]]
 ffi.metatype('cc_temperature', { __index = {} })
 ac.ColorCorrectionTemperature = function (t) 
@@ -232,7 +232,7 @@ end
 ---@class ac.ColorCorrectionWhiteBalance : ac.ColorCorrectionBase
 ---@field whitebalance number @White balance, 6500 by default.
 ---@field luminance number @Luminance, 0 by default.
----@constructor fun(t: { whitebalance: number, luminance: number } "Table with parameters."): ac.ColorCorrectionWhiteBalance
+---@constructor fun(t: nil|{ whitebalance: number, luminance: number } "Table with parameters."): ac.ColorCorrectionWhiteBalance
 ffi.cdef [[ typedef struct { void* __vfptr; float whitebalance; float luminance; } cc_whitebalance; ]]
 ffi.metatype('cc_whitebalance', { __index = {} })
 ac.ColorCorrectionWhiteBalance = function (t) 

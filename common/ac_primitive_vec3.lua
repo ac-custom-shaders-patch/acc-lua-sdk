@@ -35,7 +35,9 @@ return {
     end,
     __unm = function(v) return vec3(-v.x, -v.y, -v.z) end,
     __len = function(v) return v:length() end,
-    __eq = function(v, o) return o ~= nil and ffi.istype('vec3', o) and v.x == o.x and v.y == o.y and v.z == o.z end,
+    __eq = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return rawequal(v, o) end return ffi.istype('vec3', v) and ffi.istype('vec3', o) and v.x == o.x and v.y == o.y and v.z == o.z end,
+    __lt = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return false end return ffi.istype('vec3', v) and ffi.istype('vec3', o) and v.x < o.x and v.y < o.y and v.z < o.z end,
+    __le = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return false end return ffi.istype('vec3', v) and ffi.istype('vec3', o) and v.x <= o.x and v.y <= o.y and v.z <= o.z end,
     __index = {
       new = function(x, y, z) 
         if type(x) ~= 'number' then
@@ -43,6 +45,8 @@ return {
             return table.isArray(x) 
               and vec3(tonumber(x[1]) or 0, tonumber(x[2]) or 0, tonumber(x[3]) or 0)
               or vec3(tonumber(x.x) or 0, tonumber(x.y) or 0, tonumber(x.z) or 0)
+          elseif type(x) == 'string' then
+            return vec3(x:numbers(3))
           elseif vec3.isvec3(x) then
             return vec3(x.x, x.y, x.z)
           end
@@ -265,7 +269,10 @@ return {
         u:scale(2 * uv)
         c:scale(2 * q.w)
         return o:add(u:add(c))
-      end
+      end,
+
+      distanceToLine = function(v, a, b) return math.sqrt(ffi.C.lj_sqr_distance_to_line(v, a, b)) end,
+      distanceToLineSquared = function(v, a, b) return ffi.C.lj_sqr_distance_to_line(v, a, b) end,
     }
   }
 }

@@ -20,10 +20,4 @@ function ac.setSkyExtraGradient(id, gradient)
 end
 
 ---@deprecated
-function ac.removeSkyExtraGradient(id) 
-  if id < 0 or id >= 32 then error('Gradient ID should be within 0-31 range', 2) end
-  ac.skyExtraGradients:set(id + 1, nil)
-end
-
----@deprecated
 ac.addSkyExtraGradients = ac.addSkyExtraGradient

@@ -36,6 +36,14 @@ typedef struct {
 
 ]]
 
+---Reads file content into a string, if such file exists, otherwise returns fallback data or `nil`.
+---@param filename string @Filename.
+---@param fallbackData nil|string @Data to return if file could not be read.
+---@return string
+function io.load(filename, fallbackData)
+  return __util.strref(ffi.C.lj_load_inner__io(filename)) or fallbackData
+end
+
 ---Scan directory and call callback function for each of files, passing file name (not full name, but only name of the file) and attributes. If callback function would return
 ---a non-nil value, iteration will stop and value returned by callback would return from this function. This could be used to
 ---find a certain file without going through all files in the directory. Optionally, a mask can be used to pre-filter received files
@@ -47,9 +55,9 @@ typedef struct {
 ---@generic TCallbackData
 ---@generic TReturn
 ---@param directory string @Directory to look for files in. Note: directory is relative to current directory, not to script directory. For AC in general it’s an AC root directory, but do not rely on it, instead use `ac.getFolder(ac.FolderID.Root)`.
----@param mask string @Mask in a form of usual “*.*”. Default value: '*'.
+---@param mask string? @Mask in a form of usual “*.*”. Default value: '*'.
 ---@param callback fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: TCallbackData): TReturn @Callback which will be ran for every file in directory fitting mask until it would return a non-nil value.
----@param callbackData TCallbackData @Callback data that will be passed to callback as third argument, to avoid creating a capture.
+---@param callbackData TCallbackData? @Callback data that will be passed to callback as third argument, to avoid creating a capture.
 ---@return TReturn @First non-nil value returned by callback.
 ---@overload fun(directory: string, callback: fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: any), callbackData: any): any
 ---@overload fun(directory: string, mask: string|nil): string[]
@@ -76,3 +84,14 @@ function io.scanDir(directory, mask, callback, callbackData)
   return r
 end
 
+local _szr
+__script.scanZipCallback = function (s) _szr = s end
+
+---Returns list of entry names from a ZIP-file.
+---@param filename string
+---@return string[]
+function io.scanZip(filename)
+  _szr = nil
+  ffi.C.lj_scanZip_inner__io(filename)
+  return _szr or {}
+end

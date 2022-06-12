@@ -4,9 +4,10 @@
 ---@overload fun(value: vec3): vec3
 ---@overload fun(tableOfThree: number[]): vec3
 ---@overload fun(value: number): vec3
----@param x number
----@param y number
----@param z number
+---@overload fun(value: string): vec3
+---@param x number?
+---@param y number?
+---@param z number?
 ---@return vec3
 function vec3.new(x, y, z) end
 
@@ -37,7 +38,7 @@ function vec3.tmp() end
 ---@field x number
 ---@field y number
 ---@field z number
----@constructor fun(x: number, y: number, z: number): vec3
+---@constructor fun(x: number?, y: number?, z: number?): vec3
 
 ---Makes a copy of a vector.
 ---@return vec3
@@ -158,7 +159,7 @@ function vec3:distanceSquared(otherVector) end
 function vec3:closerToThan(otherVector, distanceThreshold) end
 
 ---@param otherVector vec3
----@return number
+---@return number @Radians.
 function vec3:angle(otherVector) end
 
 ---@param otherVector vec3
@@ -194,3 +195,9 @@ function vec3:project(otherVector, out) end
 ---@param out vec3|nil @Optional destination argument.
 ---@return vec3 @Returns itself or out value.
 function vec3:rotate(quaternion, out) end
+
+---Returns distance from point to a line. For performance reasons doesn’t do any checks, so be careful with incoming arguments.
+function vec3:distanceToLine(a, b) end
+
+---Returns squared distance from point to a line. For performance reasons doesn’t do any checks, so be careful with incoming arguments.
+function vec3:distanceToLineSquared(a, b) end

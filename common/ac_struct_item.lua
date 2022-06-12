@@ -23,6 +23,9 @@ ac.StructItem = {}
 function ac.StructItem.key(key) return {key = tostring(key)} end
 
 ---@return number
+function ac.StructItem.half() return 0.5 end
+
+---@return number
 function ac.StructItem.float() return 1.5 end
 
 ---@return number
@@ -106,6 +109,7 @@ local __slTypes = {
   [0.08] = { 'uint8_t %s;', 1, function (v) return v / 255 end, function (v) return _mmax(_mmin(v, 1), 0) * 255 end },
   [-0.16] = { 'int16_t %s;', 2, function (v) return v / 32767 end, function (v) return _mmax(_mmin(v, 1), -1) * 32767 end },
   [0.16] = { 'uint16_t %s;', 2, function (v) return v / 65535 end, function (v) return _mmax(_mmin(v, 1), 0) * 65535 end },
+  [0.5] = { 'uint16_t %s;', 2, function (v) return ac.decodeHalf(v) end, function (v) return ac.encodeHalf(v) end },
   [1.5] = { 'float %s;', 4 },
   [2.5] = { 'double %s;', 8 },
   [-1] = { 'char %s;', 1 },

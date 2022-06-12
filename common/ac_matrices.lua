@@ -11,8 +11,9 @@ mat3x3 = ffi.metatype('mat3x3', {
     return string.format('(%s,\n %s,\n %s)', v.row1, v.row2, v.row3)
   end,
   __index = {
+    ismat3x3 = function(x) return ffi.istype('mat3x3', x) end,
     set = function(s, o)
-      if not ffi.istype('mat3x3', o) then error('mat4x4 is required', 2) end
+      if not ffi.istype('mat3x3', o) then error('mat3x3 is required', 2) end
       s.row1:set(o.row1)
       s.row2:set(o.row2)
       s.row3:set(o.row3)
@@ -39,7 +40,11 @@ mat4x4 = ffi.metatype('mat4x4', {
   __tostring = function(v)
     return string.format('(%s,\n %s,\n %s,\n %s)', v.row1, v.row2, v.row3, v.row4)
   end,
+  __mul = function(v, u)
+    return v:mul(u)
+  end,
   __index = {
+    ismat4x4 = function(x) return ffi.istype('mat4x4', x) end,
     set = function(s, o)
       if not ffi.istype('mat4x4', o) then error('mat4x4 is required', 2) end
       s.row1:set(o.row1)
@@ -49,6 +54,33 @@ mat4x4 = ffi.metatype('mat4x4', {
     end,
     clone = function(s)
       return mat4x4(s.row1, s.row2, s.row3, s.row4)
+    end,
+    inverse = function(s)
+      if s == nil then return nil end
+      return ffi.C.lj_mat_inverse(s)
+    end,
+    inverseSelf = function(s)
+      if s == nil then return nil end
+      ffi.C.lj_mat_inverseself(s)
+      return s
+    end,
+    transpose = function(s)
+      if s == nil then return nil end
+      return ffi.C.lj_mat_transpose(s)
+    end,
+    transposeSelf = function(s)
+      if s == nil then return nil end
+      ffi.C.lj_mat_transposeself(s)
+      return s
+    end,
+    mul = function(s, v)
+      if s == nil then return nil end
+      return ffi.C.lj_mat_mul(s, v)
+    end,
+    mulSelf = function(s, v)
+      if s == nil then return nil end
+      ffi.C.lj_mat_mulself(s, v)
+      return s
     end,
     transformVectorTo = function(s, r, vec)
       r.x = s.row1.x * vec.x +  s.row2.x * vec.y + s.row3.x * vec.z
@@ -70,6 +102,15 @@ mat4x4 = ffi.metatype('mat4x4', {
     end,
     identity = function ()
       return mat4x4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1))
+    end,
+    translation = function (vec)
+      return ffi.C.lj_mat_translation(__util.ensure_vec3(vec))
+    end,
+    rotation = function (angle, vec)
+      return ffi.C.lj_mat_rotation(tonumber(angle) or 0, __util.ensure_vec3(vec))
+    end,
+    scaling = function (vec)
+      return ffi.C.lj_mat_scaling(__util.ensure_vec3(vec))
     end
   }
 })

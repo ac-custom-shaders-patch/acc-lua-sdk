@@ -45,13 +45,15 @@ end
 ---@generic T
 ---@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Alternatively, you can pass a string for the body of the structure here, but be careful with it.
 ---@param callback fun(sender: ac.StateCar|nil, message: T) @Callback that will be called when a new message of this type is received. Note: it would be called even if message was sent from this script. Use `sender` to check message origin: if it’s `nil`, message has come from the server, if its `.index` is 0, message has come from this client (and possibly this script).
----@return fun(message: T, repeatForNewConnections: boolean) @Function for sending new messages of newly created type. Pass a new table to set fields of a new message. If any field is missing, it would be set to default zero state. Set `repeatForNewConnections` to `true` if this message should be re-sent later for newly connected cars (good if you’re announcing a change of state, like, for example, a custom car paint color). If after setting it to `true` a function would be called again without `repeatForNewConnections` set to `true`, further re-sending will be deactivated.
-function ac.OnlineEvent(layout, callback)
+---@param namespace nil|ac.SharedNamespace @Optional namespace stopping scripts of certain types to access data of scripts with different types. For more details check `ac.SharedNamespace` documentation.
+---@return fun(message: T, repeatForNewConnections: boolean?): boolean @Function for sending new messages of newly created type. Pass a new table to set fields of a new message. If any field is missing, it would be set to default zero state. Set `repeatForNewConnections` to `true` if this message should be re-sent later for newly connected cars (good if you’re announcing a change of state, like, for example, a custom car paint color). If after setting it to `true` a function would be called again without `repeatForNewConnections` set to `true`, further re-sending will be deactivated. Function returns `true` if message has been sent successfully, or `false` otherwise (for example, if rate limits were exceeded).
+function ac.OnlineEvent(layout, callback, namespace)
   local layoutStr = ac.StructItem.__build(layout)
   if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
   if layoutStr:match('%(') then error('Invalid layout', 2) end
+  if not __allowIO__ and namespace == ac.SharedNamespace.Global then error('Script of this type can’t use global namespace', 2) end
 
-  local key = ffi.C.lj_connectonline_key(layoutStr)
+  local key = ffi.C.lj_connectonline_key(layoutStr, type(namespace) == 'string' and namespace or nil)
   local name = '__coo_'..tostring(key)
 
   local created = _created[tonumber(key)]
@@ -72,7 +74,7 @@ function ac.OnlineEvent(layout, callback)
         local p = ac.StructItem.__proxy(layout, instance)
         table.forEach(args, function (value, key, p) p[key] = value end, p) 
       end
-      ffi.C.lj_connectonline_send(key, instance, size, repeatForNewConnections == true)
+      return ffi.C.lj_connectonline_send(key, instance, size, repeatForNewConnections == true)
     end,
     callbacks = { callback },
     layout = layout,

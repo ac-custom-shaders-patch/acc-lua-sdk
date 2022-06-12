@@ -35,25 +35,28 @@ function display.interactiveMesh(params)
   local meshName = params.mesh
   local resolution = params.resolution or vec2(1, 1)
   return {
-    clicked = function(texStart, texSize, inCarPos, inCarRadius, repeatIntervalSeconds)
-      if vec3.isvec3(texStart) then
-        texStart, texSize, inCarPos, inCarRadius, repeatIntervalSeconds = nil, nil, texStart, texSize, inCarPos
-      elseif not vec3.isvec3(inCarPos) then
-        repeatIntervalSeconds, inCarPos, inCarRadius = inCarPos, nil, nil
-      end
+    clicked = function(texStart, texSize, inCarPos, inCarRadius, inCarLocalPos, repeatIntervalSeconds)
+			if vec3.isvec3(texStart) then
+				texStart, texSize, inCarPos, inCarRadius, inCarLocalPos, repeatIntervalSeconds = nil, nil, texStart, texSize, inCarPos, inCarRadius
+			elseif not vec3.isvec3(inCarPos) then
+				repeatIntervalSeconds, inCarPos, inCarRadius = inCarPos, nil, nil
+			end
+			if type(inCarLocalPos) ~= 'boolean' then
+				inCarLocalPos, repeatIntervalSeconds = repeatIntervalSeconds, inCarLocalPos
+			end
       local uv1 = texStart and texStart / resolution or vec2()
       local uv2 = texSize and texSize / resolution or vec2(1, 1)
       if repeatIntervalSeconds == nil then
-        return function() return ac.isMeshClicked(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0) end
+        return function() return ac.isMeshClicked(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0, inCarLocalPos == true) end
       end
 
       local timeToRepeat = 0
       return function()
-        if ac.isMeshClicked(meshName, uv1, uv2) then
+        if ac.isMeshClicked(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0, inCarLocalPos == true) then
           timeToRepeat = repeatIntervalSeconds
           return true
-        elseif timeToRepeat > 0 and ac.isMeshPressed(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0) then
-          timeToRepeat = timeToRepeat - ac.getSim().dt
+        elseif timeToRepeat > 0 and ac.isMeshPressed(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0, inCarLocalPos == true) then
+          timeToRepeat = timeToRepeat - ac.getScriptDeltaT()
           if timeToRepeat <= 0 then
             timeToRepeat = repeatIntervalSeconds
             return true
@@ -64,22 +67,21 @@ function display.interactiveMesh(params)
         end
       end
     end,
-    pressed = function(texStart, texSize, inCarPos, inCarRadius)
-      if vec3.isvec3(texStart) then
-        texStart, texSize, inCarPos, inCarRadius = nil, nil, texStart, texSize
-      end
-
+    pressed = function(texStart, texSize, inCarPos, inCarRadius, inCarLocalPos)
+			if vec3.isvec3(texStart) then
+				texStart, texSize, inCarPos, inCarRadius, inCarLocalPos = nil, nil, texStart, texSize, inCarPos
+			end
       local uv1 = texStart and texStart / resolution or vec2()
       local uv2 = texSize and texSize / resolution or vec2(1, 1)
       local heldDown = 0
       return function()
         if heldDown > 0 then
-          heldDown = ac.getUI().isMouseLeftKeyDown and math.max(0.01, heldDown - ac.getSim().dt) or heldDown - ac.getSim().dt
+          heldDown = ac.getUI().isMouseLeftKeyDown and math.max(0.01, heldDown - ac.getScriptDeltaT()) or heldDown - ac.getScriptDeltaT()
           return true
         end
         local holdPressed = ac.getUI().isMouseRightKeyDown or ac.getUI().isMouseMiddleKeyDown
-        local meshPressed = ac.isMeshPressed(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0)
-          or holdPressed and ac.isMeshHovered(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0)
+        local meshPressed = ac.isMeshPressed(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0, inCarLocalPos == true)
+          or holdPressed and ac.isMeshHovered(meshName, uv1, uv2, __util.ensure_vec3_nil(inCarPos), tonumber(inCarRadius) or 0, inCarLocalPos == true)
         if meshPressed and holdPressed then
           heldDown = 3
         end

@@ -15,6 +15,7 @@ typedef struct {
   const int __track_phase;
   const char __data_phase;
   const bool isPlaying;
+  const bool hasCover;
 } musicdata;
 ]]
 

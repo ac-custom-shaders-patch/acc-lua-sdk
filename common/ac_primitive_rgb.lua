@@ -50,6 +50,7 @@ return {
     colors.navy = rgb(0, 0, 0.5)
     colors.blue = rgb(0, 0, 1)
     colors.teal = rgb(0, 0.5, 0.5)
+    colors.cyan = rgb(0, 0.5, 1)
     colors.aqua = rgb(0, 1, 1)
   end,
   type = {
@@ -83,7 +84,7 @@ return {
     end,
     __unm = function(v) return rgb(-v.r, -v.g, -v.b) end,
     __len = function(v) return v:value() end,
-    __eq = function(v, o) return o ~= nil and ffi.istype('rgb', o) and v.r == o.r and v.g == o.g and v.b == o.b end,
+    __eq = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return rawequal(v, o) end return ffi.istype('rgb', v) and ffi.istype('rgb', o) and v.r == o.r and v.g == o.g and v.b == o.b end,
     __lt = function(v, o) return v:value() < o:value() end,
     __le = function(v, o) return v:value() <= o:value() end,
     __index = {
@@ -96,6 +97,8 @@ return {
         if type(r) ~= 'number' then 
           if type(r) == 'table' then
             return rgb(tonumber(r[1]) or 0, tonumber(r[2]) or 0, tonumber(r[3]) or 0)
+          elseif type(x) == 'string' then
+            return rgb(r:numbers(3))
           end
           r = 0 
         end
@@ -125,6 +128,13 @@ return {
         v.r = r
         v.g = g
         v.b = b
+        return v
+      end,
+
+      setScaled = function(v, x, m)
+        v.r = x.r * m
+        v.g = x.g * m
+        v.b = x.b * m
         return v
       end,
 

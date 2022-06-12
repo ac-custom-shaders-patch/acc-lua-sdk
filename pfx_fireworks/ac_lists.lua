@@ -1,4 +1,4 @@
-ac.fireworks = __bound_array(ffi.typeof('firework*'), 'lj_set_fireworks')
+ac.fireworks = __bound_array(ffi.typeof('firework*'), ffi.C.lj_set_fireworks)
 
 ---Adds a firework to the list of active fireworks.
 ---@param item ac.Firework

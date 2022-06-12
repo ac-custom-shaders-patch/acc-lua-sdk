@@ -1,7 +1,7 @@
 ---Creates new instance. It’s usually faster to create a new item with `hsv(h, s, v)`.
----@param h number
----@param s number
----@param v number
+---@param h number?
+---@param s number?
+---@param v number?
 ---@return hsv
 function hsv.new(h, s, v) end
 
@@ -19,7 +19,7 @@ function hsv.tmp() end
 ---@field h number
 ---@field s number
 ---@field v number
----@constructor fun(h: number, s: number, v: number): hsv
+---@constructor fun(h: number?, s: number?, v: number?): hsv
 
 ---Makes a copy of a vector.
 ---@return hsv

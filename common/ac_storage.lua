@@ -81,10 +81,10 @@ local storedMetatable = {
   __newindex = function(self, key, value) return (self.__data__[key] or error('Unknown key: '..key, 2)):set(value) end,
 }
 
-local function storedItems(data)
+local function storedItems(data, keyModifier)
   local self = setmetatable({ __data__ = {} }, storedMetatable)
   for key, value in pairs(data) do
-    self.__data__[key] = createStored(key, value)
+    self.__data__[key] = createStored(keyModifier and keyModifier..'_'..key or key, value)
   end
   return self
 end
@@ -99,8 +99,8 @@ setmetatable(ac.storage, {
     ffi.C.lj_storage_store_string(__util.str(key), value ~= nil and tostring(value) or nil)
   end,
   __call = function(s, key, default)
-    if default == nil and type(key) == 'table' then
-      return storedItems(key)
+    if type(key) == 'table' then
+      return storedItems(key, default)
     end
     return createStored(key, default)
   end

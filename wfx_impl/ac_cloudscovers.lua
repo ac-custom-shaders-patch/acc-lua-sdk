@@ -18,6 +18,10 @@ typedef struct {
 
   float shadowRadius;
   float shadowOpacityMultiplier;
+  float maskOpacityMultiplier;
+  float texScaleX;
+
+  bool ignoreTextureAlpha;
 } cloudscover;
 ]]
 
@@ -38,11 +42,25 @@ typedef struct {
 ---@field fogMultExponent number
 ---@field shadowRadius number
 ---@field shadowOpacityMultiplier number
+---@field maskOpacityMultiplier number
+---@field texScaleX number
+---@field ignoreTextureAlpha boolean @If set to `true`, texture alpha is only used for main rendering pass, not for casting shadow. Default value: `false`.
 ---@constructor fun(): ac.SkyCloudsCover
 ffi.metatype('cloudscover', {
   __index = {
-    setTexture = ffi.C.lj_cloudscover_set_texture__impl,
+
+    ---@param filename string
+    ---@param maxSize number @If non-zero, sets a maximum size for MIPs to load. Any MIPs larger than that will be skipped. Only works with BC6H/BC7 compression, or with DXT1/3/5/RGBA8888 if using new loader option is enabled.
+    setTexture = function (s, filename, maxSize) ffi.C.lj_cloudscover_set_texture__impl(s, tostring(filename), tonumber(maxSize) or 0) end,
+
     getTextureState = ffi.C.lj_cloudscover_get_texture_state__impl,
+
+    ---@param filename string
+    ---@param maxSize number @If non-zero, sets a maximum size for MIPs to load. Any MIPs larger than that will be skipped. Only works with BC6H/BC7 compression, or with DXT1/3/5/RGBA8888 if using new loader option is enabled.
+    setMaskTexture = function (s, filename, maxSize) ffi.C.lj_cloudscover_set_mask_texture__impl(s, tostring(filename), tonumber(maxSize) or 0) end,
+
+    getMaskTextureState = ffi.C.lj_cloudscover_get_mask_texture_state__impl,
+    
     setFogParams = function (s, fogHorizon, fogZenith, fogExponent, fogRangeMult)
       s.fogMultZenith = tonumber(fogZenith) or 1
       s.fogMultDelta = (tonumber(fogHorizon) or 1) - s.fogMultZenith

@@ -19,6 +19,22 @@ function mat3x3:clone() end
 ---@return mat4x4
 function mat4x4.identity() end
 
+---Creates a translation matrix.
+---@param offset vec3
+---@return mat4x4
+function mat4x4.translation(offset) end
+
+---Creates a rotation matrix.
+---@param angle number @Angle in radians.
+---@param axis vec3
+---@return mat4x4
+function mat4x4.rotation(angle, axis) end
+
+---Creates a scaling matrix.
+---@param scale vec3
+---@return mat4x4
+function mat4x4.scaling(scale) end
+
 ---@class mat4x4
 ---@field row1 vec4
 ---@field row2 vec4
@@ -54,3 +70,29 @@ function mat4x4:transformPoint(vec) end
 
 ---@return mat4x4
 function mat4x4:clone() end
+
+---Creates a new matrix.
+---@return mat4x4
+function mat4x4:inverse() end
+
+---Modifies current matrix.
+---@return mat4x4 @Returns self for easy chaining.
+function mat4x4:inverseSelf() end
+
+---Creates a new matrix.
+---@return mat4x4
+function mat4x4:transpose() end
+
+---Modifies current matrix.
+---@return mat4x4 @Returns self for easy chaining.
+function mat4x4:transposeSelf() end
+
+---Note: unlike vector’s `:mul()`, this one creates a new matrix!
+---@param other mat4x4
+---@return mat4x4
+function mat4x4:mul(other) end
+
+---Modifies current matrix.
+---@param other mat4x4
+---@return mat4x4 @Returns self for easy chaining.
+function mat4x4:mulSelf(other) end

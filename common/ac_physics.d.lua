@@ -1,0 +1,30 @@
+---State of car controls.
+---@class physics.CarControls
+---@field gas number @Gas from 0 to 1 (pedal is fully pressed with 1).
+---@field brake number @Braking from 0 to 1 (pedal is fully pressed with 1).
+---@field steer number @Steering angle from -1 to 1.
+---@field clutch number @1 for fully depressed clutch pedal (clutch fully engaged), 0 for pedal fully pressed (and clutch disengaged).
+---@field gearUp boolean
+---@field gearDown boolean
+---@field drs boolean
+---@field kers boolean
+---@field brakeBalanceUp boolean
+---@field brakeBalanceDown boolean
+---@field requestedGearIndex integer
+---@field isShifterSupported boolean
+---@field handbrake number
+---@field absUp boolean
+---@field absDown boolean
+---@field tcUp boolean
+---@field tcDown boolean
+---@field turboUp boolean
+---@field turboDown boolean
+---@field engineBrakeUp boolean
+---@field engineBrakeDown boolean
+---@field mgukDeliveryUp boolean
+---@field mgukDeliveryDown boolean
+---@field mgukRecoveryUp boolean
+---@field mgukRecoveryDown boolean
+---@field mguhMode integer
+---@cpptype ac_car_controls
+local _carControls = {}

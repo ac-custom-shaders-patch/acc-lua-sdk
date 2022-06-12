@@ -4,10 +4,10 @@
 ---@overload fun(value: quat): quat
 ---@overload fun(tableOfFour: number[]): quat
 ---@overload fun(value: number): quat
----@param x number
----@param y number
----@param z number
----@param w number
+---@param x number?
+---@param y number?
+---@param z number?
+---@param w number?
 ---@return quat
 function quat.new(x, y, z, w) end
 
@@ -47,7 +47,7 @@ function quat.tmp() end
 ---@field y number
 ---@field z number
 ---@field w number
----@constructor fun(x: number, y: number, z: number, w: number): quat
+---@constructor fun(x: number?, y: number?, z: number?, w: number?): quat
 
 ---Makes a copy of a quaternion.
 ---@return quat

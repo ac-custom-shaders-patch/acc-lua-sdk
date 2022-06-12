@@ -1,5 +1,9 @@
 __script = {}
 
+---Disposable thing is something set which you can then un-set. Just call `ac.Disposable` returned
+---from a function to cancel out whatever happened there. For example, unsubscribe from an event.
+---@alias ac.Disposable fun()
+
 ---For better compatibility, acts like `ac.log()`.
 function print(v) ac.log(v) end
 
@@ -13,11 +17,11 @@ function ac.skipSaneChecks() end
 ---@generic T
 ---@param fn fun(): T
 ---@param catch fun(err: string)
----@param finally fun()
+---@param finally fun()|nil
 ---@return T|nil
 function try(fn, catch, finally)
   if not fn then 
-    return finally()
+    return finally ~= nil and finally()
   end
   local ranFine, result = pcall(fn)
   if ranFine then
@@ -29,14 +33,6 @@ function try(fn, catch, finally)
   end
 end
 
-local __toDispose, __toDisposeN = {}, 0
-function __script.handleError()
-  for i = __toDisposeN, 1, -1 do
-    __toDispose[i]()
-  end
-  __toDisposeN = 0
-end
-
 ---Calls a function and then calls `dispose` function. Note: `dispose` function will be called even if
 ---there would be an error in `fn` function. But error would not be contained and will propagate.
 ---@generic T
@@ -44,24 +40,17 @@ end
 ---@param dispose fun()
 ---@return T|nil
 function using(fn, dispose)
-  if dispose == nil then return fn() end
-
-  __toDisposeN = __toDisposeN + 1
-  __toDispose[__toDisposeN] = dispose
-  local r = fn()
-  dispose()
-  __toDisposeN = __toDisposeN - 1
-  return r
-
-  -- local s, r = pcall(fn)
-  -- dispose()
-  -- if not s then error(r, 1) end
-  -- return r
+  __util.pushEnsureToCall(dispose)
+  local r1,r2,r3 = fn()
+  __util.popEnsureToCall()
+  return r1,r2,r3
 end
 
 ---Stores value in session shared Lua/Python storage. This is not a long-term storage, more of a way for
 ---different scripts to exchange data. Note: if you need to exchange a lot of data between Lua scripts,
 ---consider using ac.connect instead.
+---
+---Data string can contain zeroes.
 ---@param key string
 ---@param value string|number
 function ac.store(key, value)
@@ -69,7 +58,7 @@ function ac.store(key, value)
   if type(value) == 'number' then
     ffi.C.lj_store_number(key, value)
   else
-    ffi.C.lj_store_string(key, value ~= nil and tostring(value) or nil)
+    ffi.C.lj_store_string(key, __util.blob(value))
   end
 end
 
@@ -87,9 +76,67 @@ function ac.load(key)
   end
 end
 
+local releaseCallbacks = {}
+
+---Adds a callback which might be called when script is unloading. Use it for some state reversion, but
+---don’t rely on it too much. For example, if Assetto Corsa would crash or just close rapidly, it would not
+---be called. It should be called when scripts reload though.
+function ac.onRelease(callback)
+  table.insert(releaseCallbacks, callback)
+end
+
+function __script.release()
+  for i = 1, #releaseCallbacks do
+    releaseCallbacks[i]()
+  end
+end
+
 ---For easy import of scripts from subdirectories. Provide it a name of a directory relative
 ---to main script folder and it would add that directory to paths it searches for.
 ---@param dir string
 function package.add(dir)
   package.path = package.path .. ';' .. __dirname .. '/' .. dir .. '/?.lua'
+  package.cpath = package.cpath .. ';' .. __dirname .. '/' .. dir .. '/?.dll'
+end
+
+local _dbg = debug.getinfo
+
+---Resolves relative path to a Lua module (relative to Lua file you’re running this function from)
+---so it would be ready to be passed to `require()` function.
+---
+---Note: performance might be a problem if you are calling it too much, consider caching the result.
+---@param path string
+---@return string
+function package.relative(path)
+  return '.'.._dbg(2).source:sub(#__dirname + 2):match('.*[/\\\\]')..path
+end
+
+---Resolves relative path to a file (relative to Lua file you’re running this function from)
+---so it would be ready to be passed to `io` functions (returns full path).
+---
+---Note: performance might be a problem if you are calling it too much, consider caching the result.
+---@param path string
+---@return string
+function io.relative(path)
+  return _dbg(2).source:sub(2):match('.*[/\\\\]')..path
+end
+
+---Given an FFI struct, returns bytes with its content. Resulting string may contain zeroes.
+---@param data any @FFI struct (type should be “cdata”).
+---@return string
+function ac.structBytes(data)
+  if type(data) ~= 'cdata' then error('Can get bytes from cdata only', 2) end
+  return __util.strref(ffi.C.lj_structBytes_inner(data, ffi.sizeof(data)))
+end
+
+---Given an FFI struct and a string of data, fills struct with that data. Works only if size of struct matches size of data. Data string can contain zeroes.
+---@generic T
+---@param destination T @FFI struct (type should be “cdata”).
+---@param data string @String with binary data.
+---@return T
+function ac.fillStructWithBytes(destination, data)
+  if type(destination) ~= 'cdata' then error('Can get bytes from cdata only', 2) end
+  if type(data) ~= 'string' then error('Data should be a string', 2) end
+  ffi.C.lj_fillStructWithBytes_inner(destination, ffi.sizeof(destination), __util.blob(data))
+  return destination
 end

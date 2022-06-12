@@ -1,7 +1,7 @@
-ac.weatherClouds = __bound_array(ffi.typeof('cloud*'), 'lj_set_clouds__impl')
-ac.weatherCloudsCovers = __bound_array(ffi.typeof('cloudscover*'), 'lj_set_cloudscovers__impl')
-ac.skyExtraGradients = __bound_array(ffi.typeof('extragradient*'), 'lj_set_gradients__impl')
-ac.weatherColorCorrections = __bound_array(ffi.typeof('void*'), 'lj_set_corrections__impl')
+ac.weatherClouds = __bound_array(ffi.typeof('cloud*'), ffi.C.lj_set_clouds__impl)
+ac.weatherCloudsCovers = __bound_array(ffi.typeof('cloudscover*'), ffi.C.lj_set_cloudscovers__impl)
+ac.skyExtraGradients = __bound_array(ffi.typeof('extragradient*'), ffi.C.lj_set_gradients__impl)
+ac.weatherColorCorrections = __bound_array(ffi.typeof('void*'), ffi.C.lj_set_corrections__impl)
 
 ac.addWeatherCloud = function(cloud) return ac.weatherClouds:pushWhereFits(cloud) end
 ac.addWeatherCloudCover = function(cloud) return ac.weatherCloudsCovers:pushWhereFits(cloud) end

@@ -4,8 +4,9 @@
 ---@overload fun(value: vec2): vec2
 ---@overload fun(tableOfTwo: number[]): vec2
 ---@overload fun(value: number): vec2
----@param x number
----@param y number
+---@overload fun(value: string): vec2
+---@param x? number
+---@param y? number
 ---@return vec2
 function vec2.new(x, y) end
 
@@ -17,6 +18,10 @@ function vec2.isvec2(p) end
 ---Temporary vector. For most cases though, it might be better to define those locally and use those. Less chance of collision.
 ---@return vec2
 function vec2.tmp() end
+
+---Intersects two line segments, one going from `p1` to `p2` and another going from `p3` to `p4`. Returns intersection point or `nil` if there is no intersection.
+---@return vec2?
+function vec2.intersect(p1, p2, p3, p4) end
 
 ---Two-dimensional vector. All operators are overloaded. Note: creating a lot of new vectors can create extra work for garbage collector reducing overall effectiveness.
 ---Where possible, instead of using mathematical operators consider using methods altering state of already existing vectors. So, instead of:
@@ -34,7 +39,7 @@ function vec2.tmp() end
 ---@class vec2
 ---@field x number
 ---@field y number
----@constructor fun(x: number, y: number): vec2
+---@constructor fun(x: number?, y: number?): vec2
 
 ---Makes a copy of a vector.
 ---@return vec2
@@ -148,7 +153,7 @@ function vec2:distanceSquared(otherVector) end
 function vec2:closerToThan(otherVector, distanceThreshold) end
 
 ---@param otherVector vec2
----@return number
+---@return number @Radians.
 function vec2:angle(otherVector) end
 
 ---@param otherVector vec2

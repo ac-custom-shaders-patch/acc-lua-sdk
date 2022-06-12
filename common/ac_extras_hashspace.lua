@@ -37,7 +37,7 @@ end
 ---@return ac.HashSpace
 function ac.HashSpace(cellSize) return ffi.gc(ffi.C.lj_hashspace_new(tonumber(cellSize) or 10), ffi.C.lj_hashspace_gc) end
 
----Simple structure meant to speed up collision detection by arranging items in a grid using hashmap.
+---Simple structure meant to speed up collision detection by arranging items in a grid using hashmap. Cells are arranged horizontally.
 ---@class ac.HashSpace
 ---@explicit-constructor ac.HashSpace
 ffi.metatype('hashspace', { __index = {
@@ -45,7 +45,7 @@ ffi.metatype('hashspace', { __index = {
   ---@generic T
   ---@param pos vec3
   ---@param callback fun(id: integer, callbackData: T)
-  ---@param callbackData T
+  ---@param callbackData T?
   iterate = function (s, pos, callback, callbackData)
     ffi.C.lj_hashspace_iteratebegin(s, __util.ensure_vec3(pos))
     while s._iterate_cur ~= s._iterate_end do
@@ -78,6 +78,11 @@ ffi.metatype('hashspace', { __index = {
   ---@return ac.HashSpaceItem
   add = function (s) return HashSpaceItem(s, ffi.C.lj_hashspace_add(s)) end,
   ---Adds a fixed item to the grid, with predetermined ID. Avoid mixing dynamic and fixed items in the same grid.
-  addFixed = function (s, id, pos) ffi.C.lj_hashspace_addfixed(s, tonumber(id) or 0, __util.ensure_vec3(pos)) end
+  ---@param id integer
+  ---@param pos vec3
+  addFixed = function (s, id, pos) 
+    if not vec3.isvec3(pos) then error('Position should be of a vec3 type', 2) end
+    ffi.C.lj_hashspace_addfixed(s, tonumber(id) or 0, __util.ensure_vec3(pos)) 
+  end
 } })
 

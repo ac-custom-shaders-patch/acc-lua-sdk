@@ -14,8 +14,8 @@
 ---to it on deserialization. That’s because although deserialization uses `load()` function to parse and run data as Lua code,
 ---it wouldn’t allow code to access existing functions by default.
 ---@param obj table|number|string|boolean|nil @Object o serialize.
----@param compact boolean @If true, resulting string would not have spaces and line breaks, slightly faster and a lot more compact.
----@param depthLimit integer @Limits how deep serialization would go. Default value: 20.
+---@param compact boolean? @If true, resulting string would not have spaces and line breaks, slightly faster and a lot more compact.
+---@param depthLimit integer? @Limits how deep serialization would go. Default value: 20.
 ---@return string @String with input data presented in Lua syntax.
 function stringify(obj, compact, depthLimit) end
 

@@ -1,7 +1,5 @@
 __source 'lua/api_secure.cpp'
 
-if not __allowIO__ then
-
 -- Disable adding new FFI bindings
 ffi.C = nil
 
@@ -15,7 +13,7 @@ function io.popen() return nil end
 local _iopen, _ilines = io.open, io.lines
 function io.open(filename, mode)
   if mode ~= 'r' and mode ~= 'rb' or not ffi.C.lj_is_file_allowed(filename) then return nil, 'Not allowed' end
-  return _iopen(filename, mode)
+  return _iopen(filename, mode), nil
 end
 
 -- Similar check for io.lines
@@ -40,19 +38,17 @@ package.preload.ffi = nil
 local _dofile = dofile
 function dofile(filename)
   if filename == nil or not ffi.C.lj_is_file_allowed(filename) then error('Not allowed', 2) end
-  return _dofile(filename)
+  return _dofile(filename), nil
 end
 
 local _loadfile = loadfile
 function loadfile(filename, mode, env)
   if mode == 'b' or filename == nil or not ffi.C.lj_is_file_allowed(filename) then return nil, 'Not allowed' end
-  return _loadfile(filename, 't', env)
+  return _loadfile(filename, 't', env), nil
 end
 
 local _load = load
 function load(chunk, chunkname, mode, env)
   if mode == 'b' then return nil, 'Not allowed' end
-  return _load(chunk, chunkname, 't', env)
-end
-
+  return _load(chunk, chunkname, 't', env), nil
 end

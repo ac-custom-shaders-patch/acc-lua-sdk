@@ -1,5 +1,7 @@
-ffi.cdef [[ typedef struct { const int* _begin; const int* _end; const int* _cap; } lua_vector_int; ]]
-ffi.metatype('lua_vector_int', { 
+--[[? for (const TYPE of ['int', 'float']){ out(]]
+
+ffi.cdef [[ typedef struct { const __TYPE__* _begin; const __TYPE__* _end; const __TYPE__* _cap; } lua_vector___TYPE__; ]]
+ffi.metatype('lua_vector___TYPE__', { 
   __len = function (v)
     return v._end - v._begin
   end,
@@ -21,3 +23,5 @@ ffi.metatype('lua_vector_int', {
   end,
   __newindex = function() error('This list is read-only', 2) end
 })
+
+--[[) } ?]]

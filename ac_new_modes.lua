@@ -8,7 +8,8 @@ require './common/ac_light'
 require './common/ac_render'
 require './common/ac_ui'
 require './common/ac_scene'
-require './common/ac_game'
+require './common/ac_particles'
+require './common/ac_gameplay'
 require './common/ac_car_control'
 
 -- automatically generated entries go here:

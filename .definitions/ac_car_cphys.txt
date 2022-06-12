@@ -1,0 +1,48 @@
+ac.accessCarPhysics(): ac.StateCphysCarData
+ac.addForce(position: vec3, posLocal: boolean, force: vec3, forceLocal: boolean)
+ac.setColliderOffset(index: integer, offset: vec3): boolean // Returns `false` if there is no such collider.
+ac.setWingGain(wingIndex: integer, cdGain: number, clGain: number)
+
+struct ac.StateCphysWheelData {
+	float angularSpeed;
+	float slip;
+	float slipAngle; // Slip angle in radians
+	float slipRatio;
+	float ndSlip;
+	float load;
+	float inflation; // Can be changed, set to 0 to blow up tyre
+}
+
+struct ac.StateCphysCarData {
+	int inputMethod;
+	vec3 gForces;
+	vec3 localAngularVelocity;
+	vec3 localVelocity; // Car velocity relative to car
+	float damageLevel[4];
+	float speedKmh;
+	float ffb;
+	float rpm; // Can be changed
+	float engineLifeLeft; // Can be changed
+	float drivetrainDamageRPMWindow; // Can be changed
+	float drivetrainOriginalRPMWindow;
+	int absMode;
+	int tractionControlMode;
+	int gear;
+	bool tractionControlInAction;
+	bool areControlsLocked;
+	bool isEngineStallEnabled; // Can be changed
+	bool isBlackFlagged;
+	bool enforceCustomInputScheme; // If set to `true`, use custom input scheme even if input method is not wheel (if not possible, disable input entirely)
+	float gas; // Can be changed (unless controls are locked or car has black flag)
+	float brake; // Can be changed (unless controls are locked or car has black flag)
+	float steer; // Can be changed (unless controls are locked or car has black flag)
+	float clutch; // Can be changed (unless controls are locked or car has black flag)
+	float handbrake; // Can be changed (unless controls are locked or car has black flag)
+	bool gearUp; // Can be changed (unless controls are locked or car has black flag)
+	bool gearDown; // Can be changed (unless controls are locked or car has black flag)
+	bool isShifterSupported; // Can be changed (unless controls are locked or car has black flag)
+	bool isGearGrinding; // Can be changed
+	int requestedGearIndex; // Can be changed (unless controls are locked or car has black flag)
+	float controllerInputs[8]; // Set values here and access them as SCRIPT_0...SCRIPT_7 inputs in dynamic controllers. For emissives and such, can be accessed as CPHYS_SCRIPT_0..., other Lua scripts can access via car physics state.
+	state_cphys_wheel_data wheels[4];
+}

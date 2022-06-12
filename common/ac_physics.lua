@@ -41,45 +41,88 @@ ffi.metatype('rigidbody', {
 
     ---Sets collision callback for semidynamic rigid bodies.
     ---@param callback fun()
+    ---@return physics.RigidBody @Returns self for easy chaining.
     onCollision = function (s, callback)
       s.__listens_for_collisions = callback ~= nil
       __rigidbodyCallbacks[s.__id] = callback
+      return s
     end,
     
     ---@param transform mat4x4
-    ---@param estimateVelocity boolean
-    setTransformation = function (s, transform, estimateVelocity) ffi.C.lj_rigidbody_settransform__physics(s, __util.ensure_mat4x4(transform), estimateVelocity == true) end,
+    ---@param estimateVelocity boolean? @Default value: `false`.
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setTransformation = function (s, transform, estimateVelocity)
+      ffi.C.lj_rigidbody_settransform__physics(s, __util.ensure_mat4x4(transform), estimateVelocity == true)
+      return s
+    end,
+    
+    ---@param sceneReference ac.SceneReference
+    ---@param localTransform mat4x4?
+    ---@param estimateVelocity boolean? @Default value: `false`.
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setTransformationFrom = function (s, sceneReference, localTransform, estimateVelocity)
+      ffi.C.lj_rigidbody_settransformfrom__physics(s, sceneReference, mat4x4.ismat4x4(localTransform) and localTransform or nil, estimateVelocity == true)
+      return s
+    end,
 
     ---@param velocity vec3
-    setVelocity = function (s, velocity) ffi.C.lj_rigidbody_setvelocity__physics(s, __util.ensure_vec3(velocity)) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setVelocity = function (s, velocity)
+      ffi.C.lj_rigidbody_setvelocity__physics(s, __util.ensure_vec3(velocity))
+      return s
+    end,
 
     ---@param velocity vec3
-    setAngularVelocity = function (s, velocity) ffi.C.lj_rigidbody_setangularvelocity__physics(s, __util.ensure_vec3(velocity)) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setAngularVelocity = function (s, velocity)
+      ffi.C.lj_rigidbody_setangularvelocity__physics(s, __util.ensure_vec3(velocity))
+      return s
+    end,
 
     ---@param linear number
     ---@param angular number
-    setDamping = function (s, linear, angular) ffi.C.lj_rigidbody_setdamping__physics(s, tonumber(linear) or 0, tonumber(angular) or 0) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setDamping = function (s, linear, angular)
+      ffi.C.lj_rigidbody_setdamping__physics(s, tonumber(linear) or 0, tonumber(angular) or 0)
+      return s
+    end,
     
     ---@param mass number
-    setMass = function (s, mass) ffi.C.lj_rigidbody_setmass__physics(s, tonumber(mass) or 0) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setMass = function (s, mass)
+      ffi.C.lj_rigidbody_setmass__physics(s, tonumber(mass) or 0)
+      return s
+    end,
 
     ---@param value boolean
     ---@param switchBackOnContact boolean
-    setSemiDynamic = function (s, value, switchBackOnContact) ffi.C.lj_rigidbody_setsemidynamic__physics(s, value == true, switchBackOnContact == true) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setSemiDynamic = function (s, value, switchBackOnContact)
+      ffi.C.lj_rigidbody_setsemidynamic__physics(s, value == true, switchBackOnContact == true)
+      return s
+    end,
 
     ---@return boolean
     isSemiDynamic = function (s) return ffi.C.lj_rigidbody_issemidynamic__physics(s) end,
 
     ---Stops rigidbody, collider is still working.
     ---@param value boolean
-    setEnabled = function (s, value) ffi.C.lj_rigidbody_setenabled__physics(s, value) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setEnabled = function (s, value)
+      ffi.C.lj_rigidbody_setenabled__physics(s, value)
+      return s
+    end,
 
     ---@return boolean
     isEnabled = function (s) return ffi.C.lj_rigidbody_isenabled__physics(s) end,
     
     ---Stops rigidbody and removes collider from the world.
     ---@param value boolean
-    setInWorld = function (s, value) ffi.C.lj_rigidbody_setinworld__physics(s, value) end,
+    ---@return physics.RigidBody @Returns self for easy chaining.
+    setInWorld = function (s, value)
+      ffi.C.lj_rigidbody_setinworld__physics(s, value)
+      return s
+    end,
     
     ---@return boolean
     isInWorld = function (s) return ffi.C.lj_rigidbody_isinworld__physics(s) end,
@@ -139,14 +182,16 @@ function __rigidbodyContact(id)
   if c ~= nil then c() end
 end
 
----@param filename string @Collider KN5 filename.
+---@alias physics.ColliderType {type: string}
+
+---@param collider string|physics.ColliderType[] @Collider KN5 filename, or a table listing geometric colliders (see `physics.Collider`).
 ---@param mass number @Mass in kg, can be changed later.
----@param cog vec3 @Center of gravity in collider model, can’t be changed later.
----@param semiDynamic boolean @Semi-dynamic from the start. Default value: `false`.
----@param startsInWorld boolean @Add to world from the start. Default value: `true`.
+---@param cog vec3? @Center of gravity in collider model, can’t be changed later.
+---@param semiDynamic boolean? @Semi-dynamic from the start. Default value: `false`.
+---@param startsInWorld boolean? @Add to world from the start. Default value: `true`.
 ---@return physics.RigidBody
-function physics.RigidBody(filename, mass, cog, semiDynamic, startsInWorld)
-  local created = ffi.C.lj_rigidbody_new__physics(filename, __util.ensure_vec3(cog))
+function physics.RigidBody(collider, mass, cog, semiDynamic, startsInWorld)
+  local created = ffi.C.lj_rigidbody_new__physics(type(collider) == 'string', type(collider) == 'string' and collider or __util.json(table.isArray(collider) and collider or {collider}), __util.ensure_vec3(cog))
   if created == nil then error('Not allowed', 2) end
   local ret = ffi.gc(created, ffi.C.lj_rigidbody_gc__physics)
   table.insert(__rigidbodies, ret)
@@ -155,3 +200,69 @@ function physics.RigidBody(filename, mass, cog, semiDynamic, startsInWorld)
   if startsInWorld == false then ret:setInWorld(startsInWorld) end
   return ret
 end
+
+---Different collider types.
+physics.Collider = {}
+
+---Box collider.
+---@param size vec3
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param look vec3? @Default value: `vec3(0, 0, 1)`.
+---@param up vec3? @Default value: `vec3(0, 1, 0)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Box(size, offset, look, up, debug) return {type = 'box', size = size, offset = offset, look = look, up = up, debug = debug == true} end
+
+---Sphere collider.
+---@param radius number
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Sphere(radius, offset, debug) return {type = 'sphere', radius = radius, offset = offset, debug = debug == true} end
+
+---Capsule collider (like cylinder, but instead of flat caps it has hemispheres and works a bit faster).
+---@param length number
+---@param radius number
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param look vec3? @Default value: `vec3(0, 0, 1)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Capsule(length, radius, offset, look, debug) return {type = 'capsule', length = length, radius = radius, offset = offset, look = look, debug = debug == true} end
+
+---Cylinder collider (slower than capsule, consider using capsule where appropriate).
+---@param length number
+---@param radius number
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param look vec3? @Default value: `vec3(0, 0, 1)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Cylinder(length, radius, offset, look, debug) return {type = 'cylinder', length = length, radius = radius, offset = offset, look = look, debug = debug == true} end
+
+ffi.cdef [[ typedef struct __declspec(align(4)) { 
+  const bool gearUp; 
+  const bool gearDown; 
+  const bool drs; 
+  const bool kers; 
+  const bool brakeBalanceUp; 
+  const bool brakeBalanceDown; 
+  const int requestedGearIndex; 
+  const bool isShifterSupported; 
+  const float handbrake; 
+  const bool absUp; 
+  const bool absDown; 
+  const bool tcUp; 
+  const bool tcDown; 
+  const bool turboUp; 
+  const bool turboDown; 
+  const bool engineBrakeUp; 
+  const bool engineBrakeDown; 
+  const bool mgukDeliveryUp; 
+  const bool mgukDeliveryDown; 
+  const bool mgukRecoveryUp; 
+  const bool mgukRecoveryDown; 
+  const uint8_t mguhMode; 
+  const float gas; 
+  const float brake; 
+  const float steer; 
+  const float clutch; 
+} ac_car_controls; ]]

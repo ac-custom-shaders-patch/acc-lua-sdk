@@ -1,6 +1,8 @@
 __source 'extensions/lua_tools/ac_ext_lua_tools.cpp'
 __allow 'luatools'
 
+--[[? ctx.flags.withPhysics = true; ?]]
+
 require './common/internal_import'
 require './common/ac_audio'
 require './common/ac_light'
@@ -9,7 +11,9 @@ require './common/ac_ray'
 require './common/ac_positioning_helper'
 require './common/ac_ui'
 require './common/ac_scene'
+require './common/ac_particles'
 require './common/ac_physics'
+require './common/ac_gameplay'
 require './common/ac_game'
 require './common/ac_car_control'
 

@@ -22,27 +22,33 @@ typedef struct {
 render.PositioningHelper = ffi.metatype('positioning_helper', { __index = {
 
   ---@param pos vec3
-  ---@param forceInactive boolean @Prevents PositioningHelper from moving.
+  ---@param forceInactive boolean? @Prevents PositioningHelper from moving. Default value: `false`.
   ---@return boolean
   render = function(s, pos, forceInactive) 
-    return ffi.C.lj_positioninghelper_render__render(s, __util.ensure_vec3(pos), forceInactive and true or false) 
+    if not pos then error('Argument `pos` is required', 2) end
+    return ffi.C.lj_positioninghelper_render__render(s, pos, forceInactive and true or false) 
   end,
 
   ---@param pos vec3
   ---@param look vec3
-  ---@param forceInactive boolean @Prevents PositioningHelper from moving.
+  ---@param forceInactive boolean? @Prevents PositioningHelper from moving. Default value: `false`.
   ---@return boolean
   renderAligned = function(s, pos, look, forceInactive) 
-    return ffi.C.lj_positioninghelper_render_l__render(s, __util.ensure_vec3(pos), __util.ensure_vec3(look), forceInactive and true or false)
+    if not pos then error('Argument `pos` is required', 2) end
+    if not look then error('Argument `look` is required', 2) end
+    return ffi.C.lj_positioninghelper_render_l__render(s, pos, __util.ensure_vec3(look), forceInactive and true or false)
   end,
 
   ---@param pos vec3
   ---@param look vec3
   ---@param up vec3
-  ---@param forceInactive boolean @Prevents PositioningHelper from moving.
+  ---@param forceInactive boolean? @Prevents PositioningHelper from moving. Default value: `false`.
   ---@return boolean
-  renderFullyAligned = function(s, pos, look, up, forceInactive) 
-    return ffi.C.lj_positioninghelper_render_lu__render(s, __util.ensure_vec3(pos), __util.ensure_vec3(look), __util.ensure_vec3(up), forceInactive and true or false) 
+  renderFullyAligned = function(s, pos, look, up, forceInactive)
+    if not pos then error('Argument `pos` is required', 2) end
+    if not look then error('Argument `look` is required', 2) end
+    if not up then error('Argument `up` is required', 2) end
+    return ffi.C.lj_positioninghelper_render_lu__render(s, pos, __util.ensure_vec3(look), __util.ensure_vec3(up), forceInactive and true or false) 
   end,
 
   ---@return boolean

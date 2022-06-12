@@ -119,14 +119,22 @@ function ac.SkyCloudMaterial()
   return ffi.gc(ffi.C.lj_cloudmaterial_new__impl(), ffi.C.lj_cloudmaterial_gc__impl) 
 end
 
+local function __cloudSetTexture(c, filename, maxSize)
+  ffi.C.lj_cloud_set_texture__impl(c, tostring(filename), tonumber(maxSize) or 0)
+end
+
+local function __cloudSetNoiseTexture(c, filename, maxSize)
+  ffi.C.lj_cloud_set_noise_texture__impl(c, tostring(filename), tonumber(maxSize) or 0)
+end
+
 -- ac.SkyCloud, keeps .material reference in Lua table to save it from GC
 local __cloudMaterialKeepAlive = {}
 local __cloudExtraData = {}
 ffi.metatype('cloud', {
   __index = function(self, key) 
-    if key == 'setTexture' then return ffi.C.lj_cloud_set_texture__impl end
+    if key == 'setTexture' then return __cloudSetTexture end
     if key == 'getTextureState' then return ffi.C.lj_cloud_get_texture_state__impl end
-    if key == 'setNoiseTexture' then return ffi.C.lj_cloud_set_noise_texture__impl end
+    if key == 'setNoiseTexture' then return __cloudSetNoiseTexture end
     if key == 'getNoiseTextureState' then return ffi.C.lj_cloud_get_noise_texture_state__impl end
     if key == 'material' then return self.__material end
     if key == 'extras' then 

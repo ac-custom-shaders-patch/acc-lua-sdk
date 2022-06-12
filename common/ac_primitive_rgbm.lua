@@ -20,6 +20,7 @@ return {
     colors.navy = rgbm(0, 0, 0.5, 1)
     colors.blue = rgbm(0, 0, 1, 1)
     colors.teal = rgbm(0, 0.5, 0.5, 1)
+    colors.cyan = rgbm(0, 0.5, 1, 1)
     colors.aqua = rgbm(0, 1, 1, 1)
   end,
   type = {
@@ -53,7 +54,7 @@ return {
     end,
     __unm = function(v) return v * -1 end,
     __len = function(v) return v:value() end,
-    __eq = function(v, o) return o ~= nil and ffi.istype('rgbm', o) and v.rgb == o.rgb and v.mult == o.mult end,
+    __eq = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return rawequal(v, o) end return ffi.istype('rgbm', v) and ffi.istype('rgbm', o) and v.rgb == o.rgb and v.mult == o.mult end,
     __lt = function(v, o) return v:value() < o:value() end,
     __le = function(v, o) return v:value() <= o:value() end,
     __index = {

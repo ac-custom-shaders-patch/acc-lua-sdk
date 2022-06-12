@@ -15,4 +15,3 @@ debug.setmetatable(function()end, {
       end,
   },
 })
-

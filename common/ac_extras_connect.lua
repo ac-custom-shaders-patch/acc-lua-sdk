@@ -23,18 +23,20 @@ local _fficdef = ffi.cdef
 ---For safety reasons, car scripts can only connect to other car scripts, and track scripts can only connect to other track scripts.
 ---@generic T
 ---@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Alternatively, you can pass a string for the body of the structure here, but be careful with it.
----@param keepLive boolean @Set to true to keep structure even if any references were removed or script was unloaded.
+---@param keepLive boolean? @Set to true to keep structure even if any references were removed or script was unloaded.
+---@param namespace nil|ac.SharedNamespace @Optional namespace stopping scripts of certain types to access data of scripts with different types. For more details check `ac.SharedNamespace` documentation.
 ---@return T
-function ac.connect(layout, keepLive)
+function ac.connect(layout, keepLive, namespace)
   local layoutStr = ac.StructItem.__build(layout)
   if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
   if layoutStr:match('%(') then error('Invalid layout', 2) end
-  local name = '__con_'..__util.strref(ffi.C.lj_connect_key(layoutStr))
+  if not __allowIO__ and namespace == ac.SharedNamespace.Global then error('Script of this type can’t use global namespace', 2) end
+  local name = '__con_'..__util.strref(ffi.C.lj_connect_key(layoutStr, type(namespace) == 'string' and namespace or nil))
   local size = _sizes[name]
   if size == nil then
     _fficdef(ac.StructItem.__cdef(name, layoutStr, false))
     size = ffi.sizeof(name)
     _sizes[name] = size
   end
-  return ac.StructItem.__proxy(layout, ffi.gc(ffi.cast(name..'*', ffi.C.lj_connect_new(layoutStr, size, keepLive ~= false)), ffi.C.lj_connect_gc))
+  return ac.StructItem.__proxy(layout, ffi.gc(ffi.cast(name..'*', ffi.C.lj_connect_new(layoutStr, type(namespace) == 'string' and namespace or nil, size, keepLive ~= false)), ffi.C.lj_connect_gc))
 end

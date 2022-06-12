@@ -11,4 +11,4 @@ local __utrgb = __util.cast_rgb
 local __utrgbm = __util.cast_rgbm
 local __utenum = __util.cast_enum
 local __utmat3x3 = __util.cast_mat3x3
--- local __utmat4x4 = __util.cast_mat4x4
+local __utmat4x4 = __util.cast_mat4x4

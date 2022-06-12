@@ -1,4 +1,4 @@
-# acc-lua-sdk
+# CSP Lua SDK
 
 Source code for CSP Lua libraries. Feel free to use any of its parts, like its [class implementation](/common/class.lua), in your projects, 
 or just use it for a reference.
@@ -26,3 +26,18 @@ Different types of script can define different `script.…` functions which will
 For backwards compatibility some functions, like `function script.update()`, can be defined in global namespace like `function update()`,
 but `script.…` ones will be looked for first. Once CSP finds a function, it would store a reference to it for faster lookup when calling
 in the future, so changing functions on-fly wouldn’t work.
+
+# Points of interest
+
+A few places in this repo that might interest you:
+
+- [Definitions](.definitions): while automatically generated documentation for that Lua plugin is detaile, there are also some simple summary files listing available functions and structures. They’re not as exhaustive and don’t have everything, but they still might help to skim over and possibly notice something useful.
+- [Common API implementation](common): sometimes docs might not be enough and you might want to check how something is implemented, like, for example, [those `table` functions](common/table.lua).
+
+# Prepared scripts to use as examples
+
+- [Built-in apps](https://github.com/ac-custom-shaders-patch/app-csp-defaults);
+- [Built-in postprocessing filters](https://github.com/ac-custom-shaders-patch/acc-extension-config/tree/master/lua/pp-filters);
+- [Default WeatherFX implementation](https://github.com/ac-custom-shaders-patch/acc-weatherfx-base);
+- [Various Lua examples](https://github.com/ac-custom-shaders-patch/acc-lua-examples).
+

@@ -1,21 +1,43 @@
 ac.getJoypadState(): ac.StateJoypadData
+ac.setCustomDriverModelSteerAngle(angle: number)
 
 struct ac.StateJoypadData {
-	const float steerLock;
-	const float speedKmh;
-	const float ffb;
-	const float mzForce;
-	const float steerRatio;
-	const float steerLinearRatio;
-	const float steerStick;
-	const float localSpeedX;
-	const float gas;
-	const float brake;
-	const float steer;
-	const float clutch;
-	const float handbrake;
-	const bool gearUp;
-	const bool gearDown;
-	const bool shifterSupported;
-	const int requestedGearIndex;
+	float steeringSpeed;
+	float steeringGamma;
+	float steeringFilter;
+	float steeringDeadzone;
+	float rumbleEffects;
+	float speedSensitivity;
+	float steerLock;
+	float speedKmh;
+	vec3 gForces;
+	vec3 localAngularVelocity;
+	float ffb;
+	float mzForce;
+	float steerRatio;
+	float steerLinearRatio;
+	float steerStickX;
+	float steerStickY;
+	float steerStick; // @hidden
+	float localSpeedX; // Speed of front axle on X axis relative to car
+	vec3 localVelocity; // Car velocity relative to car
+	float ndSlipL; // At 1 left tyre is at its grip limit, above 1 for slipping tyre
+	float ndSlipR; // At 1 left tyre is at its grip limit, above 1 for slipping tyre
+	float ndSlipRL; // At 1 left tyre is at its grip limit, above 1 for slipping tyre
+	float ndSlipRR; // At 1 left tyre is at its grip limit, above 1 for slipping tyre
+	float surfaceVibrationGainLeft;
+	float surfaceVibrationGainRight;
+	float surfaceVibrationLengthLeft;
+	float surfaceVibrationLengthRight;
+	float gas;
+	float brake;
+	float steer;
+	float clutch;
+	float handbrake;
+	bool gearUp;
+	bool gearDown;
+	bool shifterSupported;
+	int requestedGearIndex;
+	float vibrationLeft;
+	float vibrationRight;
 }

@@ -4,6 +4,7 @@
 ---To draw album cover, pass `ac.MusicData` as an argument to something like `ui.image()`.
 ---@class ac.MusicData
 ---@field isPlaying boolean @If `true`, music is currently playing.
+---@field hasCover boolean @If `true`, album cover is present.
 ---@field title string @Name of currently playing track.
 ---@field album string @Name of currently playing album (if not available, an empty string).
 ---@field artist string @Name of currently playing artist (if not available, an empty string).

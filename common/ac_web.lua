@@ -5,15 +5,17 @@ local function encodeHeaders(headers)
   if headers == nil then return nil end
   local ret = nil
   for key, value in pairs(headers) do
-    ret = (ret ~= nil and ret..'\n' or '')..key..'='..value
+    ret = (ret ~= nil and ret..'\n' or '')..key..'='..(value ~= nil and (type(value) == 'boolean' and (value and '1' or '0') or tostring(value)) or '')
   end
   return ret
 end
 
 local function parseHeaders(headers)
   local ret = {}
-  for k, v in string.gmatch(headers, "([%a%d%-]+): ([%g ]+)\r\n") do
-    ret[k:lower()] = v
+  if type(headers) == 'string' then
+    for k, v in string.gmatch(headers, "([%a%d%-]+): ([%g ]+)\r\n") do
+      ret[k:lower()] = v
+    end
   end
   return ret
 end
@@ -27,9 +29,18 @@ end
 
 local function request(method, url, headers, data, callback)
   if url == nil then error('URL is required', 2) end
-  if ffi.C.lj_http_request__web(__util.str(method), __util.str(url), encodeHeaders(headers), 
-      data ~= nil and tostring(data) or nil, requestCallback(callback)) == false then
-    error('Invalid arguments', 2)
+
+  local ret
+  if type(data) == 'table' then
+    ret = ffi.C.lj_http_request_file__web(__util.str(method), __util.str(url), encodeHeaders(headers), data.filename, requestCallback(callback))
+  else
+    ret = ffi.C.lj_http_request__web(__util.str(method), __util.str(url), encodeHeaders(headers), __util.blob(data), requestCallback(callback))
+  end
+
+  if ret == false then
+    setTimeout(function ()
+      callback('Invalid arguments', nil)
+    end, 0)
   end
 end
 
@@ -40,7 +51,7 @@ web = {}
 ---a faulty script wouldn’t spam a remote server or overload internet connection (that’s how I lost access
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param url string @URL.
----@param headers table<string, string>? @Optional headers.
+---@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(url: string, callback: fun(err: string, response: WebResponse))
 function web.get(url, headers, callback)
@@ -52,8 +63,8 @@ end
 ---a faulty script wouldn’t spam a remote server or overload internet connection (that’s how I lost access
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param url string @URL.
----@param headers table<string, string>? @Optional headers.
----@param data string? @Optional data.
+---@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
+---@param data WebPayload @Optional data.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(url: string, data: string, callback: fun(err: string, response: WebResponse))
 ---@overload fun(url: string, callback: fun(err: string, response: WebResponse))
@@ -69,8 +80,8 @@ end
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param method "'GET'"|"'POST'"|"'PUT'"|"'HEAD'"|"'DELETE'"|"'PATCH'"|"'OPTIONS'" @HTTP method.
 ---@param url string @URL.
----@param headers table<string, string>? @Optional headers.
----@param data string? @Optional data.
+---@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
+---@param data WebPayload @Optional data.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(method: string, url: string, data: string, callback: fun(err: string, response: WebResponse))
 ---@overload fun(method: string, url: string, callback: fun(err: string, response: WebResponse))

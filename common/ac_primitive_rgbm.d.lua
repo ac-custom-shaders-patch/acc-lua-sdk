@@ -10,9 +10,9 @@
 ---@overload fun(hexColor: string): rgbm
 ---@overload fun(colorAlpha: number): rgbm
 ---@overload fun(color: number, alpha: number): rgbm
----@param r number
----@param g number
----@param b number
+---@param r number?
+---@param g number?
+---@param b number?
 ---@param m number? @Default value: 1.
 ---@return rgbm
 function rgbm.new(r, g, b, m) end
@@ -52,6 +52,7 @@ rgbm.colors = {
   navy = rgbm(0, 0, 0.5, 1),
   blue = rgbm(0, 0, 1, 1),
   teal = rgbm(0, 0.5, 0.5, 1),
+  cyan = rgbm(0, 0.5, 1, 1),
   aqua = rgbm(0, 1, 1, 1),
 }
 
@@ -63,7 +64,7 @@ rgbm.colors = {
 ---@field b number
 ---@field rgb rgb
 ---@field mult number
----@constructor fun(r: number, g: number, b: number, mult: number): rgbm
+---@constructor fun(r: number?, g: number?, b: number?, mult: number?): rgbm
 
 ---Makes a copy of a vector.
 ---@return rgbm

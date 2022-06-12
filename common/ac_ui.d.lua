@@ -3,7 +3,7 @@
 ---a smoothly changing numerical value. Unlike functions like `math.applyLag()`, this one is a bit more
 ---complicated, taking into account velocity as well.
 ---@param initialValue number @Initial value with which animation will start.
----@param weightMult number @Weight multiplier for smoother or faster animation. Default value: 1.
+---@param weightMult number? @Weight multiplier for smoother or faster animation. Default value: 1.
 ---@return fun(target: number): number
 function ui.SmoothInterpolation(initialValue, weightMult) end
 
@@ -27,7 +27,7 @@ function ui.SmoothInterpolation(initialValue, weightMult) end
 ---end
 ---```
 ---@param drawCallback fun() @Draw callback. Would only be called if alpha is above 0.2%, so there is no overhead if element is hidden.
----@param initialState boolean @Should element be visible from the start. Default value: `false`.
+---@param initialState boolean? @Should element be visible from the start. Default value: `false`.
 ---@return fun(state: boolean)
 function ui.FadingElement(drawCallback, initialState) end
 
@@ -78,3 +78,4 @@ function _uiDWriteFont:allowRealSizes()
   self._fullName = nil
   return self
 end
+

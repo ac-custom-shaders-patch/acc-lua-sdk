@@ -16,6 +16,10 @@ script = {}
 
 --[[? if (ctx.ldoc) out(]]
 
+---Index of connected gamepad.
+---@type number
+__gamepadIndex = nil
+
 ---Called each physics frame.
 ---@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
 function script.update(dt) end

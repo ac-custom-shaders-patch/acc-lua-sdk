@@ -35,14 +35,19 @@ ac.getSunPitchAngle(): number // Value in degrees
 ac.getSunHeadingAngle(): number // Value in degrees
 ac.isInteriorView(): boolean // Returns true if camera is focused on interior (interior audio is playing)
 ac.isInReplayMode(): boolean
+ac.setTextureKey(key: string = nullptr)
+ac.encodeTexture(filename: string, outputFilename: string, key: string, applyLz4Compression: boolean)
+ac.compressTexture(filename: string, outputFilename: string)
 ac.getSoundSpeedMs(): number
 ac.getLastError(): string
 ac.lapTimeToString(time: number, allowHours: boolean = false): string
+ac.getCountryName(nationCode: string): string
 ac.getAudioVolume(audioChannelKey: string): number // value from 0 to 1
 ac.getCarSpeedKmh(carIndex: integer): number
 ac.getGroundYApproximation(): number
 ac.getDeltaT(): number // seconds
 ac.getGameDeltaT(): number // seconds
+ac.getScriptDeltaT(): number
 ac.getConditionsTimeScale(): number
 ac.getPpFilter(): string
 ac.getWindVelocity(): vec3 // Value is in m/s
@@ -54,45 +59,97 @@ ac.isWeatherFxActive(): boolean
 ac.getTrackCoordinatesDeg(): vec2 // X for lattitude, Y for longitude
 ac.getTrackTimezoneBaseDst(): vec2 // X for base offset, Y for summer time offset
 ac.getMGUKDeliveryName(carIndex: integer, programIndex: integer = -1): string
+ac.getTrackSectorName(trackProgress: number): string
+ac.getTrackUpcomingTurn(carIndex: integer = 0): vec2
 ac.getTyresName(carIndex: integer, compoundIndex: integer = -1): string
 ac.getTyresIndex(carIndex: integer, tyresShortName: string): integer
-ac.getTyresLongName(carIndex: integer, compoundIndex: integer): string
+ac.getTyresLongName(carIndex: integer, compoundIndex: integer = -1): string
 ac.getCarID(carIndex: integer): string
 ac.getCarName(carIndex: integer, includeYearPostfix: boolean = false): string
 ac.getCarSkinID(carIndex: integer): string
+ac.getCarBrand(carIndex: integer): string
+ac.getCarCountry(carIndex: integer): string
 ac.getDriverName(carIndex: integer): string
 ac.getDriverNationCode(carIndex: integer): string
 ac.getDriverNationality(carIndex: integer): string
 ac.getDriverTeam(carIndex: integer): string
+ac.getDriverNumber(carIndex: integer): integer
 ac.getSessionName(sessionIndex: integer): string
+ac.isKeyDown(keyIndex: ac.KeyIndex): boolean
+ac.getControllerSteerValue(): number
+ac.isControllerGasPressed(): boolean
+ac.isControllerGearUpPressed(): boolean
+ac.isControllerGearDownPressed(): boolean
 ac.getSessionSpawnSet(sessionIndex: integer): string
+ac.forceVisibleHeadNodes(carIndex: integer, force: boolean = true)
 ac.hasTrackSpline(): boolean // Refers to AI spline.
 ac.worldCoordinateToTrackProgress(v: vec3): number
+ac.getTrackAISplineSides(v: number): vec2 // X for left side, Y for right side.
 ac.trackProgressToWorldCoordinate(v: number): vec3
 ac.trackProgressToWorldCoordinateTo(v: number, r: vec3)
 ac.worldCoordinateToTrack(v: vec3): vec3
 ac.trackCoordinateToWorld(v: vec3): vec3
 ac.isVisibleInMainCamera(pos: vec3, radius: number): boolean // Checks visibility with frustum culling
 ac.setSystemMessage(msg: string, description: string)
+ac.isGamepadButtonPressed(gamepadIndex: integer, gamepadButtonID: integer): boolean
+ac.getGamepadAxisValue(gamepadIndex: integer, gamepadAxisID: integer): number
+ac.getJoystickCount(): integer
+ac.getJoystickName(joystick: integer): string
+ac.getJoystickAxisCount(joystick: integer): integer
+ac.getJoystickButtonsCount(joystick: integer): integer
+ac.getJoystickDpadsCount(joystick: integer): integer
 ac.isJoystickButtonPressed(joystick: integer, button: integer): boolean
 ac.getJoystickAxisValue(joystick: integer, axis: integer): number
 ac.isJoystickAxisValue(joystick: integer, axis: integer): number
 ac.getJoystickDpadValue(joystick: integer, dpad: integer): integer
 ac.isJoystickDpadValue(joystick: integer, dpad: integer): integer
+ac.getPenPressure(): number // Pen pressure from 0 to 1 (if mouse is used, pressure is 1)
 ac.setClipboadText(text: string)
 ac.getTrackDataFilename(name: string): string
 ac.getCarLeaderboardPosition(carIndex: integer): integer // Returns -1 if couldn’t calculate the value.
 ac.getCarRealTimeLeaderboardPosition(carIndex: integer): integer // Returns -1 if couldn’t calculate the value.
-ac.console(message: string)
+ac.console(message: string, withoutPrefix: boolean = false)
 ac.setMessage(title: string, description: string)
+ac.getMoonFraction(): number
+ac.getAltitude(): number
+ac.getSkyFeatureDirection(skyFeature: ac.SkyFeature, distance: refnumber = nullptr): vec3
+ac.getSkyStarDirection(declRad: number, rightAscRad: number): vec3
 ac.getServerName(): string
 ac.getServerIP(): string
 ac.getServerPortHTTP(): integer
 ac.getServerPortTCP(): integer
 ac.getServerPortUDP(): integer
+ac.isTaggedAsFriend(username: string): boolean
+ac.tagAsFriend(username: string, isFriend: boolean = true)
+ac.updateDriverModel(carIndex: integer = -1)
+ac.encodeHalf(v: number): integer
+ac.encodeHalf2(v: vec2): integer
+ac.decodeHalf(v: integer): number
+ac.decodeHalf2(v: integer): vec2
+ac.onCarJumped(carIndex: integer, callback: integer): lua_linked_id
+ac.onClientConnected(callback: integer): lua_linked_id
+ac.onClientDisconnected(callback: integer): lua_linked_id
+ac.onFolderChanged(folder: string, filter: string, recursive: boolean, callback: integer): lua_linked_id
+ac.onCSPConfigChanged(cspModuleID: string, callback: integer): lua_linked_id
+ac.onScreenshot(callback: integer): lua_linked_id
+ac.checksumSHA256(data: string): string
+ac.checksumXXH(data: string): integer
+ac.uniqueMachineKey(): string
+ac.compress(data: string, type: ac.CompressionType, level: integer = 9): string
+ac.decompress(data: string): string
+ac.encodeBase64(data: string, trimResult: boolean = false): string
+ac.decodeBase64(data: string): string
+ac.utf8To16(data: string): string
+ac.utf16To8(data: string): string
+ac.broadcastSharedEvent(key: string, data: string): integer // Returns number of listeners to the event with given key.
+ac.onSharedEvent(key: string, callback: integer): lua_linked_id
+ac.setVRHandBusy(hand: integer, busy: boolean)
+ac.setVRHandVibration(hand: integer, frequency: number, amplitude: number, duration: number = 0.01)
+ac.getGapBetweenCars(carMainIndex: integer, carComparingToIndex: integer): number
 io.getAttributes(filename: string): lua_file_attributes
-io.load(filename: string): string
+io.loadAsync(filename: string, callback: integer)
 io.save(filename: string, data: string): boolean
+io.saveAsync(filename: string, data: string, callback: integer)
 io.exists(filename: string): boolean
 io.dirExists(filename: string): boolean
 io.fileExists(filename: string): boolean
@@ -109,15 +166,21 @@ io.deleteFile(filename: string): boolean
 io.deleteDir(filename: string): boolean
 io.recycle(filename: string): boolean
 io.loadFromZip(zipFilename: string, entryFilename: string): string
+io.checksumSHA256(filename: string, callback: integer)
+os.dateGlobal(format: string, timestamp: integer): string
+os.addDLLDirectory(filename: string)
 os.showMessage(msg: string, type: integer = 0): integer
 os.showInExplorer(filename: string)
 os.openInExplorer(directory: string)
 os.findAssociatedExecutable(filename: string): string
 os.openTextFile(filename: string, line: integer)
 os.openURL(url: string)
+ac.onAlbumCoverUpdate(callback: integer): lua_linked_id
+ac.mediaCurrentPeak(): vec2
 ac.mediaNextTrack()
 ac.mediaPreviousTrack()
 ac.mediaPlayPause()
+ac.getTrackDateTime(): number
 ac.getSimState(): ac.StateSim
 ac.getUiState(): ac.StateUi
 ac.getCarState(index: integer): ac.StateCar
@@ -125,6 +188,11 @@ ac.getSim(): ac.StateSim
 ac.getSession(index: integer): ac.StateSession
 ac.getUI(): ac.StateUi
 ac.getCar(index: integer): ac.StateCar
+ac.getVR(): ac.StateVr
+ac.getCarPhysics(index: integer): ac.StateCarPhysics
+web.loadRemoteModel(url: string, callback: integer)
+web.loadRemoteAnimation(url: string, callback: integer)
+web.loadRemoteAssets(url: string, callback: integer)
 web.encryptKey(key: string): string
 
 struct ac.StateWheel {
@@ -147,7 +215,7 @@ struct ac.StateWheel {
 	const float tyreMiddleTemperature; // Middle tyre temperature, in °C
 	const float tyreOutsideTemperature; // Outside tyre temperature, in °C
 	const float tyreOptimumTemperature; // Optimum tyre temperature, in °C
-	const float brakeTorque; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float brakeTorque; // @hidden
 	const float discTemperature;
 	const float angularSpeed;
 	const float slip;
@@ -161,7 +229,9 @@ struct ac.StateWheel {
 	const float suspensionDamage;
 	const float suspensionTravel;
 	const float tyreLoadedRadius;
-	const float dz;
+	const float waterThickness; // Water thickness in meters
+	const float dz; // @hidden
+	const float dy;
 	const float mz; // Self aligning torque
 	const vec3 contactNormal; // Normal of a contact point surface
 	const vec3 contactPoint; // Contact point position in world coordinates
@@ -171,6 +241,7 @@ struct ac.StateWheel {
 	const vec3 up; // Wheel vector directed upwards
 	const vec3 outside; // Points outside of car (to the left of tyre for left tyres, to the right for right)
 	const vec3 velocity;
+	const mat4x4 transform; // Wheel transformation
 	const float surfaceDirt; // Dirt additive coefficient of the surface below the wheel
 	const int surfaceSectorID; // Sector ID of the surface below the wheel
 	const float surfaceGrip; // Grip of the surface below the wheel
@@ -182,10 +253,12 @@ struct ac.StateWheel {
 	const bool surfaceValidTrack; // If surface below the wheel is valid track
 	const bool isBlown;
 	const bool isHot;
+	const uint8_t surfaceType;
 }
 
 struct ac.StateCar {
 	const float mass; // Car mass in kg
+	const float steerLock; // Maximum steering wheel angle in degrees
 	const float maxFuel; // Maximum amount of fuel in liters
 	const float exposureOutside; // Outboard exposure from car.ini
 	const float exposureInside; // Onboard exposure from car.ini
@@ -197,17 +270,28 @@ struct ac.StateCar {
 	const int turboCount; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const int tractionType; // 0 for rwd, 1 for fwd, 2 for awd, 3 for new awd, -1 for N/A. Physics-only (see `ac.CarState.physicsAvailable`)
 	const int enginePosition; // 0 for unspecified, 1 for front, 2 for rear, 3 for mid. Physics-only (see `ac.CarState.physicsAvailable`)
+	const float brakesBiasLimitDown; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float brakesBiasLimitUp; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float brakesBiasStep; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const int year; // Manufactoring year
 	const bool hShifter; // True if car has H-shifter in its physics data
 	const bool adjustableTurbo; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool brakesCockpitBias; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool extrapolatedMovement; // If set to false and you’re adding objects moving close to cars, use ac.CarState.timestamp to estimate dt in such a way that it would match car physics time
 	const bool extendedPhysics; // True if extended car physics is active
-	const float brakesBiasLimitDown; // Physics-only (see `ac.CarState.physicsAvailable`)
-	const float brakesBiasLimitUp; // Physics-only (see `ac.CarState.physicsAvailable`)
-	const float brakesBiasStep; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const bool isRacingCar; // True for racing cars (cars with class different from “road” or “street”)
+	const bool isRallyCar; // Car counts as rally car if it has a corresponding tag or “rally” in its name
+	const bool isOpenWheeler; // Check is based on car tags
+	const bool isEngineDiesel; // Check is based on car tags
+	const bool isKunosCar; // True if car is standard, from Kunos
+	const bool prefersImperialUnits; // True for cars from UK or USA
+	const int tractionControlModes; // 0 if TC is not present. Physics-only (see `ac.CarState.physicsAvailable`)
+	const int absModes; // 0 if TC is not present. Physics-only (see `ac.CarState.physicsAvailable`)
 	const double timestamp; // time of last physics state record, in milliseconds (counting from the same point as ac.SimState.time)
-	const mat4x4 transform; // car transformation in world space
-	const mat4x4 worldToLocal; // inverse of car transformation
+	const mat4x4 transform; // car physics transformation in world space (does not match body transformation! for it, use `bodyTransform`)
+	const mat4x4 pitTransform; // transformation of pit position
+	const mat4x4 bodyTransform; // car visual transformation (the one applied to 3D model)
+	const mat4x4 worldToLocal; // inverse of car visual transformation
 	const vec3 pos; // @hidden
 	const vec3 position; // car position in the world (corresponds to 0 coordinate in its model space)
 	const vec3 velocity; // car velocity in m/s
@@ -218,6 +302,7 @@ struct ac.StateCar {
 	const vec3 up; // vector facing upwards (normalized)
 	const vec3 look; // vector facing forward (normalized)
 	const vec3 side; // vector facing sideways (normalized)
+	const vec3 driverEyesPosition; // in-car coordinates for driver eyes position (can be changed by user)
 	const float gas; // throttle, from 0 to 1
 	const float brake; // brake, from 0 to 1
 	const float clutch; // clutch, from 0 to 1 (1 for pedal fully depressed)
@@ -238,7 +323,7 @@ struct ac.StateCar {
 	const float cgHeight;
 	const int wheelsOutside; // number of wheels outside of allowed area
 	const float engineLifeLeft; // engine life left (1000 for new engine, breaks at 0)
-	const float damage[5]; // damage values from 0 to 1 for four different zones (fifth one is not really used)
+	const float damage[5]; // damage values from 0 to maximum collision speed in km/h for four different zones (fifth one is not really used)
 	const float gearboxDamage; // gearbox damage (0 for new gearbox, 1 for non-functional)
 	const int nodeIndex; // car index if 0 is nearest to camera, 1 is second nearest and so on
 	const int visibleIndex; // car index if 0 is nearest to camera and visible in main camera, 1 is second nearest visible and so on. Cars outside of main camera would have 255 here.
@@ -249,6 +334,7 @@ struct ac.StateCar {
 	const float driftInstantPoints; // drift instant points (calculated in any racing mode)
 	const int driftComboCounter; // drift combo counter (calculated in any racing mode)
 	const float collisionDepth; // how deep is current collision, in meters (generally it’s better to use change of car speed to estimate collision intensity though, depth is much less predictable)
+	const vec3 collisionPosition; // coordinates of current collision in car space
 	const int collidedWith; // 0 for track, non-zero for cars
 	const int lapCutsCount; // Number of lap cuts in current lap. Physics-only (see `ac.CarState.physicsAvailable`)
 	const int lastLapCutsCount; // Number of lap cuts in last lap
@@ -259,7 +345,9 @@ struct ac.StateCar {
 	const lua_vector_int bestSplits; // Best splits times (and not splits of best lap), in milliseconds
 	const lua_vector_int bestLapSplits; // Splits times of best lap (not necessarily best split times in itself), in milliseconds
 	const state_wheel wheels[4];
-	const bool isConnected; // True if car is currently connected (cars can be disconnected online)
+	const bool isActive; // True if car is currently active (changes to `false` for disconnected cars if server does not have them visible)
+	const bool isConnected; // True if car is currently connected (cars can be disconnected online), or if car is not a remote one
+	const bool isRemote; // True if car is controlled by another player online
 	const bool isAIControlled; // True if car is controlled by AI (or that autopilot thing)
 	const bool isLapValid; // True if current lap is valid. Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool isLastLapValid; // True if last lap is valid
@@ -315,8 +403,8 @@ struct ac.StateCar {
 	const int bestLapTimeMs; // Time of best lap of this session in milliseconds
 	const int previousLapTimeMs; // Time of last lap in milliseconds
 	const int lapCount; // Number of completed laps in this session, including spoiled laps
-	const int currentSector; // 0-based index of current track sector
-	const int previousSectorTime; // Time of previous sector in milliseconds, or 0 if it’s a first sector
+	const int currentSector; // 0-based index of current track split
+	const int previousSectorTime; // Time of previous split in milliseconds, or 0 if it’s a first split
 	const int racePosition; // Position of a car in the race, 1 for first, 2 for second, etc.
 	const int estimatedLapTimeMs; // Based on best lap and performance meter (delta of this lap time vs best lap time)
 	const float performanceMeter; // Performance meter comparing this lap with best, seconds
@@ -340,6 +428,8 @@ struct ac.StateCar {
 	const bool kersHasButtonOverride; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool kersButtonPressed; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool mguhChargingBatteries;
+	const bool manualPitsSpeedLimiterEnabled; // Returns `true` if manual pits speed limiter is currently active. Physics-only (see `ac.CarState.physicsAvailable`)            
+	const bool userSpeedLimiterEnabled; // Returns `true` if custom physics speed limiter is currently active. Not the same as pit limiter (or manually operated speed limiter). Physics-only (see `ac.CarState.physicsAvailable`)            
 	const int mgukDelivery; // starts with 0
 	const int mgukDeliveryCount;
 	const int mgukRecovery; // from 0 to 10 (for 100%)
@@ -348,12 +438,14 @@ struct ac.StateCar {
 	const int brakeSettingsCount; // @hidden
 	const int engineBrakeSettingsCount;
 	const int currentEngineBrakeSetting;
-	const float speedLimiter; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float fuelPerLap; // Uses original AC fuel estimation. Zero until value is available. Physics-only (see `ac.CarState.physicsAvailable`)                
 	const float differentialPreload; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float awdFrontShare; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float awdCenterLock; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float drivetrainTorque; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float drivetrainPower; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float brakeBias; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float speedLimiter; // Returns pit limiter speed in km/h (80 by default unless session specified different settings) or 0 if no limit is currently active. Physics-only (see `ac.CarState.physicsAvailable`)            
 	const float turboBoosts[8]; // Values per each turbo, up to 8 (if there are less turbos in a car, rest are zeroes). Physics-only (see `ac.CarState.physicsAvailable`)
 	const float turboWastegates[8]; // Values per each turbo, up to 8 (if there are less turbos in a car, rest are zeroes). Physics-only (see `ac.CarState.physicsAvailable`)
 	const float tractionControl2;
@@ -373,6 +465,8 @@ struct ac.StateCar {
 	const float altitude; // Altitude in meters above sea level.
 	const float ambientOcclusion; // Ambient occlusion value computed from prebaked data from track’s VAO patch. 0 for car fully shadowed (in a tunnel), 1 for car outside.
 	const int carCamerasCount; // Number of F6 cameras.
+	const int currentPenaltyType; // Current penalty type (set only for user car).
+	const int currentPenaltyParameter; // Parameter of current penalty (role depends on penalty type).
 }
 
 struct ac.StateSession {
@@ -388,6 +482,33 @@ struct ac.StateSession {
 	const bool isOver;
 }
 
+struct ac.StateWheelPhysics {
+	const float brakeTorque;
+	const float handbrakeTorque;
+	const float electricTorque;
+	const float feedbackTorque;
+	const float angularInertia;
+	const float shaftVelocity;
+	const float shaftInertia;
+}
+
+struct ac.StateCarPhysics {
+	const int _inner; // @hidden
+	const bool isAvailable;
+	const float gearRatio;
+	const float finalRatio;
+	const float awd2MaxTorque;
+	const float awd2CurrentLockTorque;
+	const float awd2Ramp;
+	const float engineInertia;
+	const float drivetrainInertia;
+	const float drivetrainVelocity;
+	const float clutchInertia;
+	const float clutchState;
+	const state_wheel_physics wheels[4];
+	const float scriptControllerInputs[8];
+}
+
 struct ac.StateSim {
 	const int windowWidth; // width of AC window in pixels (set in AC video settings). Might not be the same as UI screen size if scaling is used.
 	const int windowHeight; // height of AC window in pixels (set in AC video settings). Might not be the same as UI screen size if scaling is used.
@@ -397,10 +518,14 @@ struct ac.StateSim {
 	const bool isVSyncActive; // A value from AC video settings, does not change live
 	const bool isPostProcessingActive; // True if YEBIS post-processing is active
 	const bool isVRMode; // True if AC was launched with either Oculus or OpenVR mode (not necessarily successfully connected)
+	const bool isOculusMode; // True if AC was launched with Oculus mode (not necessarily successfully connected)
+	const bool isOpenVRMode; // True if AC was launched with OpenVR mode (not necessarily successfully connected)
 	const bool isTripleMode; // True if AC was launched in triple screen mode
-	const bool isCustomVideMode; // True if AC was launched with custom screen mode (fisheye, 360°, splitscreen)
+	const bool isCustomVideMode; // @hidden
+	const bool isCustomVideoMode; // True if AC was launched with custom screen mode (fisheye, 360°, splitscreen)
 	const bool isVRConnected; // True if AC runs in either Oculus or OpenVR mode and initialization went successfully
 	const bool staticReflections; // True if reflection cubemap does not update live and uses custom cubemap.kn5 instead of track model
+	const bool directMessagingAvailable; // True if it’s an online race and server supports TCP exchange of extra data between clients (allows to send online events more frequently)
 	const double time; // game time in milliseconds (counting from the start of the simulation)
 	const vec3 cameraPosition;
 	const vec3 cameraLook; // points forward (there was some confusion with older API)
@@ -415,8 +540,9 @@ struct ac.StateSim {
 	const int closelyFocusedCar; // 0-based index, or -1 if there is no focused car (for example, with track camera or with free camera far from other cars)
 	const int focusedCar; // 0-based index, or -1 if there is no focused car, unlike `.closelyFocusedCar` returns index of a car with track camera as well
 	const float dt; // Delta time in seconds, 0 when paused, affected by replay slow motion and fast forwarding
-	const bool isLive; // If `true`, simulation is currently running (not paused and not in replay mode)
 	const bool isPaused; // If `true`, AC is currently paused
+	const bool isInMainMenu; // If `true`, main menu is currently active
+	const bool isLive; // If `true`, simulation is currently running (not paused and not in replay mode)
 	const bool isFreeCameraOutside; // Set to `true` if camera is either free or orbit (F7/F5) and not inside an interior 
 	const bool isReplayActive;
 	const bool isReplayOnlyMode; // True if AC is ran in replay mode, without any racing
@@ -443,11 +569,13 @@ struct ac.StateSim {
 	const int timeMinutes; // Number of minutes in current hour, rounded down
 	const int timeSeconds; // Number of seconds in current minute, rounded down
 	const float timeMultiplier; // Time multiplier set in race conditions
+	const int timestamp; // Timestamp for in-game time (whole number seconds since 01/01/1970)
+	const int dayOfYear; // Returns number of current day in the year, from 1 to 366
 	const int raceFlagType;
 	const bool isSessionStarted;
 	const int raceSessionType;
-	const double timeToSessionStart;
-	const double sessionTimeLeft;
+	const double timeToSessionStart; // Time to session start in milliseconds
+	const double sessionTimeLeft; // Remaining session time in milliseconds
 	const int currentSessionIndex; // 0-based index of current session (`.sessions` store more details about each session)
 	const int sessionsCount;
 	const float trackLengthM;
@@ -457,6 +585,8 @@ struct ac.StateSim {
 	const float physicsLate;
 	const int cpuOccupancy;
 	const float cpuTime;
+	const float onboardCameraFOV; // @hidden
+	const float firstPersonCameraFOV; // Current value for first person camera FOV in degrees. Global value, applying for all cars.
 	const int cameraMode;
 	const int driveableCameraMode;
 	const int carCameraIndex; // 0-based index of currently active car camera (if `.cameraMode` is set to `ac.CameraMode.Car`). To find out how many ofd those cameras there are, use `ac.getCar(sim.focusedCar).carCamerasCount`
@@ -472,18 +602,22 @@ struct ac.StateSim {
 	const bool timeRaceEnded;
 	const bool timeRaceLastLap;
 	const bool timeRaceAdditionalLap;
+	const bool isAdmin; // Changes to true if user signs up as admin using that new chat app
+	const float pitsSpeedLimit; // Maximum speed allowed in pits in km/h. Regular value is 80, but servers might change it
 	const float pitWindowStartTime; // If non-zero, start of mandatory pit time window (to get current time, use `.time`)
 	const float pitWindowEndTime; // If non-zero, end of mandatory pit time window (to get current time, use `.time`)
 	const float replayFrameMs; // Time of each replay frame in milliseconds
 	const int replayFrames; // Number of recorded replay frames
 	const int replayCurrentFrame; // 0-based index of current replay frame
+	const float replayPlaybackRate; // 0-based index of current replay frame
 	const char weatherType; // Current weather type, set by WeatherFX controller or guessed from weather name
 	const float weatherSkyOcclusion; // Estimates sky occlusion based on current weather type
 	const float baseAltitude; // Altitude in meters above sea level associated with Y=0 level.
 	const int connectedCars; // Number of currently connected cars
 	const int randomSeed; // Synced between clients online
+	const lua_vector_float lapSplits; // Normalized positions of track splits
 	const double handshakeServerTime; // Server time of the handshake, in milliseconds
-	const double currentServerTime; // Current server time (synced on all clients), in milliseconds
+	const double currentServerTime; // Current server time (synced on all clients), in milliseconds. Resets to 0 when new race session (P/Q/R) starts.
 }
 
 struct ac.StateUi {
@@ -506,6 +640,7 @@ struct ac.StateUi {
 	const bool superDown; // Keyboard modifier pressed: Cmd/Super/Windows
 	const bool wantCaptureMouse; // If your script is listening to mouse events, you might need to disable this functionality if this value is `true` — it means mouse is currently captured by some IMGUI element (for example, dragging happens).
 	const bool wantCaptureKeyboard; // If your script is listening to keyboard events, you might need to disable this functionality if this value is `true` — it means keyboard is currently captured by some IMGUI element (for example, user enters text in a text box).
+	const bool vrController; // If true, mouse is currenly controlled by VR controller, so its precision might be lower
 	const float framerate; // UI framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames
 	const int metricsRenderVertices; // Vertices output during last call to Render()
 	const int metricsRenderIndices; // Indices output during last call to Render() = number of triangles * 3
@@ -513,4 +648,29 @@ struct ac.StateUi {
 	const int metricsActiveWindows; // Number of active windows
 	const int metricsRenderCommands; // Number of draw calls
 	const vec2 mouseDelta; // Mouse delta. Note that this is zero if either current or previous position are invalid (-FLT_MAX,-FLT_MAX), so a disappearing/reappearing mouse won't have a huge delta.
+	const float uiScale; // UI scale. Usually scripts shouldn’t worry about it, but just in case
+	const rgbm accentColor; // Theme-defined accent color
+}
+
+struct ac.StateVrHand {
+	const mat4x4 transform;
+	const float triggerIndex;
+	const float triggerHand;
+	const vec2 thumbstick;
+	const bool active;
+	const bool thumbUp;
+	const bool indexPointing;
+	const bool busy; // Set to true if hand is already going something, like grabbing an object. If so, don’t do any more grabbing (and don’t forget to call `ac.setVRHandBusy()` when you do)
+	const uint64_t openVRButtons; // OpenVR-specific buttons
+	const uint64_t openVRTouches; // OpenVR-specific touches
+	const vec2 openVRAxis[5]; // OpenVR-specific touches
+}
+
+struct ac.StateVr {
+	const mat4x4 headTransform;
+	const bool headActive;
+	const int oculusButtons; // Oculus-specific buttons
+	const int oculusTouches; // Oculus-specific touches
+	const int activeHand; // index of a hand that is actively moving, or -1
+	const state_vr_hand hands[2];
 }

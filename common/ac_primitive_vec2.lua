@@ -1,5 +1,6 @@
 local vtmp1
 local vtmp2
+local vtmp3
 return {
   init = function()
     vtmp1 = vec2()
@@ -36,7 +37,9 @@ return {
     end,
     __unm = function(v) return vec2(-v.x, -v.y) end,
     __len = function(v) return v:length() end,
-    __eq = function(v, o) return o ~= nil and ffi.istype('vec2', o) and v.x == o.x and v.y == o.y end,
+    __eq = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return rawequal(v, o) end return ffi.istype('vec2', v) and ffi.istype('vec2', o) and v.x == o.x and v.y == o.y end,
+    __lt = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return false end return ffi.istype('vec2', v) and ffi.istype('vec2', o) and v.x < o.x and v.y < o.y end,
+    __le = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return false end return ffi.istype('vec2', v) and ffi.istype('vec2', o) and v.x <= o.x and v.y <= o.y end,
     __index = {
       new = function(x, y) 
         if type(x) ~= 'number' then 
@@ -44,6 +47,8 @@ return {
             return table.isArray(x) 
               and vec2(tonumber(x[1]) or 0, tonumber(x[2]) or 0)
               or vec2(tonumber(x.x) or 0, tonumber(x.y) or 0)
+          elseif type(x) == 'string' then
+            return vec2(x:numbers(2))
           elseif vec2.isvec2(x) then
             return vec2(x.x, x.y)
           end
@@ -59,6 +64,17 @@ return {
       clone = function(v) return vec2(v.x, v.y) end,
       unpack = function(v) return v.x, v.y end,
       table = function(v) return {v.x, v.y} end,
+
+      intersect = function(p1, p2, p3, p4)
+        local r = vtmp3 or vec2()
+        if ffi.C.lj_2d_segments_intersection(r, p1, p2, p3, p4) then
+          vtmp3 = nil
+          return r
+        else
+          vtmp3 = r
+          return nil
+        end
+      end,
 
       set = function(v, x, y)
         if vec2.isvec2(x) then x, y = x.x, x.y

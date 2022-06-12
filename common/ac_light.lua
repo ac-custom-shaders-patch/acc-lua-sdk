@@ -40,6 +40,7 @@ typedef struct {
   bool shadows;
   bool shadowsStatic;
   bool shadowsHalfResolution;
+  bool shadowsExtraBlur;
   
   float shadowsSpot;
   float shadowsRange;
@@ -55,8 +56,8 @@ typedef struct {
 local __lightSourceKeepAlive = {}
 
 ---Light source on the scene. Starts working immediattely after creation. Use `:dispose()` to remove it.
----@param lightType ac.LightType
----@param position vec3
+---@param lightType ac.LightType?
+---@param position vec3?
 ---@return ac.LightSource
 function ac.LightSource(lightType, position)
   local created = ffi.C.lj_lightsource_new()
@@ -91,6 +92,7 @@ end
 ---@field shadows boolean @Use dynamic shadows.
 ---@field shadowsStatic boolean @Static dynamic shadows exclude any dynamic objects, so they need a much lower refresh rate.
 ---@field shadowsHalfResolution boolean @Half-resolution dynamic shadows for extra blurriness.
+---@field shadowsExtraBlur boolean @Additional shadow blurring.
 ---@field shadowsSpot number @If your spotlight is too wide and you can’t reduce it, alternatively you can use a lower spot angle for shadows alone. Wouldn’t look that great though sometimes.
 ---@field shadowsRange number @Range of shadows, by default matches range of light source. Because those are exponential shadow maps, adjusting it might help with visual quality.
 ---@field shadowsBoost number @Intensity boost for exponential shadow maps.

@@ -184,14 +184,14 @@ local VectorT__mt = {
     else
       self._data, self._size, self._cap = nil, 0, 0
     end
-    if self.__cb ~= 0 then ffi.C[self.__cb](self) end
+    if self.__cb then self.__cb(self) end
     return self
   end,
   __gc = function( self ) 
     self.__alloc:deallocate(self._data)
     self.__keep_alive = {}
     self._data, self._cap, self._size = nil, 0, 0
-    if self.__cb ~= 0 then ffi.C[self.__cb](nil) end
+    if self.__cb then self.__cb(nil) end
     return self
   end,
   __len = function( self ) return self._size end,
@@ -207,7 +207,7 @@ local function VectorT(ct, cb)
   vt_mt.__index.__ct_size = ffi.sizeof(ct)
   vt_mt.__index.__alloc = MallocAllocator(ct)
   vt_mt.__index.__keep_alive = {}
-  vt_mt.__index.__cb = cb or 0
+  vt_mt.__index.__cb = cb
 
   local vt = ffi.typeof(VectorT__cdef, ct)
   local result = ffi.metatype(vt, vt_mt)()

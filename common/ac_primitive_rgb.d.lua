@@ -8,9 +8,10 @@
 ---@overload fun(color: vec3): rgb
 ---@overload fun(tableOfThree: number[]): rgb
 ---@overload fun(color: number): rgb
----@param r number
----@param g number
----@param b number
+---@overload fun(value: string): rgb
+---@param r number?
+---@param g number?
+---@param b number?
 ---@return rgb
 function rgb.new(r, g, b, m) end
 
@@ -48,6 +49,7 @@ rgb.colors = {
   navy = rgb(0, 0, 0.5),
   blue = rgb(0, 0, 1),
   teal = rgb(0, 0.5, 0.5),
+  cyan = rgb(0, 0.5, 1),
   aqua = rgb(0, 1, 1),
 }
 
@@ -56,7 +58,7 @@ rgb.colors = {
 ---@field r number
 ---@field g number
 ---@field b number
----@constructor fun(r: number, g: number, b: number): rgb
+---@constructor fun(r: number?, g: number?, b: number?): rgb
 
 ---Makes a copy of a vector.
 ---@return rgb
@@ -78,6 +80,11 @@ function rgb:type() end
 ---@param b number?
 ---@return rgb @Returns itself.
 function rgb:set(r, g, b) end
+
+---@param x rgb
+---@param mult number
+---@return rgb @Returns itself.
+function rgb:setScaled(x, mult) end
 
 ---@param value1 rgb
 ---@param value2 rgb
@@ -168,7 +175,7 @@ function rgb:saturation() end
 function rgb:luminance() end
 
 ---Returns rgbm.
----@param mult number @Default value: 1.
+---@param mult number? @Default value: 1.
 ---@return rgbm
 function rgb:rgbm(mult) end
 

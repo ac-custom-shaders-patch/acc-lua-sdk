@@ -36,7 +36,9 @@ return {
     end,
     __unm = function(v) return vec4(-v.x, -v.y, -v.z, -v.w) end,
     __len = function(v) return v:length() end,
-    __eq = function(v, o) return o ~= nil and ffi.istype('vec4', o) and v.x == o.x and v.y == o.y and v.z == o.z and v.w == o.w end,
+    __eq = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return rawequal(v, o) end return ffi.istype('vec4', v) and ffi.istype('vec4', o) and v.x == o.x and v.y == o.y and v.z == o.z and v.w == o.w end,
+    __lt = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return false end return ffi.istype('vec4', v) and ffi.istype('vec4', o) and v.x < o.x and v.y < o.y and v.z < o.z and v.w < o.w end,
+    __le = function(v, o) if rawequal(o, nil) or rawequal(v, nil) then return false end return ffi.istype('vec4', v) and ffi.istype('vec4', o) and v.x <= o.x and v.y <= o.y and v.z <= o.z and v.w <= o.w end,
     __index = {
       new = function(x, y, z, w) 
         if vec3.isvec3(x) then return vec4(x.x, x.y, x.z, w or 0) end
@@ -46,6 +48,8 @@ return {
             return table.isArray(x) 
               and vec4(tonumber(x[1]) or 0, tonumber(x[2]) or 0, tonumber(x[3]) or 0, tonumber(x[4]) or 0)
               or vec4(tonumber(x.x) or 0, tonumber(x.y) or 0, tonumber(x.z) or 0, tonumber(x.w) or 0)
+          elseif type(x) == 'string' then
+            return vec4(x:numbers(4))
           elseif vec4.isvec4(x) then
             return vec4(x.x, x.y, x.z, x.w)
           end

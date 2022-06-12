@@ -1,7 +1,8 @@
 ac.setStartMessage(message: string, icon: string = "DRIVE"): boolean
 ac.endSession(message: string, successfulRun: boolean = true): boolean
-ac.loadSoundbank(soundbank: string, guids: string): boolean // Returns `true` if both files were found. 
+ac.loadSoundbank(soundbank: string, guids: string = nullptr): boolean // Returns `true` if both files were found. 
 ac.isAudioReady(): boolean
+ac.setAudioEventMultiplier(surfaceWav: string, mult: number): boolean
 render.isVisible(center: vec3, radius: number): boolean
 render.setBlendMode(mode: render.BlendMode)
 render.setCullMode(mode: render.CullMode)
@@ -14,13 +15,19 @@ render.glTexture(filename: string)
 render.glEnd()
 render.circle(pos: vec3, dir: vec3, radius: number, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr)
 render.rectangle(pos: vec3, dir: vec3, width: number, height: number, color: rgbm = rgbm(1, 1, 1, 1))
+render.quad(p1: vec3, p2: vec3, p3: vec3, p4: vec3, color: rgbm = rgbm(1, 1, 1, 1), texture: string = nullptr)
+render.setTransform(t: mat4x4, applySceneOriginOffset: boolean = false)
 render.debugText(pos: vec3, text: string, color: rgbm = rgbm(1, 1, 1, 1), scale: number = 1, align: render.FontAlign = AC::FontAlign::center)
 render.debugSphere(center: vec3, radius: number, color: rgbm = rgbm(3, 0, 0, 1))
 render.debugCross(center: vec3, size: number, color: rgbm = rgbm(3, 0, 0, 1))
+render.debugBox(center: vec3, size: vec3, color: rgbm = rgbm(3, 0, 0, 1))
 render.debugPoint(center: vec3, size: number, color: rgbm = rgbm(3, 0, 0, 1))
 render.debugPlane(center: vec3, dir: vec3, color: rgbm = rgbm(3, 0, 0, 1), size: number = 1)
 render.debugLine(from: vec3, to: vec3, color: rgbm = rgbm(3, 0, 0, 1))
 render.debugArrow(from: vec3, to: vec3, size: number = -1, color: rgbm = rgbm(3, 0, 0, 1))
+render.getRenderTargetSize(): vec2
+render.backupRenderTarget(): boolean
+render.restoreRenderTarget(): boolean
 ui.beginToolWindow(windowID: string, pos: vec2, size: vec2, noPadding: boolean)
 ui.endToolWindow()
 ui.beginTransparentWindow(windowID: string, pos: vec2, size: vec2, noPadding: boolean)
@@ -32,6 +39,8 @@ ui.textColored(text: string, color: rgbm)
 ui.labelText(label: string, text: string)
 ui.textDisabled(text: string)
 ui.isKnownIcon24(iconID: string): boolean
+ui.icon(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1), iconSize: vec2 = nullptr)
+ui.addIcon(iconID: string, size: vec2, alignment: vec2, colorOpt: rgbm = nullptr, padding: vec2 = nullptr)
 ui.icon24(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
 ui.icon32(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
 ui.icon64(iconID: string, size: vec2, tintCol: rgbm = rgbm(1, 1, 1, 1))
@@ -46,12 +55,14 @@ ui.setCursorY(v: number)
 ui.offsetCursorX(v: number)
 ui.offsetCursorY(v: number)
 ui.sameLine(offsetFromStart: number = 0, spacing: number = -1)
-ui.newLine()
+ui.newLine(spacing: number = -1)
 ui.beginGroup()
 ui.endGroup()
 ui.availableSpaceX(): number
 ui.availableSpaceY(): number
 ui.availableSpace(): vec2
+ui.imageSize(filename: string): vec2
+ui.decodeImage(data: string): string
 ui.drawImage(filename: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), keepAspectRatio: boolean = false)
 ui.drawImageRounded(filename: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), rounding: number = 1, corners: ui.CornerFlags = ImDrawCornerFlags_All)
 ui.drawImageQuad(filename: string, p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 0), uv3: vec2 = vec2(1, 1), uv4: vec2 = vec2(0, 1))
@@ -64,8 +75,8 @@ ui.endGradientShade(p1: vec2, p2: vec2, col1: rgbm = rgbm(1, 1, 1, 1), col2: rgb
 ui.pushClipRect(p1: vec2, p2: vec2, intersectWithExisting: boolean = true)
 ui.pushClipRectFullScreen()
 ui.popClipRect()
-ui.drawRect(p1: vec2, p2: vec2, color: rgbm, rounding: number = 0, roundingFlags: integer = 15, thickness: number = 1)
-ui.drawRectFilled(p1: vec2, p2: vec2, color: rgbm, rounding: number = 0, roundingFlags: integer = 15)
+ui.drawRect(p1: vec2, p2: vec2, color: rgbm, rounding: number = 0, roundingFlags: ui.CornerFlags = ImDrawCornerFlags_All, thickness: number = 1)
+ui.drawRectFilled(p1: vec2, p2: vec2, color: rgbm, rounding: number = 0, roundingFlags: ui.CornerFlags = ImDrawCornerFlags_All)
 ui.drawRectFilledMultiColor(p1: vec2, p2: vec2, colorTopLeft: rgbm, colorTopRight: rgbm, colorBottomRight: rgbm, colorBottomLeft: rgbm)
 ui.drawLine(p1: vec2, p2: vec2, color: rgbm, thickness: number = 1)
 ui.drawBezierCurve(p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm, thickness: number = 1)
@@ -97,9 +108,12 @@ ui.beginOutline()
 ui.endOutline(color: rgbm, scale: number = 1)
 ui.beginSharpening()
 ui.endSharpening(sharpening: number = 1)
+ui.beginBlurring()
+ui.endBlurring(blurring: vec2)
 ui.beginRotation()
 ui.endRotation(deg: number, offset: vec2 = vec2())
 ui.endPivotRotation(deg: number, pivot: vec2, offset: vec2 = vec2())
+ui.applyTransformationToWindows(active: boolean = true)
 ui.beginScale()
 ui.endScale(scale: vec2)
 ui.endPivotScale(scale: vec2, pivot: vec2)
@@ -116,15 +130,15 @@ ui.pushTextWrapPosition(wrapPos: number)
 ui.popTextWrapPosition()
 ui.areaVisible(size: vec2): boolean
 ui.rectVisible(p1: vec2, p2: vec2): boolean
-ui.rectHovered(p1: vec2, p2: vec2): boolean
+ui.rectHovered(p1: vec2, p2: vec2, clip: boolean = true): boolean
 ui.setItemDefaultFocus()
 ui.setKeyboardFocusHere(offset: integer = 0)
 ui.getScrollX(): number
 ui.getScrollY(): number
 ui.getScrollMaxX(): number
 ui.getScrollMaxY(): number
-ui.setScrollX(scrollX: number, relative: boolean = false)
-ui.setScrollY(scrollY: number, relative: boolean = false)
+ui.setScrollX(scrollX: number, relative: boolean = false, smooth: boolean = true)
+ui.setScrollY(scrollY: number, relative: boolean = false, smooth: boolean = true)
 ui.setScrollHereX(centerXRatio: number = 0.5)
 ui.setScrollHereY(centerYRatio: number = 0.5)
 ui.windowHovered(flags: ui.HoveredFlags = ImGuiHoveredFlags_None): boolean
@@ -136,7 +150,12 @@ ui.mouseReleased(mouseButton: integer = 0): boolean
 ui.mouseDown(mouseButton: integer = 0): boolean
 ui.mousePos(): vec2 // Mouse cursor position in pixels, or (-1, -1) if mouse is not available.
 ui.mouseLocalPos(): vec2 // Mouse cursor position in pixels, or (-1, -1) if mouse is not available.
+ui.itemRectMin(): vec2
+ui.itemRectMax(): vec2
+ui.deltaTime(): number
+ui.itemRectSize(): vec2
 ui.mouseDelta(): vec2
+ui.mouseWheel(): number
 ui.windowPos(): vec2
 ui.windowSize(): vec2
 ui.windowContentSize(): vec2
@@ -173,6 +192,10 @@ ui.getFocusID(): integer
 ui.getHoveredID(): integer
 ui.clearActiveID()
 ui.activateItem(id: integer)
+ui.loadStoredNumber(id: integer = 0, defaultValue: number = 0): number
+ui.loadStoredBool(id: integer = 0, defaultValue: boolean = false): boolean
+ui.storeNumber(id: integer = 0, value: number = 0)
+ui.storeBool(id: integer = 0, value: boolean = false)
 ui.columns(columns: integer = 1, border: boolean = true, id: string = nullptr)
 ui.nextColumn()
 ui.setColumnWidth(columnIndex: integer, width: number)
@@ -186,7 +209,6 @@ ui.bullet()
 ui.separator()
 ui.checkbox(label: string, checked: refbool): boolean // Returns `true` if checkbox was clicked.
 ui.radioButton(label: string, checked: refbool): boolean
-ui.colorButton(label: string, color: rgbm, flags: ui.ColorPickerFlags = ImGuiColorEditFlags_None, size: vec2 = vec2()): boolean
 ui.progressBar(fraction: number, size: vec2 = vec2(), overlay: string = nullptr)
 ui.setNextItemWidth(width: number)
 ui.beginCombo(label: string, previewValue: string, flags: ui.ComboFlags = ImGuiComboFlags_None): boolean
@@ -202,6 +224,8 @@ ui.beginTreeNode(label: string, flags: ui.TreeNodeFlags = ImGuiTreeNodeFlags_Fra
 ui.endTreeNode()
 ui.beginPopupContextItem(id: string, mouseButton: integer = 1): boolean
 ui.endPopup()
+ui.beginTooltip(padding: vec2 = vec2(20, 8))
+ui.endTooltip()
 ui.header(text: string)
 ui.bulletText(text: string)
 ui.setTooltip(tooltip: string)
@@ -225,7 +249,7 @@ ui.itemToggledSelection(): boolean
 ui.image(filename: string, size: vec2, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr, uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), keepAspectRatio: boolean = false)
 ui.imageButton(filename: string, size: vec2, color: rgbm = rgbm(1, 1, 1, 1), bgColor: rgbm = nullptr, uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), framePadding: number = -1, keepAspectRatio: boolean = false): boolean
 ui.isImageReady(filename: string): boolean
-ui.setAsynchronousImagesLoading(value: boolean)
+ui.setAsynchronousImagesLoading(value: boolean = true)
 ui.calcItemWidth(): number
 ui.pushAllowKeyboardFocus(allowKeyboardFocus: boolean)
 ui.popAllowKeyboardFocus()
@@ -266,36 +290,31 @@ ui.getClipboardText(): string
 ui.setClipboardText(text: string)
 ui.time(): number
 ui.frameCount(): integer
+ui.modalPopup(title: string, msg: string, okText: string, cancelText: string, okIconID: string, cancelIconID: string, callback: integer)
+ui.modalPrompt(title: string, msg: string, defaultValue: string, okText: string, cancelText: string, okIconID: string, cancelIconID: string, callback: integer)
+ui.projectPoint(pos: vec3, considerUiScale: boolean = true): vec2 // Returns vector with `inf` for values if point is outside of screen.
+ui.unloadImage(filename: string): boolean // Returns `true` if file was unloaded successfully.
 render.createRay(pos: vec3, dir: vec3, length: number = -1): ray
 render.createMouseRay(): ray
 render.createPointRay(onscreenPoint: vec2): ray
 ac.setDriverVisible(carIndex: integer, isVisible: boolean)
 ac.setDriverDoorOpen(carIndex: integer, isOpen: boolean)
-ac.pauseFilesWatching(pause: boolean)
-ac.debugLights(filter: string, count: integer, mode: ac.LightsDebugMode, distance: number = 100)
-ac.resetCar()
-ac.takeAStepBack()
-ac.setWeatherTimeMultiplier(multiplier: number)
-ac.setWeatherTimeOffset(offset: number)
-ac.setVAOMode(mode: ac.VAODebugMode)
-ac.getVAOMode(): ac.VAODebugMode
-ac.setWiperSpeed(carIndex: integer, wiperSpeed: integer)
-ac.setAudioVolume(audioChannelKey: string, value: number)
-ac.markLapAsSpoiled()
 ac.setTrackCondition(key: string, value: number)
-ac.setReplayPosition(frameIndex: integer, playCounter: number)
 ac.setCurrentCamera(mode: ac.CameraMode)
 ac.setCurrentDrivableCamera(mode: ac.DrivableCamera)
 ac.setCurrentCarCamera(mode: integer)
 ac.setCurrentTrackCamera(set: integer)
+ac.recenterVR()
 ac.focusCar(index: integer)
-ac.restartAssettoCorsa()
+ac.restartAssettoCorsa(raceIni: string = nullptr)
 ac.shutdownAssettoCorsa()
-ac.consoleExecute(command: string)
-ac.onConsoleInput(callback: integer)
 ac.sendChatMessage(command: string): boolean // Returns `false` if message couldn’t be sent (trying to send too often, or not online)
-ac.onChatMessage(callback: integer)
-ac.setFFBMultiplier(multiplier: number)
+ac.onChatMessage(callback: integer): lua_linked_id
+ac.setCameraPosition(pos: vec3)
+ac.setCameraDirection(look: vec3, up: vec3 = vec3(0, 1, 0))
+ac.setCameraFOV(fov: number)
+ac.setCameraExposure(exposure: number)
+ac.setCameraDOF(distance: number)
 ac.setABS(mode: integer)
 ac.setTC(mode: integer)
 ac.isTurboWastegateAdjustable(turboIndex: integer): boolean
@@ -307,8 +326,10 @@ ac.setKERS(state: boolean)
 ac.setMGUHCharging(charging: boolean)
 ac.setMGUKDelivery(level: integer)
 ac.setMGUKRecovery(level: integer)
+ac.switchToNeutralGear()
 ac.setHeadlights(active: boolean)
 ac.setHighBeams(active: boolean)
 ac.setExtraSwitch(index: integer, value: boolean)
 ac.getRealMirrorCount(): integer
+ac.getRealMirrorAABB(mirrorIndex: integer, min: vec3, max: vec3): boolean
 ac.setRealMirrorParams(mirrorIndex: integer, params: ac.RealMirrorParams)

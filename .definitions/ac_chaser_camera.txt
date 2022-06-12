@@ -26,5 +26,6 @@ ac.getGear(): integer
 ac.looksLeft(): boolean
 ac.looksRight(): boolean
 ac.looksBehind(): boolean
-ac.loadSoundbank(soundbank: string, guids: string): boolean // Returns `true` if both files were found. 
+ac.loadSoundbank(soundbank: string, guids: string = nullptr): boolean // Returns `true` if both files were found. 
 ac.isAudioReady(): boolean
+ac.setAudioEventMultiplier(surfaceWav: string, mult: number): boolean

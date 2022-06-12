@@ -6,7 +6,9 @@ require './common/ac_audio'
 require './common/ac_light'
 require './common/ac_ui'
 require './common/ac_display'
+require './common/ac_particles'
 require './common/ac_scene'
+require './common/ac_ray'
 require './common/ac_car_control'
 require './common/ac_physics_raycast'
 require './car_scriptable_display/car_scriptable_display_utils'
@@ -16,9 +18,12 @@ require './common/secure'
 __definitions()
 
 -- extra additions:
+
+---Reference to information about state of associated car.
 ---@type ac.StateCar
 car = nil
 
+---Reference to information about state of simulation.
 ---@type ac.StateSim
 sim = nil
 

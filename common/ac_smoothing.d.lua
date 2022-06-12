@@ -13,7 +13,7 @@ function smoothing.setDT(dt) end
 ---@field val number|vec2|vec3|vec4
 ---@field lastValue number|vec2|vec3|vec4
 ---@field smooth number
----@constructor fun(initialValue: number|vec2|vec3|vec4, smoothingIntensity: number "Default value: 100."): smoothing
+---@constructor fun(initialValue: number|vec2|vec3|vec4, smoothingIntensity: number? "Default value: 100."): smoothing
 
 ---Updates value, moving it closer to `newValue`.
 ---@param newValue number|vec2|vec3|vec4 @Target value to move to.

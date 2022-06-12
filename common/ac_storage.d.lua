@@ -35,6 +35,7 @@ function _ac_StoredValue:set(value) end
 ---to write things often.
 ---@generic T
 ---@param layout T
+---@param keyPrefix string|nil @Optional parameter for adding a prefix to keys.
 ---@return T
 ---@overload fun(key: string, value: string|number|boolean|vec2|vec3|vec4|rgb|rgbm): ac.StoredValue
-function ac.storage(layout) end
+function ac.storage(layout, keyPrefix) end

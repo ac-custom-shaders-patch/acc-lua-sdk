@@ -1,5 +1,8 @@
 #!node -r shelljs-wrap
 
+const QUOTE = '`';
+const QUOTE_BOOLEAN = `|${QUOTE}true${QUOTE}|${QUOTE}false${QUOTE}`
+
 function jsMacroEngine(file, ctx, args){
   /*
   Very simple JS macros system. Runs everything between “--[[?” and “?]]” through JS. Function “out(…)” is available for outputting things. Also,
@@ -30,7 +33,7 @@ function jsMacroEngine(file, ctx, args){
   resulting Lua code would be returned from `inc()` call.
   */
   return ('' + file).replace(/--\[\[\?([\s\S]+?)\?\]\]/g, (_, m) => {
-    const r = [], f = new Function('out,ctx,inc,args', m.replace(/\(\]\]([\s\S]+?)--\[\[\)/g, (_, b) => `(${JSON.stringify(b).replace(/__(\w+)__/g, (_, k) => `"+${k}+"`)})`));
+    const r = [], f = new Function('out,ctx,inc,args', m.replace(/\(\]\]([\s\S]+?)--\[\[\)/g, (_, b) => `(${JSON.stringify(b).replace(/__([a-z]\w*)__/ig, (_, k) => `"+${k}+"`)})`));
     return r.push(f(r.push.bind(r), ctx, (f, ...a) => jsMacroEngine(fs.readFileSync(f), ctx, a), args || [])), r.join('');
   });
 }
@@ -43,7 +46,7 @@ const minifyFfiDefinitions = true;
 const enumTypes = {};
 const luaTypes = {};
 const knownTypes = {
-  regex: /^(void|char|ray|lua_string_ref|lua_string_cached_ref|int|u?int\d+_t|size_t|float|double|bool|vec[234]|mat3x3|mat4x4|rgbm?|refbool|refnumber)$/,
+  regex: /^(void|char|ray|blob_view|lua_string_ref|lua_string_cached_ref|lua_cshader_\w*|int|u?int\d+_t|size_t|float|double|bool|vec[234]|mat3x3|mat4x4|rgbm?|refbool|refnumber)$/,
   ffiStructs: {},
   referencedTypes: {},
   ffiFunctions: {},
@@ -88,7 +91,7 @@ function checkTypes() {
 
 // Rules:
 function notForExport(t) {
-  if (/^(lj_memmove|lj_malloc|lj_calloc|lj_realloc|lj_free)$/.test(t)) return true;
+  if (/^(lj_memcpy|lj_memmove|lj_malloc|lj_calloc|lj_realloc|lj_free)$/.test(t)) return true;
   if (/lj_[^_]+_[^_]/.test(t)) return true;
   return false;
 }
@@ -110,6 +113,7 @@ function baseTypeToLua(t) {
 
 function typeToLua(t, origin) {
   // if (knownLDocTypes[t]) return knownLDocTypes[t];
+  if (t == 'lua_linked_id') return t;
 
   let m = 0;
   t = t.replace(/^(const\s*)?([\w:]+)([&*])?$/, (_, p, v, x) => {
@@ -122,6 +126,11 @@ function typeToLua(t, origin) {
     $.fail(`unexpected type: “${t}”`);
   }
   return t;
+}
+
+function typeToFfi(t, origin){
+  if (t == 'lua_linked_id') return 'int';
+  return typeToLua(t, origin);
 }
 
 function crunchC(code) {
@@ -177,6 +186,16 @@ function isRefType(type) {
 }
 
 function getTypeInfo(type, customTypes) {
+  if (type === 'const blob_view*') {
+    return {
+      name: 'string',
+      default: null,
+      prepare: arg => `__util.blob(${arg.name})`,
+      forceExpression: true,
+      customPrepare: true
+    };
+  }
+
   if (type === 'const char*') {
     return {
       name: 'string',
@@ -200,6 +219,15 @@ function getTypeInfo(type, customTypes) {
       name: 'integer',
       default: null,
       prepare: arg => `tonumber(${arg.name}) or ${arg.default || 0}`,
+      forceExpression: true
+    };
+  }
+
+  if (type == 'int16_t' || type == 'uint16_t') {
+    return {
+      name: 'integer',
+      default: null,
+      prepare: arg => arg.name,
       forceExpression: true
     };
   }
@@ -278,6 +306,7 @@ function getTypeInfo(type, customTypes) {
     default: valueRequired ? null : 'nil',
     prepare: arg => {
       // if (valueRequired){
+      //   $.echo(β.grey(`\tDefault FFI type prepare function: ${luaType}`));
       //   return `if ffi.istype('${luaType}', ${arg.name}) == false then 
       //     if ${arg.name} == nil then error("Required argument '${arg.niceName}' is missing", 2) end 
       //     error("Argument '${arg.niceName}' requires a value of type ${customType}", 2) 
@@ -292,6 +321,7 @@ function toDocName(luaType, customTypes) {
   if (luaType === 'uint64_t') return 'uint64';
 
   if (luaType === 'lua_vector_int') return 'integer[]';
+  if (luaType === 'lua_vector_float') return 'number[]';
 
   const knownType = /^state_/.test(luaType);
   if (!knownType) {
@@ -320,7 +350,7 @@ function prepareParam(arg, wrapDefault, localDefines) {
     if (arg.typeInfo.name === 'string' && arg.default === 'nullptr') {
       return `__uso(${arg.name})`;
     }
-  } else if (arg.typeInfo.name === 'string') {
+  } else if (arg.typeInfo.name === 'string' && !arg.typeInfo.customPrepare) {
     return `__ust(${arg.name})`;
   }
 
@@ -391,8 +421,8 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
   let comment = '';
   let type = arg.typeInfo.name;
 
-  if (arg.comment && /^(.*)\b(fun\(.+)/.test(arg.comment)){
-    type = RegExp.$2.trim();
+  if (arg.comment && /^(.*?)\b((?:nil\|)?(?:fun|reply_fun)\(.+)/.test(arg.comment)){
+    type = RegExp.$2.trim().replace(/\breply_fun\b/, 'fun');
     arg.comment = RegExp.$1.trim();
   }
 
@@ -405,8 +435,10 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
   for (let d of enumOverrides){
     if (d.params.override && d.params.override.test(`${namespace}.${fnName}/${arg.niceName}:${type}`)){
       type = d.params.name;
-      if (defaultValue){
-        const ndv = Object.entries(d.values).filter(x => (!d.comments[x[0]] || !/@hidden/.test(d.comments[x[0]])) && '' + x[1] == '' + defaultValue)[0][0];
+      if (defaultValue && (defaultValue != 'nullptr' || d.params.underlying !== 'string')){
+        const ndb = Object.entries(d.values).filter(x => (!d.comments[x[0]] || !/@hidden/.test(d.comments[x[0]])) && '' + x[1] == '' + defaultValue);
+        if (!ndb || !ndb[0]) $.echo(d.values, defaultValue);
+        const ndv = ndb[0][0];
         if (!ndv) $.fail(`default value is not found in enum: ${defaultValue} (${d.params.name})`);
         defaultValue = d.params.name + '.' + ndv;
       }
@@ -417,6 +449,8 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
   if (defaultValue) comment = `${comment} Default value: ${convertLDocDefaultValue(defaultValue)}.`;
   if (comment) comment = ' @' + comment.trim();
   if (defaultValue && defaultValue != 'nullptr') comment = '?' + comment;
+
+  if (type == 'refbool') type = 'boolean|refbool|nil';
 
   return `---@param ${arg.niceName} ${type}${defaultValue == 'nullptr' ? '|nil' : ''}${comment}`;
 }
@@ -429,11 +463,12 @@ function wrapReturnDefinition(arg, customTypes) {
 function getLDocType(arg, customTypes) {
   let type = getTypeInfo(arg, customTypes).name;
   if (type == 'uint64') return 'integer';
+  if (type == 'lua_linked_id') return 'ac.Disposable';
   return type;
 }
 
 function wrapLDocSentence(v) {
-  v = v.replace(/^ (?<!:)\/\/ /, '').replace(/^[a-z]/, _ => _.toUpperCase());
+  v = v.trim().replace(/^ (?<!:)\/\/ /, '').replace(/^[a-z]/, _ => _.toUpperCase());
   if (!/^\s*\!\[|[.!?]|```$/.test(v)) v = v + '.';
   return v;
 }
@@ -449,22 +484,27 @@ function wrapReturnLComment(docs, comment) {
 
   if (docs) {
     comment = docs.replace(/\s+\*/g, '\n').replace(/\n\n\n/g, '\n\n').trim();
+  } else {
+    comment = comment.replace(/^\s*\/\/\s*/, '')
   }
 
   let d = [];
   comment = wrapLDocSentence(comment.replace(/\n@.+/g, _ => (d.push(_), '')).trim());
   if (d.length > 0) comment += d.join('');
 
+  comment = comment.replace(/\s*@deprecated/g, '\n@deprecated');
+
   return `---${comment.replace(/\n/g, '\n---')}`;
 }
 
 function needsWrappedResult(type) {
-  if (/const (?:char|lua_string_ref|lua_string_cached_ref)\*/.test(type)) return true;
+  if (/\blua_linked_id\b|const (?:char|lua_string_ref|lua_string_cached_ref)\*/.test(type)) return true;
   return false;
 }
 
 function wrapResult(type) {
   if (type == 'void') return { callback: x => x, extraData: null };
+  if (/lua_linked_id/.test(type)) return { callback: x => `return __util.disposable(${x})`, extraData: null };
   if (/state_/.test(type)) return { callback: x => `return __uss(${x})`, extraData: null };
   if (/const char\*/.test(type)) return { callback: x => `return ffi.string(${x})`, extraData: null };
   if (/const lua_string_ref\*/.test(type)) return { callback: x => `return __usf(${x})`, extraData: null };
@@ -520,7 +560,7 @@ const processMacros = (src => {
   $.readText(src).replace(
     /\n#define (\w+)\(((?:\w+|\.\.\.)(?:,\s*(?:\w+|\.\.\.))*)\)\s*((.+|(?!\n#define)[\s\S])+)/g,
     (_, n, a, b) => {
-      if (n == 'LUATYPEDEF') return;
+      if (n == 'LUATYPEDEF' || n == 'LUAEXPORT_OPT') return;
       const args = a.split(',').map(x => x.trim().replace('...', '')).map(x => [
         eval('/(##?|\\b)' + (x || '__VA_ARGS__') + '(##|\\b)/g'),
         i => ((r, v) => v[0] == '#' && v[1] != '#' ? JSON.stringify(r) : r).bind(0, x ? i.shift() : i.join(', '))
@@ -543,9 +583,10 @@ function verifyCppFile(cpp, cppName){
   if (verified[cppName]) return cpp;
   verified[cppName] = true;
 
-  if (cppName != 'extensions/weather_fx/ac_ext_weather_fx__lua.h') {
+  if (cppName != 'extensions/weather_fx/ac_ext_weather_fx__lua.h'
+      && cppName != 'extensions/online_plus/online_scripts.cpp') {
     const ends = {};
-    cpp.replace(/\bLUAEXPORT\b([^(]+)\(/g, (_, n) => {
+    cpp.replace(/\bLUAEXPORT(?:_OPT\(.+?\))?\b([^(]+)\(/g, (_, n) => {
       const k = /__(\w+)/.test(n) ? RegExp.$1 : '<none>';
       (ends[k] || (ends[k] = [])).push(/(\w+)$/.test(n) ? RegExp.$1 : _);
     });
@@ -622,7 +663,7 @@ function getLuaCode(opts, definitionsCallback) {
     return value;
   }
 
-  prepared.replace(/(?:\/\*@([\s\S]+?)\*\/\s+)?\bLUAEXPORT\s+((?:const\s+)?\w+[*&]?)\s+(lj_\w+)\s*\((.*)/g, (_, docs, resultType, name, argsLine) => {
+  prepared.replace(/(?:\/\*@([\s\S]+?)\*\/\s+)?\bLUAEXPORT(?:_OPT\((.*)\))?\s+((?:const\s+)?\w+[*&]?)\s+(lj_\w+)\s*\((.*)/g, (_, docs, optCondition, resultType, name, argsLine) => {
     let ns = 'ac';
     if (/__(\w+)$/.test(name) && !opts.allows.includes(RegExp.$1)) {
       if (opts.namespaces.includes(RegExp.$1)) {
@@ -632,13 +673,17 @@ function getLuaCode(opts, definitionsCallback) {
       }
     }
 
+    if (optCondition && !opts.flags[optCondition]){
+      return;
+    }
+
     if (/\/\*@/.test(docs)){
       docs = docs.substr(docs.lastIndexOf('/*@') + 3);
     }
 
     const args = argsLine[0] == ')' ? [] : splitArgs(name, argsLine.split(/\)\s*(\{|$|(?<!:)\/\/)/)[0].trim());
     const comment = /(?<!:)\/\/@?\s+(.+)/.test(argsLine) ? ' // ' + RegExp.$1 : '';
-    ffiDefinitions.push(`${typeToLua(resultType)} ${name}(${args.map(x => `${typeToLua(x.type)} ${x.name}`).join(', ')});`);
+    ffiDefinitions.push(`${typeToFfi(resultType)} ${name}(${args.map(x => `${typeToFfi(x.type)} ${x.name}`).join(', ')});`);
     if (notForExport(name)) return;
 
     const cleanName = name.replace(/^lj_|__\w+$/g, '');
@@ -653,6 +698,7 @@ function getLuaCode(opts, definitionsCallback) {
         if (e.params.name == type) {
           if (!e.params.underlying) $.fail(`enum without known underlying type: ${type}`);
           if (e.params.underlying == 'int') return 'number';
+          if (e.params.underlying == 'string') return 'string';
           $.fail(`enum with unsupported underlying type: ${type}, ${e.params.underlying}`);
         }
       }
@@ -663,7 +709,7 @@ function getLuaCode(opts, definitionsCallback) {
     function typeMatches(value, targetType){
       targetType = solveType(targetType);
       if (isVectorType(targetType)) return `ffi.istype('${targetType}', ${value})`;
-      if (/^boolean|string|number$/.test(targetType)) return `type(${value}) == '${targetType}'`;
+      if (/^boolean|string|number|function$/.test(targetType)) return `type(${value}) == '${targetType}'`;
       $.fail(`unknown type for overload check: ${targetType}`);
     }
 
@@ -673,9 +719,9 @@ function getLuaCode(opts, definitionsCallback) {
 
     function resolveOverload(overload, overloadIndex){
       for (let i = 0; i < overload.length; ++i){
-        if (overload[i][0] != args[i].name) {
+        if (overload[i][0] != args[i].niceName) {
           const overloadType = findLDocType(args[i], opts.enumDefs, ns, cleanName)
-          if (areTypesSame(overload[i][1], overloadType)) $.fail(`can’t overload ${name} if types are the same: ${overload}`);
+          if (areTypesSame(overload[i][1], overloadType)) $.fail(`can’t overload ${name} if types are the same (argument: ${overload[i][0]}, type: ${overload[i][1]} matches ${overloadType}):\n\t${overload.join('\n\t')}`);
 
           const o = args.length - overload.length;
           function remapV(j){
@@ -683,14 +729,27 @@ function getLuaCode(opts, definitionsCallback) {
               const n = overload[j + i];
               const f = args.filter(x => x.niceName == n[0])[0];
               if (!f) $.fail(`can’t overload ${name}: failed to match ${n[0]}: ${n[1]}`);
-              if (findLDocType(f, opts.enumDefs, ns, cleanName) != n[1]) $.fail(`can’t overload: ${name} types of ${n[0]} don’t match (${n[1]} ≠ ${findLDocType(f, opts.enumDefs, ns, cleanName)})`);
+
+              let ldt = findLDocType(f, opts.enumDefs, ns, cleanName);
+              let ndt = n[1];
+              if (ndt == 'function') ndt = 'integer';
+              if (ldt != ndt) $.fail(`can’t overload: ${name} types of ${n[0]} don’t match (${ndt} ≠ ${ldt})`);
               return f.name;
             }
             return args[i + (j + o) % (args.length - i)].name;
           }
 
-          return `${overloadIndex > 0 ? 'elseif' : 'if'} ${typeMatches(args[i].name, overload[i][1])} then 
-            ${args.slice(i).map((x, j) => remapV(j)).join(', ')} = ${args.slice(i).map((x, j) => i + j >= overload.length ? 'nil' : args[i + j].name).join(', ')} 
+          let conditionExtra = '';
+          for (let k = overload.length; k < args.length; ++k){
+            conditionExtra = `${conditionExtra} and ${args[k].name} == nil`
+          }
+
+          if (i >= overload.length) $.fail('Fixme1');
+          
+          const argsToReassign = args.slice(i, overload.length + 1);
+          // const argsToReassign = args.slice(i);
+          return `${overloadIndex > 0 ? 'elseif' : 'if'} ${typeMatches(args[i].name, overload[i][1])}${conditionExtra} then 
+            ${argsToReassign.map((x, j) => remapV(j)).join(', ')} = ${argsToReassign.map((x, j) => i + j >= overload.length ? 'nil' : args[i + j].name).join(', ')} 
           ${overloadIndex < overloads.length - 1 ? '' : 'end'}`;
         }
       }
@@ -702,8 +761,11 @@ function getLuaCode(opts, definitionsCallback) {
       const wrapResultCallback = wrapResult(resultType);
       const wrapResultPrefix = wrapResultCallback.extraData == null ? '' : wrapResultCallback.extraData(cleanName) + '\n';
       exportEntries.push(`${wrapResultPrefix}${ns}.${cleanName} = function(${args.map(x => x.name).join(', ')}) 
-        ${args.map(x => /\bfun\(/.test(x.comment) ? `${x.niceName} = __util.setCallback(${x.niceName})` : null).filter(x => x).join('\n') }
-        ${overloads.map(resolveOverload).join('\n')}
+      ${overloads.map(resolveOverload).join('\n')}
+        ${args.map(x => /\bnil\|fun\(/.test(x.comment) ? `${x.name} = ${x.name} and __util.setCallback(${x.name}) or nil` 
+          : /\bfun\(/.test(x.comment) ? `${x.name} = __util.setCallback(${x.name})` 
+          : /\breply_fun\(/.test(x.comment) ? `${x.name} = __util.expectReply(${x.name})` 
+          : null).filter(x => x).join('\n') }
         ${prepared.filter(x => !x.i).map(x => x.x).join(' ')} 
         ${wrapResultCallback.callback(`ffi.C.${name}(${args.map((x, i) => prepared[i].i ? prepared[i].x : x.name).join(', ')})`, cleanName)} 
       end`);
@@ -738,12 +800,13 @@ function getLuaCode(opts, definitionsCallback) {
   if (opts.states.length > 0) {
     for (let name of opts.states) {
       stateExtras = '';
-      $.readText(`${cspSource}/${name}`).replace(/\bLUASTRUCT\s+(\w+)([\s\S]+?)\n(?:\t| {4})\};/g, (_, name, content) => {
+      $.readText(`${cspSource}/${name}`).replace(/\b(LUASTRUCT|LUASTRUCT_DYNAMIC)\s+(\w+)([\s\S]+?)\n(?:\t| {4})\};/g, (_, type, name, content) => {
         const fields = [];
         const ldFields = [];
         const cppStatic = [];
         const cppUpdate = [];
         const cppFields = {};
+        const fieldPrefix = type == 'LUASTRUCT_DYNAMIC' ? '' : 'const ';
         content.replace(/\bLUA(\w+)\((.+)/g, (_, keys, data) => {
           let comment = '', ldocComment = '';
           if (/^(.+)(?<!:)\/\/\s*(.+)$/.test(data)) {
@@ -755,13 +818,15 @@ function getLuaCode(opts, definitionsCallback) {
           const isStatic = /STATIC/.test(keys);
           const isDynArray = /DYNARRAY/.test(keys);
           const isArray = /ARRAY/.test(keys);
-          let match = data.trim().match(isDynArray ? /(\w+), ([^,]+), (\w+), (.+)\)$/ : isArray ? /(\w+), (\d+), (\w+), (.+)\)$/ : /(\w+), (\w+), (.+)\)$/);
+          const isPass = /PASS/.test(keys);
+          let match = data.trim().match(isDynArray ? /(\w+), ([^,]+), (\w+)(?:, (.+))?\)$/ : isArray ? /(\w+), (\d+), (\w+)(?:, (.+))?\)$/ : /(\w+), (\w+)(?:, (.+))?\)$/);
+          // if (!!(match[isArray || isDynArray ? 3 : 2]) != isPass) $.fail(`failed to value existance with PASS flag: “${data}”`);
           if (!match && !isArray) match = data.trim().match(/(\w+), (\w+), \[&]\{$/);
           if (!match) $.fail(`failed to match field data: “${data}”`);
 
-          fields.push(isDynArray ? `const ${baseTypeToLua(match[1])}* ${match[3]};${comment}` 
-            : isArray ? `const ${baseTypeToLua(match[1])} ${match[3]}[${match[2]}];${comment}`
-            : `const ${baseTypeToLua(match[1])} ${match[2]};${comment}`);
+          fields.push(isDynArray ? `${fieldPrefix}${baseTypeToLua(match[1])}* ${match[3]};${comment}` 
+            : isArray ? `${fieldPrefix}${baseTypeToLua(match[1])} ${match[3]}[${match[2]}];${comment}`
+            : `${fieldPrefix}${baseTypeToLua(match[1])} ${match[2]};${comment}`);
 
           if (isArray){
             if (isDynArray){
@@ -771,7 +836,7 @@ function getLuaCode(opts, definitionsCallback) {
               if (!ldocComment) ldocComment = ` @${match[2]} items, starts with 0.`;
               else ldocComment = `${ldocComment} ${match[2]} items, starts with 0.`;
             }
-          } else if (match[1] === 'lua_vector_int'){
+          } else if (match[1] === 'lua_vector_int' || match[1] === 'lua_vector_float'){
             if (!ldocComment) ldocComment = ` @Items start with 0. To get number of elements, use \`#state.${match[2]}\``;
             else ldocComment = `${ldocComment} Items start with 0. To get number of elements, use \`#state.${match[2]}\``;
           }
@@ -784,7 +849,7 @@ function getLuaCode(opts, definitionsCallback) {
               } else {
                 cppFields[kw] = true;
               }
-            } else if (kw !== false) {
+            } else if (kw !== false && !isPass) {
               $.echo(β.yellow(`\tCouldn’t find keyword: ${_} (${JSON.stringify(kw)}`))
             }
 
@@ -861,6 +926,7 @@ function getLuaCode(opts, definitionsCallback) {
   function enVal(v, b){
     if (v == null) throw new Error('v is null');
     if (b && typeof(v) === 'number') return '0x' + v.toString(16);
+    if (Array.isArray(v)) return '{' + v + '}';
     return JSON.stringify(v).replace(/"/g, '\'');
   }
 
@@ -1029,8 +1095,24 @@ function getLuaCode(opts, definitionsCallback) {
           const b = enBit(i.values);
           const v = Object.entries(i.values).filter(v => !i.comments[v[0]] || !/@hidden/.test(i.comments[v[0]])).map(v => `  ${v[0]} = ${enVal(v[1], b)},${' ---' + enCom(i.comments[v[0]], v[0], i.params.name, v[1], b)}`)
           if (v.length === 0) $.fail('empty enum: ' + i.params.name)
+
+          const v2 = {};
+          for (let k in i.values) {
+            let o = i.values[k];
+            if (Array.isArray(o)){
+              for (let i of o){
+                if (/^(\w+) = (.+)/.test(i)){
+                  v2[k + '.' + RegExp.$1] = RegExp.$2;
+                }
+              }
+            } else {
+              v2[k] = o;
+            }
+          }
+          
+           // TODO:QUOTES
           return `${i.comment ? i.comment : ''}
----@alias ${i.params.name}${Object.entries(i.values).filter(v => !i.comments[v[0]] || !/@(?:opt|hidden)/.test(i.comments[v[0]])).map(v => `\n---| '${i.params.name}.${v[0]}' @${enCom(i.comments[v[0]], v[0], i.params.name, v[1], b)}`).join('')}
+---@alias ${i.params.name}${Object.entries(v2).filter(v => !i.comments[v[0]] || !/@(?:opt|hidden)/.test(i.comments[v[0]])).map(v => `\n---| ${QUOTE}${i.params.name}.${v[0]}${QUOTE} @${enCom(i.comments[v[0]], v[0], i.params.name, v[1], b)}`).join('')}
 ${i.params.name} = {\n${v.join('\n')}\n}`
         }))
     }
@@ -1132,7 +1214,44 @@ function resolveRequires(code, filename, context = null) {
     return false;
   }
 
+  function resolveName(v){
+    if (v.type === 'MemberExpression') return resolveName(v.base) + '.' + resolveName(v.identifier);
+    if (v.type === 'Identifier') return v.name;
+    return v.base.name + v.indexer + v.identifier.name;
+  }
+
+  function analyzeReturnValues(p){
+    const name = resolveName(p.identifier);
+    if (name === 'ui.combo' || name === 'ui.slider') return;
+
+    let retCount = null;
+    function iterateEntries(o, f){
+      if (!o) return;
+      if (Array.isArray(o)){
+        for (let i of o){
+          iterateEntries(i);
+        }
+      } else if (o instanceof Object){
+        if (!f && o.type == 'FunctionDeclaration') return;
+        if (o.type == 'ReturnStatement') {
+          if (retCount == null) retCount = o.arguments.length;
+          else if (retCount != o.arguments.length) $.echo(β.red(`Uneven number of return values: ${filename} (${name})`));
+        }
+        for (let n in o){
+          if (o.hasOwnProperty(n)) {
+            iterateEntries(o[n]);
+          }
+        }
+      }
+    }
+    iterateEntries(p, true);
+  }
+
   function processStatement(p) {
+    if (p.type == 'FunctionDeclaration'){
+      analyzeReturnValues(p);
+    }
+
     function isStringCall(nameTest) {
       if (p.type === 'CallStatement' && p.expression && isStringCallExpression(p.expression, nameTest)) {
         return (p.expression.argument || p.expression.arguments[0]).value;
@@ -1168,13 +1287,9 @@ function resolveRequires(code, filename, context = null) {
     function resolveConst(v){
       if (v.type === 'NumericLiteral' || v.type === 'StringLiteral' || v.type === 'BooleanLiteral') return v.value;
       if (v.type === 'UnaryExpression' && v.operator === '-') return -resolveConst(v.argument);
-      return v.value || console.log(v);
-    }
-
-    function resolveName(v){
-      if (v.type === 'MemberExpression') return resolveName(v.base) + '.' + resolveName(v.identifier);
       if (v.type === 'Identifier') return v.name;
-      return v.base.name + v.indexer + v.identifier.name;
+      if (v.type == 'TableConstructorExpression') return v.fields.map(x => `${resolveConst(x.key)} = ${resolveConst(x.value)}`);
+      return v.value || console.log(v);
     }
 
     if (p.type == 'AssignmentStatement'
@@ -1202,16 +1317,20 @@ function resolveRequires(code, filename, context = null) {
         if (/^\d+$/.test(value)) {
           for (let k in this) if (this[k] == value) return this[k];
         }
+        if (value == 'AC::BlendMode::ext_blend_accurate') return this.BlendAccurate;
         $.fail(`building script needs more work on mapping Lua enum names to C++ names:\nValue: ${value}\nDef: ${JSON.stringify(this)}`);
       }.bind(args[1]);
       enumTypes[args[0].cpp] = args[0];
       p.init[0] = p.init[0].arguments[1];
       let comments = null;
       code.replace(new RegExp(`${args[0].name} = __enum\\(([\\s\\S]+?)\\n\\s*\\}\\)`), (_, c) => {
-        comments = c.split('}, {')[1].split('\n').map(x => x.split(/=|--/).map(y => y.trim())).reduce((c, p) => (p[2] && (c[p[0]] = p[2]), c), {});
+        comments = c.split('}, {')[1].split('\n').map(x => /\{/.test(x) ? null : x.split(/=|--/).map(y => y.trim())).reduce((c, p) => (p && p[2] && (c[p[0]] = p[2]), c), {});
       });
       if (!comments) {
         $.fail(`failed to find enum values: ${args[0].name}`);
+      }
+      if (args[0].cpp == 'uirt_format'){
+        // $.echo(args);
       }
       context.definitions.enumDefs.push({ params: args[0], values: args[1], comments });
       if (args[0].override) enumOverrides.push(context.definitions.enumDefs[context.definitions.enumDefs.length - 1]);
@@ -1322,6 +1441,7 @@ function guessDefaultLDocValue(item, hint){
   if (hint) return hint;
   if (item == 'number' || item == 'integer') return 0;
   if (item == 'string') return "''";
+  if (item == 'boolean') return "false";
 
   if (/fun\((.*)\)(?::\s*(\S+))?/.test(item)){
     const a = RegExp.$1.replace(/:.+?(?=,|$)/g, '');
@@ -1356,7 +1476,7 @@ function prepareLDocTableParam(_, i, ldoc, comments, namePrefix){
     const v = unwrap(RegExp.$3.trim());
     const l = unwrap(RegExp.$4.trim());
     if (l){
-      comments.push({ name: namePrefix ? `${namePrefix}.${n}` : n, comment: JSON.parse(l) });
+      comments.push({ name: namePrefix ? `${namePrefix}.${n}` : n, comment: JSON.parse(l), type: t });
     }
 
     if (t[0] == '{' && t[t.length - 1] == '}'){
@@ -1430,12 +1550,13 @@ function prepareLDoc(content){
       }
 
       if (comments.length > 0) {
-        if (!comment) comment = 'Properties:'
-        else comment = `${wrapLDocSentence(parseLDocComment(comment))} Properties:`
-        for (let c of comments) comment = `${comment}\n- \`${c.name}\`: ${wrapLDocSentence(c.comment)}`
+        if (!comment) comment = 'Table with properties:'
+        else comment = `${wrapLDocSentence(parseLDocComment(comment))} Table with properties:`
+        for (let c of comments) comment = `${comment}\n- \`${c.name}\` (\`${c.type}\`): ${wrapLDocSentence(c.comment)}`
       }
 
-      return `${prefix.replace('tableparam', 'param')}{${ldoc.join(', ')}} | "${formatLDocDefaultTable(s)}"${comment ? ' ' + JSON.stringify(comment) : ''}`;
+      const d = formatLDocDefaultTable(s).replace(/(?<=\w = )'[^']+'/g, _ => /\\n/.test(_) ? '[[' + _.slice(1, _.length - 1) + ']]' : _);
+      return `${prefix.replace('tableparam', 'param')}{${ldoc.join(', ')}} | "${d}"${comment ? ' ' + JSON.stringify(comment) : ''}`;
     });
     
   if (/---@tableparam (.+)/.test(content)){
@@ -1485,7 +1606,7 @@ function finalizeLDoc(content, type){
     };
 
     const a = args.split(',').filter(x => x).map(x => {
-      if (!/\s*(\w+)\s*:\s*(\w+)\s*(".+")?/.test(x)) {
+      if (!/\s*(\w+)\s*:\s*([\w.|?]+)\s*(".+")?/.test(x)) {
         // $.echo(JSON.stringify(args));
         $.fail(`incorrectly formatted constructor argument: ${x}`);
       }
@@ -1526,7 +1647,7 @@ function finalizeLDoc(content, type){
     $.echo(β.grey(`\tNo I/O for you: ${type}`));
   }
 
-  content = content.replace(/(?<=\s)(?:---@param\s+\w+\s+boolean)(?= @|\n)/g, _ => _ + `|'true'|'false'`)
+  content = content.replace(/(?<=\s)(?:---@param\s+\w+\s+boolean)(?= @|\n)/g, _ => _ + QUOTE_BOOLEAN) // TODO:QUOTES
   content = content.replace(/---@.+/g, _ => _.replace(/\s*\|\s*/g, '|'));
 
   for (let i in knownLDocTypes){
@@ -1625,12 +1746,12 @@ function verifyLDocIntegrity(code){
       }
     }
     if (n === 'number' || n === 'integer' || n === 'string' || n === 'any' || n === 'table' || n === 'function' || n === 'boolean' || n === 'nil') return;
-    if (n[0] == '"' && n[n.length - 1] == '"') return;
+    if (n[0] == '"' && n[n.length - 1] == '"' || n[0] == '`' && n[n.length - 1] == '`') return;
     if (!referredTypes[n]) referredTypes[n] = ctx;
   }
   code.replace(/---@(?:(?:type|return)\s+|(?:field|param)\s+\S+\s+)(.+?)(?:\n|@|$| ")/g, (ctx, s) => add(s.trim(), ctx));
   for (let t in referredTypes){
-    if (code.indexOf('@class ' + t) === -1 && code.indexOf('@alias ' + t) === -1){
+    if (code.indexOf('@class ' + t) === -1 && code.indexOf('@alias ' + t) === -1 && t !== '...'){
       $.echo(β.red(`\tUnknown type? ${t} (ctx: “${referredTypes[t]}”)`));
     }
   }
@@ -1640,7 +1761,10 @@ function verifyLDocIntegrity(code){
   });
   
   code.replace(/---.+/g, _ => {
-    if (/\b(?<!a )default value\b/i.test(_) && !/Default value: [`'\d-]/.test(_)) $.echo(β.red('\tMalformed default value: ' + _));
+    if (/\b(?<!a )default value\b/i.test(_)){
+      if (!/Default value: [`'\d-]/.test(_)) $.echo(β.red('\tMalformed default value: ' + _));
+      if (/---@param/.test(_) && !/".*}/.test(_) /* to quickly weed out tableparam */ && !/\bnil\b|\?/.test(_.split(/["#]|(?<!-)@/)[0])) $.echo(β.red('\tIf default value is possible, use nullable type: ' + _));
+    } 
     if (_.indexOf('"') !== -1 && !/\|/.test(_) && !/---@(?:field|param) \w+ .+ ".+"$/.test(_)) $.echo(β.red('\tUnexpected " symbol: ' + _));
   });
 
@@ -1685,6 +1809,7 @@ function generateLDocMd(content, module){
   const p = content.split(/(?=--\[\[ [\w./]+ \]\])/);
   const t = {};
   const R = {};
+  const known = {};
   for (let i = 1; i < p.length; ++i){
     let j = p[i];
     let l = j.indexOf('\n');
@@ -1692,9 +1817,8 @@ function generateLDocMd(content, module){
     const g = t[f] || (t[f] = []);
     j.substr(l + 1).replace(/(?:---.*\n)+(.+)/g, (_, l) => {
       const d = getD(_);
-
       if (/@class (\S+)/.test(_)){
-        const cn = RegExp.$1;
+        const cn = RegExp.$1;        
         g.push(`## Class ${cn}`);
         if (d) g.push(d);
         if (/(\S+) = /.test(l)){
@@ -1728,24 +1852,37 @@ function saveLDocLib(dir, content){
   const finalized = finalizeLDoc(content, path.basename(dir));
   verifyLDocIntegrity(finalized);
   $.mkdir('-p', dir);
-  // $.rm(`${dir}/*.lua`);
-  fs.writeFileSync(`${dir}/lib.lua`, finalized);
+  $.rm(`${dir}/*.lua`);
+
+  fs.writeFileSync(`${dir}/lib.lua`, finalized);  
   fs.writeFileSync(`${dir}/README.md`, generateLDocMd(finalized, path.basename(dir)));
 
-  /* const p = content.split(/(?=--\[\[ [\w.]+ \]\])/);
-  fs.writeFileSync(`${dir}/lib.lua`, p[0]);
+  // const lines = finalized.split('\n');
+  // let i = 0, j = 0;
+  // let k = 0;
+  // while (i < lines.length){
+  //   j += Math.ceil(lines.length / 9.1);
+  //   if (j > lines.length) j = lines.length;
+  //   else while (lines[j - 1] != '') --j;
+  //   fs.writeFileSync(k == 0 ? `${dir}/lib.lua` : `${dir}/lib_${k}.lua`, lines.slice(i, j).join('\n'));  
+  //   i = j;
+  //   ++k;
+  // }
+  // // fs.writeFileSync(`${dir}/lib_${k}.lua`, lines.slice(i).join('\n'));
+  // if (k != 10) $.fail('Should be split into 10 pieces: ' + k);
 
-  const t = {};
-  for (let i = 1; i < p.length; ++i){
-    let j = p[i];
-    let l = j.indexOf('\n');
-    let f = j.substr(5, l - 8).replace(/^\w+\.(?!lua)/, '');
-    (t[f] || (t[f] = [])).push(j);
-  }
-
-  for (let n in t){    
-    fs.writeFileSync(`${dir}/${n}`, t[n].join('\n\n'));
-  } */
+  // const p = content.split(/(?=--\[\[ [\w.]+ \]\])/);
+  // fs.writeFileSync(`${dir}/lib.lua`, p[0]);
+  // const t = {};
+  // for (let i = 1; i < p.length; ++i){
+  //   let j = p[i];
+  //   let l = j.indexOf('\n');
+  //   let f = j.substr(5, l - 8).replace(/^\w+\.(?!lua)/, '');
+  //   (t[f] || (t[f] = [])).push(j);
+  // }
+  // for (let n in t){    
+  //   fs.writeFileSync(`${dir}/${n}`, t[n].join('\n\n'));
+  // }
 }
 
 function finalizeCDefs(code){
@@ -1836,6 +1973,16 @@ function verifyIntegrity(code){
   code.replace(/[^\.]\berror(?!\().*/g, _ => {
     $.echo(β.red('incorrect use of keyword “error” (in library code): ' + _));
   });
+      
+  const known = {};
+  code.replace(/function ([\w.]+)\(/g, (_, un) => {
+    if (known[un]) $.echo(β.yellow(`names collision: ${un}`));
+    if (un && !/^(Class(?:Base|Pool)|vec\d|rgbm?|hsv|quat|mat\dx\d)$/.test(un)) known[un] = true;
+  });
+  code.replace(/([a-z]+\.\w+) = function\(/g, (_, un) => {
+    if (known[un]) $.echo(β.yellow(`names collision: ${un}`));
+    if (un && !/^(Class(?:Base|Pool)|vec\d|rgbm?|hsv|quat|mat\dx\d)$/.test(un)) known[un] = true;
+  });
 }
 
 const luaJit = $[process.env['LUA_JIT']];
@@ -1882,7 +2029,8 @@ async function compile(filename) {
 }
 
 await compile('./ac_common.lua');
-for (let filename of $.glob(`./tests/t*.lua`)) {
+// for (let filename of $.glob(`./tests/t*.lua`)) {
+for (let filename of $.glob(`./tests/___t*.lua`)) {
   fs.writeFileSync('./tests/_out.lua', jsMacroEngine($.readText('./tests/_core.lua') + '\n\n' + $.readText(filename), { test: true }))
   $.echo(`Running test: ${filename}`)
   const s = Date.now();

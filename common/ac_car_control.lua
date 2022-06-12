@@ -30,6 +30,10 @@ typedef struct {
 ---@field monitorShaderSkew number @Skew of pixels grid to align pixels with tilted monitors.
 ---@field monitorShaderType ac.MirrorMonitorType @Type of monitor shader. By default guessed based on manufacturing year.
 ac.RealMirrorParams = ffi.metatype('realmirrorparams', { __index = {
+  ---@return ac.RealMirrorParams
+  clone = function(s)
+    return ac.RealMirrorParams(s)
+  end
 } })
 
 ---Returns set of mirror settings for a given Real Mirror mirror (for car scripts, associated car, for apps and tools — player’s car).

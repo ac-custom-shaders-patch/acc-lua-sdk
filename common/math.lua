@@ -34,6 +34,31 @@ function math.poissonSamplerCircle(size)
   return result
 end
 
+---Generates random number based on a seed.
+---@param seed integer|boolean|string @Seed.
+---@return number @Random number from 0 to 1.
+function math.seededRandom(seed)
+  if type(seed) == 'string' then 
+    seed = ffi.C.lj_checksumXXH(seed)
+  elseif type(seed) ~= 'number' then
+    seed = seed and 1 or 0
+  end
+  return ffi.C.lj_seed_random(seed)
+end
+
+---Rounds number, leaves certain number of decimals.
+---@param number number
+---@param decimals number? @Default value: 0 (rounding to a whole number).
+function math.round(number, decimals)
+  local c = 2^52 + 2^51
+  if decimals then
+    local scale = 10^decimals
+    return ((number * scale + c) - c) / scale
+  else
+    return (number + c) - c
+  end
+end
+
 --[[ …N functions are meant to work with numbers only, slightly faster ]]
 
 ---Clamps a number value between `min` and `max`.
@@ -193,14 +218,7 @@ function math.distanceSquared(x, y) return x:distanceSquared(y) end
 ---@return T
 function math.project(x, y) return x:clone():project(y) end
 
----Converts degrees to radians.
----@param x number @Degrees.
----@return number @Radians.
 function math.radians(x) return x * math.pi / 180 end
-
----Converts radians to degrees.
----@param x number @Radians.
----@return number @Degrees.
 function math.degress(x) return x * 180 / math.pi end
 
 ---Checks if value is NaN.

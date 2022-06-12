@@ -4,10 +4,11 @@
 ---@overload fun(value: vec4): vec4
 ---@overload fun(tableOfFour: number[]): vec4
 ---@overload fun(value: number): vec4
----@param x number
----@param y number
----@param z number
----@param w number
+---@overload fun(value: string): vec4
+---@param x number?
+---@param y number?
+---@param z number?
+---@param w number?
 ---@return vec4
 function vec4.new(x, y, z, w) end
 
@@ -39,7 +40,7 @@ function vec4.tmp() end
 ---@field y number
 ---@field z number
 ---@field w number
----@constructor fun(x: number, y: number, z: number, w: number): vec4
+---@constructor fun(x: number?, y: number?, z: number?, w: number?): vec4
 
 ---Makes a copy of a vector.
 ---@return vec4
@@ -161,7 +162,7 @@ function vec4:distanceSquared(otherVector) end
 function vec4:closerToThan(otherVector, distanceThreshold) end
 
 ---@param otherVector vec4
----@return number
+---@return number @Radians.
 function vec4:angle(otherVector) end
 
 ---@param otherVector vec4

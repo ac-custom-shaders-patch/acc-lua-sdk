@@ -7,6 +7,7 @@ require './common/ac_audio'
 __definitions()
 
 -- extra additions:
+
 ---Gets chase camera settings.
 ---@return { distance: number, height: number, pitch: number }
 function ac.getCameraParameters(index)

@@ -17,9 +17,36 @@ typedef struct {
   lua_string_ref data;
   uint64_t data_hash;
 } lua_string_cached_ref;
+
+typedef struct {
+  const char* p_begin;
+  const char* p_end;
+} blob_view;
 ]]
 
 __util = {}
+
+function __util.blob(data)
+  if type(data) ~= 'string' then
+    if not data then return nil end
+    if type(data) == 'cdata' then
+      local b = ffi.new('blob_view')
+      b.p_begin = ffi.cast('const char*', data)
+      b.p_end = b.p_begin + ffi.sizeof(data)
+      return b
+    end
+    data = tostring(data)
+  end
+  local b = ffi.new('blob_view')
+  b.p_begin = data
+  b.p_end = b.p_begin + #data
+  return b
+end
+
+function __util.disposable(key)
+  if key == 0 then return function() end end
+  return function() ffi.C.lj_unlink_inner(key) end
+end
 
 function __util.ffistrsafe(str, len)
   for i = 0, len do
@@ -90,8 +117,9 @@ end
 
 function __util.cast_enum(value, min, max, def)
   if value == nil then return def end
-  local i = math.floor(tonumber(value))
-  if i < min or i > max then return def end
+  local i = math.floor(tonumber(value) or 0)
+  -- if i < min or i > max then return def end
+  if i < min then return def end
   return i
 end
 
@@ -212,6 +240,21 @@ function __util.cast_mat3x3(ret, arg, def)
   return ret
 end
 
+function __util.cast_mat4x4(ret, arg, def)
+  if ffi.istype('mat4x4', arg) then return arg end
+  if arg == nil then return def end
+  if type(arg) == 'cdata' then
+    error('Cannot convert '..tostring(arg)..' to mat4x4', 2)
+  else
+    local num = tonumber(arg) or 0
+    ret.row1:set(num, num, num)
+    ret.row2:set(num, num, num)
+    ret.row3:set(num, num, num)
+    ret.row4:set(num, num, num)
+  end
+  return ret
+end
+
 local __u_def_mat4x4 = nil
 function __util.ensure_mat4x4(arg)
   if __u_def_mat4x4 == nil then __u_def_mat4x4 = mat4x4() end
@@ -225,12 +268,14 @@ end
 
 function __util.secure_refbool(arg, def)
   if ffi.istype('refbool', arg) then return arg end
+  if def == nil then return nil end
   def.value = arg and true or false
   return def
 end
 
 function __util.secure_refnumber(arg, def)
   if ffi.istype('refnumber', arg) then return arg end
+  if def == nil then return nil end
   def.value = arg and true or false
   return def
 end
@@ -280,8 +325,10 @@ function __util.ensure_rgbm_nil(arg)
   return ffi.istype('rgbm', arg) and arg or nil
 end
 
+local tb = debug.traceback
+
 function __util.cbCall(fn, ...)
-  local s, err = pcall(fn, ...)
+  local s, err = xpcall(fn, tb, ...)
   if not s then
     ac.error('Error in callback: '..tostring(err))
   end
@@ -347,6 +394,27 @@ function __util.updateInner(dt)
   end
 end
 
+local __toDispose, __toDisposeN = {}, 0
+function __script.handleError()
+  for i = __toDisposeN, 1, -1 do
+    pcall(__toDispose[i])
+  end
+  __toDisposeN = 0
+end
+
+function __util.pushEnsureToCall(fn)
+  local n = __toDisposeN + 1
+  __toDispose[n], __toDisposeN = fn, n
+end
+
+function __util.popEnsureToCall(fn)
+  local n = __toDisposeN
+  if n > 0 then
+    __toDispose[n]()
+    __toDisposeN = n - 1
+  end
+end
+
 -- Simple JSON encoder based on json.lua by rxi (but slightly streamlined) for easier passing of complex data
 -- to FFI bindings. Whole idea is far from optimal, but calls that need complex data don’t usually need high
 -- performance anyway.
@@ -366,6 +434,6 @@ function __util.json(v, s)
       or '{'..table.concat(table.map(v, function (i, k) return __util.json(tostring(k))..':'..__util.json(i, s) end), ',')..'}', nil
     return s
   end
-  return t == 'string' and '"'..string.gsub(v, '[\1-\31\\"]', __escapeChar)..'"'
+  return (t == 'string' or t == 'cdata') and '"'..string.gsub(tostring(v), '[\1-\31\\"]', __escapeChar)..'"'
     or (t == 'boolean' or t == 'number' and v == v and v > -math.huge and v < math.huge) and tostring(v) or 'null'
 end
