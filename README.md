@@ -37,7 +37,9 @@ A few places in this repo that might interest you:
 # Prepared scripts to use as examples
 
 - [Built-in apps](https://github.com/ac-custom-shaders-patch/app-csp-defaults);
+- [Built-in internal scripts](https://github.com/ac-custom-shaders-patch/acc-lua-internal);
 - [Built-in postprocessing filters](https://github.com/ac-custom-shaders-patch/acc-extension-config/tree/master/lua/pp-filters);
 - [Default WeatherFX implementation](https://github.com/ac-custom-shaders-patch/acc-weatherfx-base);
+- [Paintshop app](https://github.com/ac-custom-shaders-patch/app-paintshop);
 - [Various Lua examples](https://github.com/ac-custom-shaders-patch/acc-lua-examples).
 
