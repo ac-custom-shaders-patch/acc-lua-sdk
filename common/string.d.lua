@@ -96,6 +96,6 @@ function string.reggmatch(self, pattern, ignoreCase) end
 ---@param pattern integer @Regular expression.
 ---@param repl    string|table|function @Replacement value. Used in the same way as with `string.gsub()`, could be a table or a function.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
----@return fun():string, ... @Iterator with captured elements if there are any capture groups in the pattern, or the whole captured string otherwise.
+---@return string @String with found entries replaced.
 ---@nodiscard
 function string.reggsub(self, pattern, repl, ignoreCase) end

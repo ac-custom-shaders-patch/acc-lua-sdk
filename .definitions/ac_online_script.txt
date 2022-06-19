@@ -1,4 +1,4 @@
-ui.registerOnlineExtra(iconID: string, title: string, availableCallback: integer, uiCallback: integer, closeCallback: integer, flags: ui.OnlineExtraFlags): lua_linked_id
+ui.registerOnlineExtra(iconID: string, title: string, availableCallback: integer, uiCallback: integer, closeCallback: integer, flags: ui.OnlineExtraFlags, toolFlags: ui.WindowFlags = ImGuiWindowFlags_None, toolSize: vec2 = vec2(320, 400)): lua_linked_id
 ac.getUserSteamID(): string
 ac.loadSoundbank(soundbank: string, guids: string = nullptr): boolean // Returns `true` if both files were found. 
 ac.isAudioReady(): boolean
@@ -315,6 +315,7 @@ ac.restartAssettoCorsa(raceIni: string = nullptr)
 ac.shutdownAssettoCorsa()
 ac.sendChatMessage(command: string): boolean // Returns `false` if message couldn’t be sent (trying to send too often, or not online)
 ac.onChatMessage(callback: integer): lua_linked_id
+ac.setReverbValue(reverbValue: number)
 ac.setCameraPosition(pos: vec3)
 ac.setCameraDirection(look: vec3, up: vec3 = vec3(0, 1, 0))
 ac.setCameraFOV(fov: number)
@@ -346,6 +347,10 @@ physics.setCarBodyDamage(carIndex: integer, bodyDamage: vec4)
 physics.setCarEngineLife(carIndex: integer, engineLife: number)
 physics.setCarBallast(carIndex: integer, ballast: number)
 physics.setCarRestrictor(carIndex: integer, restrictor: number)
+physics.setCarCollisions(carIndex: integer, active: boolean)
+physics.allowCarDRS(carIndex: integer, active: boolean)
+physics.setCarDRS(carIndex: integer, active: boolean)
+physics.setExtraAIGrip(carIndex: integer, value: number)
 physics.setCarPenalty(penaltyType: ac.PenaltyType, penaltyParam: integer = -1)
 physics.awakeCar(carIndex: integer)
 physics.addForce(carIndex: integer, position: vec3, posLocal: boolean, force: vec3, forceLocal: boolean)

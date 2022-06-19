@@ -46,6 +46,7 @@ rgb.colors = {
   lime = rgb(0, 1, 0),
   olive = rgb(0.5, 0.5, 0),
   yellow = rgb(1, 1, 0),
+  orange = rgb(1, 0.5, 0),
   navy = rgb(0, 0, 0.5),
   blue = rgb(0, 0, 1),
   teal = rgb(0, 0.5, 0.5),

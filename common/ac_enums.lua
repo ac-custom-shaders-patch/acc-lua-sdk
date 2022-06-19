@@ -515,6 +515,9 @@ ac.GamepadButton = __enum({ override = '*.*/gamepadButtonID:integer' }, {
   B = 0x2000,
   X = 0x4000,
   Y = 0x8000,
+  PlayStation = 0x10000, -- only for DualSense gamepads
+  Microphone = 0x20000, -- only for DualSense gamepads
+  Pad = 0x40000, -- only for DualSense gamepads
 })
 
 ac.GamepadAxis = __enum({ override = '*.*/gamepadAxisID:integer' }, {
@@ -524,4 +527,10 @@ ac.GamepadAxis = __enum({ override = '*.*/gamepadAxisID:integer' }, {
   LeftThumbY = 3,
   RightThumbX = 4,
   RightThumbY = 5
+})
+
+ac.GamepadType = __enum({ cpp = 'joypad_type' }, {
+  None = 0, -- No gamepad in that slot.
+  XBox = 1, -- Regular XBox gamepad.
+  DualSense = 2, -- DualSense gamepad.
 })

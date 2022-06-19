@@ -34,6 +34,12 @@ function math.poissonSamplerCircle(size)
   return result
 end
 
+---Generates a random number in [0, INT32_MAX) range. Can be a good argument for `math.randomseed()`.
+---@return integer
+function math.randomKey()
+  return ffi.C.lj_random_seed()
+end
+
 ---Generates random number based on a seed.
 ---@param seed integer|boolean|string @Seed.
 ---@return number @Random number from 0 to 1.

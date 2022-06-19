@@ -17,6 +17,7 @@ require './common/ac_gameplay'
 require './common/ac_game'
 require './common/ac_car_control'
 require './common/ac_apps'
+-- require './common/ac_extras_leapmotion'
 
 ---Draw virtual mirror.
 ---@param pos vec2

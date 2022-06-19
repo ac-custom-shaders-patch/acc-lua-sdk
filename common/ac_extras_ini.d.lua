@@ -16,6 +16,11 @@
 ---@return T
 function ac.INIConfig:get(section, key, defaultValue, offset) end
 
+---Attempts to load a 1D-to-1D LUT from an INI file, supports both inline “(|X=Y|…|)” LUTs and separate files next to configs (only
+---for configs loaded by filename or from car data)
+---@return ac.DataLUT11? @Returns `nil` if there is no such key or no such file.
+function ac.INIConfig:tryGetLut(section, key) end
+
 ---Iterates over sections of INI file with a certain prefix. Order matches order of CSP parsing such data.
 ---
 ---Example:

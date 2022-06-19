@@ -50,13 +50,13 @@ ffi.metatype('cloudscover', {
   __index = {
 
     ---@param filename string
-    ---@param maxSize number @If non-zero, sets a maximum size for MIPs to load. Any MIPs larger than that will be skipped. Only works with BC6H/BC7 compression, or with DXT1/3/5/RGBA8888 if using new loader option is enabled.
+    ---@param maxSize number? @If non-zero, sets a maximum size for MIPs to load. Any MIPs larger than that will be skipped. Only works with BC6H/BC7 compression, or with DXT1/3/5/RGBA8888 if using new loader option is enabled.
     setTexture = function (s, filename, maxSize) ffi.C.lj_cloudscover_set_texture__impl(s, tostring(filename), tonumber(maxSize) or 0) end,
 
     getTextureState = ffi.C.lj_cloudscover_get_texture_state__impl,
 
     ---@param filename string
-    ---@param maxSize number @If non-zero, sets a maximum size for MIPs to load. Any MIPs larger than that will be skipped. Only works with BC6H/BC7 compression, or with DXT1/3/5/RGBA8888 if using new loader option is enabled.
+    ---@param maxSize number? @If non-zero, sets a maximum size for MIPs to load. Any MIPs larger than that will be skipped. Only works with BC6H/BC7 compression, or with DXT1/3/5/RGBA8888 if using new loader option is enabled.
     setMaskTexture = function (s, filename, maxSize) ffi.C.lj_cloudscover_set_mask_texture__impl(s, tostring(filename), tonumber(maxSize) or 0) end,
 
     getMaskTextureState = ffi.C.lj_cloudscover_get_mask_texture_state__impl,

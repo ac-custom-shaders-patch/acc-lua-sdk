@@ -14,6 +14,19 @@ __definitions()
 ---@single-instance
 script = {}
 
+---Reference to information about state of associated car.
+---@type ac.StateCar
+car = nil
+
+---Reference to information about state of simulation.
+---@type ac.StateSim
+sim = nil
+
+function __script.__init__()
+  car = ac.getCar(__carIndex)
+  sim = ac.getSim()
+end
+
 --[[? if (ctx.ldoc) out(]]
 
 ---Index of connected gamepad.

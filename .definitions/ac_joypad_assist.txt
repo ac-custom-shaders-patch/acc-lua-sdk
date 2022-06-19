@@ -1,7 +1,13 @@
 ac.getJoypadState(): ac.StateJoypadData
+ac.setDualSenseTriggerNoEffect(triggerIndex: integer)
+ac.setDualSenseTriggerContinuousResitanceEffect(triggerIndex: integer, startPosition: number, force: number)
+ac.setDualSenseTriggerSectionResitanceEffect(triggerIndex: integer, startPosition: number, endPosition: number)
+ac.setDualSenseTriggerExtendedEffect(triggerIndex: integer, startPosition: number, beginForce: number, middleForce: number, endForce: number, frequency: number, keepEffect: boolean)
 ac.setCustomDriverModelSteerAngle(angle: number)
 
 struct ac.StateJoypadData {
+	int gamepadIndex;
+	int gamepadType;
 	float steeringSpeed;
 	float steeringGamma;
 	float steeringFilter;

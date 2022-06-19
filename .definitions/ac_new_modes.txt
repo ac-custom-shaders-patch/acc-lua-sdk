@@ -310,6 +310,7 @@ ac.restartAssettoCorsa(raceIni: string = nullptr)
 ac.shutdownAssettoCorsa()
 ac.sendChatMessage(command: string): boolean // Returns `false` if message couldn’t be sent (trying to send too often, or not online)
 ac.onChatMessage(callback: integer): lua_linked_id
+ac.setReverbValue(reverbValue: number)
 ac.setCameraPosition(pos: vec3)
 ac.setCameraDirection(look: vec3, up: vec3 = vec3(0, 1, 0))
 ac.setCameraFOV(fov: number)

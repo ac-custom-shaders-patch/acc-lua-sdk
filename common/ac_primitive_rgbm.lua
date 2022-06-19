@@ -17,6 +17,7 @@ return {
     colors.lime = rgbm(0, 1, 0, 1)
     colors.olive = rgbm(0.5, 0.5, 0, 1)
     colors.yellow = rgbm(1, 1, 0, 1)
+    colors.orange = rgbm(1, 0.5, 0, 1)
     colors.navy = rgbm(0, 0, 0.5, 1)
     colors.blue = rgbm(0, 0, 1, 1)
     colors.teal = rgbm(0, 0.5, 0.5, 1)

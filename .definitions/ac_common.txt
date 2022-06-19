@@ -190,6 +190,8 @@ ac.getUI(): ac.StateUi
 ac.getCar(index: integer): ac.StateCar
 ac.getVR(): ac.StateVr
 ac.getCarPhysics(index: integer): ac.StateCarPhysics
+ac.getDualSense(gamepadIndex: integer): ac.StateDualsense
+ac.setDualSense(gamepadIndex: integer, priority: number = 0, holdFor: number = 0.5): ac.StateDualsenseOutput // Returns `nil` if there is no applicable controller, make sure to check for it
 web.loadRemoteModel(url: string, callback: integer)
 web.loadRemoteAnimation(url: string, callback: integer)
 web.loadRemoteAssets(url: string, callback: integer)
@@ -381,6 +383,8 @@ struct ac.StateCar {
 	const bool extraE;
 	const bool extraF;
 	const bool kersCharging;
+	const bool turningLightsActivePhase;
+	const rgb headlightsColor;
 	const float kersCharge;
 	const float kersInput;
 	const float kersCurrentKJ;
@@ -618,6 +622,11 @@ struct ac.StateSim {
 	const lua_vector_float lapSplits; // Normalized positions of track splits
 	const double handshakeServerTime; // Server time of the handshake, in milliseconds
 	const double currentServerTime; // Current server time (synced on all clients), in milliseconds. Resets to 0 when new race session (P/Q/R) starts.
+	const rgb skyColor; // Sky color
+	const rgb horizonColor; // Horizon color
+	const rgb fogColor; // Fog color
+	const rgb lightColor; // Light (sun or moon) color
+	const vec3 lightDirection; // Light (sun or moon) direction
 }
 
 struct ac.StateUi {
@@ -673,4 +682,31 @@ struct ac.StateVr {
 	const int oculusTouches; // Oculus-specific touches
 	const int activeHand; // index of a hand that is actively moving, or -1
 	const state_vr_hand hands[2];
+}
+
+struct ac.StateDualsenseTouch {
+	const vec2 delta;
+	const vec2 pos;
+	const int id;
+	const bool down;
+}
+
+struct ac.StateDualsense {
+	const vec3 accelerometer;
+	const vec3 gyroscope;
+	const float battery;
+	const state_dualsense_touch touches[2];
+	const bool batteryCharging;
+	const bool batteryFullyCharged;
+	const bool headphonesConnected;
+	const bool connected;
+}
+
+struct ac.StateDualsenseOutput {
+	rgbm lightBar;
+	int microphoneLED; // 0 for disabled, 1 for enabled, 2 for flashing
+	int playerLEDsBrightness; // 0 for max, 1 for medium, 2 for low
+	bool disableLEDs;
+	bool playerLEDsFade;
+	bool playerLEDs[5];
 }

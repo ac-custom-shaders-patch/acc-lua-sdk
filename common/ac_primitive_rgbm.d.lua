@@ -49,6 +49,7 @@ rgbm.colors = {
   lime = rgbm(0, 1, 0, 1),
   olive = rgbm(0.5, 0.5, 0, 1),
   yellow = rgbm(1, 1, 0, 1),
+  orange = rgbm(1, 0.5, 0, 1),
   navy = rgbm(0, 0, 0.5, 1),
   blue = rgbm(0, 0, 1, 1),
   teal = rgbm(0, 0.5, 0.5, 1),

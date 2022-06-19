@@ -2,6 +2,14 @@ ac.accessCarPhysics(): ac.StateCphysCarData
 ac.addForce(position: vec3, posLocal: boolean, force: vec3, forceLocal: boolean)
 ac.setColliderOffset(index: integer, offset: vec3): boolean // Returns `false` if there is no such collider.
 ac.setWingGain(wingIndex: integer, cdGain: number, clGain: number)
+ac.setGearsFinalRatio(finalRatio: number)
+ac.setGearsGrinding(grinding: boolean)
+ac.setDrivetrainDamageRPMWindow(newValue: number)
+ac.setAntirollBars(kFront: number, kRear: number)
+ac.setEngineRPM(newValue: number)
+ac.setEngineLifeLeft(newValue: number)
+ac.setEngineStalling(value: boolean)
+ac.setTyreInflation(tyre: integer, inflation: number)
 
 struct ac.StateCphysWheelData {
 	float angularSpeed;
@@ -10,7 +18,7 @@ struct ac.StateCphysWheelData {
 	float slipRatio;
 	float ndSlip;
 	float load;
-	float inflation; // Can be changed, set to 0 to blow up tyre
+	float inflation; // For changing use `ac.setTyreInflation(tyreIndex, pressure)`
 }
 
 struct ac.StateCphysCarData {
@@ -21,28 +29,30 @@ struct ac.StateCphysCarData {
 	float damageLevel[4];
 	float speedKmh;
 	float ffb;
-	float rpm; // Can be changed
-	float engineLifeLeft; // Can be changed
-	float drivetrainDamageRPMWindow; // Can be changed
+	float rpm; // For changing use `ac.setEngineRPM()`
+	float engineLifeLeft; // For changing use `ac.setEngineLifeLeft()`
+	float drivetrainDamageRPMWindow; // For changing use `ac.setDrivetrainDamageRPMWindow()`
 	float drivetrainOriginalRPMWindow;
+	float antirollBarFront;
+	float antirollBarRear;
 	int absMode;
 	int tractionControlMode;
 	int gear;
 	bool tractionControlInAction;
 	bool areControlsLocked;
-	bool isEngineStallEnabled; // Can be changed
+	bool isEngineStallEnabled; // For changing use `ac.setEngineStalling()`
 	bool isBlackFlagged;
 	bool enforceCustomInputScheme; // If set to `true`, use custom input scheme even if input method is not wheel (if not possible, disable input entirely)
+	bool isGearGrinding; // For changing use `ac.setGearsGrinding()`
 	float gas; // Can be changed (unless controls are locked or car has black flag)
 	float brake; // Can be changed (unless controls are locked or car has black flag)
 	float steer; // Can be changed (unless controls are locked or car has black flag)
 	float clutch; // Can be changed (unless controls are locked or car has black flag)
 	float handbrake; // Can be changed (unless controls are locked or car has black flag)
+	int requestedGearIndex; // Can be changed (unless controls are locked or car has black flag)
 	bool gearUp; // Can be changed (unless controls are locked or car has black flag)
 	bool gearDown; // Can be changed (unless controls are locked or car has black flag)
 	bool isShifterSupported; // Can be changed (unless controls are locked or car has black flag)
-	bool isGearGrinding; // Can be changed
-	int requestedGearIndex; // Can be changed (unless controls are locked or car has black flag)
 	float controllerInputs[8]; // Set values here and access them as SCRIPT_0...SCRIPT_7 inputs in dynamic controllers. For emissives and such, can be accessed as CPHYS_SCRIPT_0..., other Lua scripts can access via car physics state.
 	state_cphys_wheel_data wheels[4];
 }

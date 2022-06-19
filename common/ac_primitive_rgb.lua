@@ -47,6 +47,7 @@ return {
     colors.lime = rgb(0, 1, 0)
     colors.olive = rgb(0.5, 0.5, 0)
     colors.yellow = rgb(1, 1, 0)
+    colors.orange = rgb(1, 0.5, 0)
     colors.navy = rgb(0, 0, 0.5)
     colors.blue = rgb(0, 0, 1)
     colors.teal = rgb(0, 0.5, 0.5)

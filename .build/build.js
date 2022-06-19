@@ -648,7 +648,7 @@ function getLuaCode(opts, definitionsCallback) {
             comment: unwrap(commentBase).replace(/^\/\*\s*|\s\*\/$/g, '') 
           };
         }
-        $.fail(`failed to parse argument: “${x}”`)
+        $.fail(`failed to parse argument: “${x}” (“${unwrap(x)}”)`)
       })
       .filter(x => x);
     ret.forEach(x => extendArg(x, name, ret, opts.customTypes));
@@ -792,6 +792,7 @@ function getLuaCode(opts, definitionsCallback) {
     // if (i == -1) return {e2:expr};
     if (/(?:LUAFIELD_SET|LUASTATIC_SET)\([\w:]+, [\w:]+, ([\s\S]+)\)/.test(expr)) return RegExp.$1;
     if (/(?:LUAFIELD_ARRAY_FILL|LUAFIELD_ARRAY_STRUCT)\([\w:]+, \d+, [\w:]+, ([\s\S]+)\)/.test(expr)) return RegExp.$1;
+    if (/(?:LUAFIELD_ARRAY_CUSTOM)\([\w:]+, \d+, [\w:]+\)/.test(expr)) return RegExp.$1;
     if (/LUASTATIC_SET_KEY\([\w:]+, [\w:]+, ([\s\S]+), [^,]+\)/.test(expr)) return RegExp.$1;
     // return expr.substr(i + 1);
     return {e2:expr};
