@@ -113,8 +113,11 @@ end
 ---from crashing, C++ exceptions halt Lua script that triggered them until script gets a full reload).
 ---@return boolean @Returns `false` if shader is not yet ready and no drawing occured (happens only if `async` is set to `true`).
 --[[@tableparam params {
+  p1: vec3 = vec3(0, 0, 0),
+  p2: vec3 = vec3(0, 1, 0),
+  p3: vec3 = vec3(1, 1, 0),
+  p4: vec3 = vec3(1, 0, 0),
   blendMode: render.BlendMode = render.BlendMode.AlphaBlend "Blend mode. Default value: `render.BlendMode.AlphaBlend`.",
-  depthMode: render.DepthMode = render.DepthMode.ReadOnlyLessEqual "Depth mode. Default value: `render.DepthMode.ReadOnlyLessEqual`.",
   async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",

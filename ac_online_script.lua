@@ -26,7 +26,7 @@ ui.OnlineExtraFlags = __enum({ cpp = 'online_extra_flags' }, {
 local function __getServerConfig(section, key, def)
   if type(def) == 'boolean' then return ffi.C.lj_cfg_server_bool(__util.str(section), __util.str(key), def) end
   if type(def) == 'number' then return ffi.C.lj_cfg_server_decimal(__util.str(section), __util.str(key), def) end
-  if type(def) == 'string' then return __util.strref(ffi.C.lj_cfg_server_string(__util.str(section), __util.str(key), def)) end
+  if type(def) == 'string' then return __util.strrefr(ffi.C.lj_cfg_server_string(__util.str(section), __util.str(key), def)) end
   if rgb.isrgb(def) then return ffi.C.lj_cfg_server_rgb(__util.str(section), __util.str(key), def) end
   if rgbm.isrgbm(def) then return ffi.C.lj_cfg_server_rgbm(__util.str(section), __util.str(key), def) end
   if vec2.isvec2(def) then return ffi.C.lj_cfg_server_vec2(__util.str(section), __util.str(key), def) end

@@ -14,7 +14,7 @@ refbool = ffi.metatype('refbool', { __index = {
   ---@param newValue boolean
   ---@return refbool
   set = function (s, newValue) s.value = newValue return s end
-} })
+}, __call = function(s) return s.value end })
 
 ---Stores a numerical value and can be used as a reference to it.
 ---@class refnumber
@@ -27,5 +27,5 @@ refnumber = ffi.metatype('refnumber', { __index = {
   ---@param newValue number
   ---@return refnumber
   set = function (s, newValue) s.value = newValue return s end
-} })
+}, __call = function(s) return s.value end })
 

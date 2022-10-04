@@ -583,6 +583,8 @@ function ui.pushID(value)
   end
 end
 
+local __itep = refbool()
+
 ---Text input control. Returns updated string (which would be the input string unless it changed, so no)
 ---copying there. Second return value would change to `true` when text has changed. Example:
 ---```
@@ -597,9 +599,9 @@ end
 ---@return boolean
 ---@return boolean
 function ui.inputText(label, str, flags)
-  local changed = ffi.C.lj_inputText_inner__ui(__util.str(label), __util.str(str), tonumber(flags) or 0)
-  if changed == nil then return str, false, ui.itemActive() and ui.keyPressed(ui.Key.Enter) end
-  return ffi.string(changed), true, ui.itemActive() and ui.keyPressed(ui.Key.Enter)
+  local changed = ffi.C.lj_inputText_inner__ui(__util.str(label), __util.str(str), tonumber(flags) or 0, __itep)
+  if changed == nil then return str, false, __itep.value end
+  return ffi.string(changed), true, __itep.value
 end
 
 ---Color picker control. Returns true if color has changed (as usual with Lua, colors are passed)
@@ -886,7 +888,7 @@ local _rn = refnumber()
 ---
 ---To enter value with keyboard, hold Ctrl and click on it.
 ---@param label string @Slider label.
----@param value refnumber @Current slider value.
+---@param value refnumber|number @Current slider value.
 ---@param min number? @Default value: 0.
 ---@param max number? @Default value: 1.
 ---@param format string|'%.3f'|nil @C-style format string. Default value: '%.3f'.
@@ -1353,7 +1355,7 @@ ffi.metatype('mmfholder', {
 
     ---Some debug information for testing and fixing things.
     ---@return string
-    debugText = function (s) return __util.strref(ffi.C.lj_mmfholder_debugtext__ui(s)) end,
+    debugText = function (s) return __util.strrefr(ffi.C.lj_mmfholder_debugtext__ui(s)) end,
   }
 })
 
@@ -1532,7 +1534,7 @@ ffi.metatype('uirt', {
     ---imported image to the full size of the canvas.
     ---@return string|nil @Binary data, or `nil` if binary data export has failed.
     encode = function(s)
-      return __util.strref(ffi.C.lj_uirt_tobytes__ui(s))
+      return __util.strrefp(ffi.C.lj_uirt_tobytes__ui(s))
     end,
 
     ---Returns texture resolution (or zeroes if element has been disposed).

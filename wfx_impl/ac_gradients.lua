@@ -22,7 +22,8 @@ ffi.metatype('extragradient', { __index = {} })
 ---@field isIncludedInCalculate boolean
 ---@field color rgb
 ---@field exponent number
----@constructor fun(t: { direction: vec3, sizeFull: number, sizeStart: number, isAdditive: boolean, isIncludedInCalculate: boolean, color: rgb, exponent: number }): ac.SkyExtraGradient
+---@constructor fun(t: { direction: vec3, sizeFull: number, sizeStart: number, isAdditive: boolean, isIncludedInCalculate: boolean, color: rgb, exponent: number }?): ac.SkyExtraGradient
+
 function ac.SkyExtraGradient(t)
   local r = ffi.C.lj_extragradient_new__impl()
   if type(t) == 'table' then

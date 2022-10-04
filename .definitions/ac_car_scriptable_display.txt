@@ -47,6 +47,7 @@ ui.beginToolWindow(windowID: string, pos: vec2, size: vec2, noPadding: boolean)
 ui.endToolWindow()
 ui.beginTransparentWindow(windowID: string, pos: vec2, size: vec2, noPadding: boolean)
 ui.endTransparentWindow()
+ui.textHyperlink(text: string): boolean
 ui.text(text: string)
 ui.textAligned(text: string, alignment: vec2, size: vec2 = vec2())
 ui.textWrapped(text: string, wrapPos: number = 0)
@@ -77,7 +78,7 @@ ui.availableSpaceX(): number
 ui.availableSpaceY(): number
 ui.availableSpace(): vec2
 ui.imageSize(filename: string): vec2
-ui.decodeImage(data: string): string
+ui.decodeImage(data: string|any): string
 ui.drawImage(filename: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), keepAspectRatio: boolean = false)
 ui.drawImageRounded(filename: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), rounding: number = 1, corners: ui.CornerFlags = ImDrawCornerFlags_All)
 ui.drawImageQuad(filename: string, p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 0), uv3: vec2 = vec2(1, 1), uv4: vec2 = vec2(0, 1))
@@ -106,7 +107,7 @@ ui.pathClear()
 ui.pathLineTo(pos: vec2)
 ui.pathLineToMergeDuplicate(pos: vec2)
 ui.pathFillConvex(color: rgbm)
-ui.pathStroke(color: rgbm, closed: boolean, thickness: number = 1)
+ui.pathStroke(color: rgbm, closed: boolean = false, thickness: number = 1)
 ui.pathArcTo(center: vec2, radius: number, angleFrom: number, angleTo: number, numSegments: integer = 10)
 ui.pathUnevenArcTo(center: vec2, radius: vec2, angleFrom: number, angleTo: number, numSegments: integer = 10)
 ui.pathVariableArcTo(center: vec2, radiusFrom: number, radiusTo: number, angleFrom: number, angleTo: number, numSegments: integer = 10)
@@ -144,6 +145,7 @@ ui.popItemWidth()
 ui.pushTextWrapPosition(wrapPos: number)
 ui.popTextWrapPosition()
 ui.areaVisible(size: vec2): boolean
+ui.areaVisibleY(height: number): boolean
 ui.rectVisible(p1: vec2, p2: vec2): boolean
 ui.rectHovered(p1: vec2, p2: vec2, clip: boolean = true): boolean
 ui.setItemDefaultFocus()
@@ -312,6 +314,7 @@ ui.unloadImage(filename: string): boolean // Returns `true` if file was unloaded
 render.createRay(pos: vec3, dir: vec3, length: number = -1): ray
 render.createMouseRay(): ray
 render.createPointRay(onscreenPoint: vec2): ray
+ac.setHeatShimmerIntensity(key: integer, intensity: number): boolean
 ac.setABS(mode: integer)
 ac.setTC(mode: integer)
 ac.isTurboWastegateAdjustable(turboIndex: integer): boolean

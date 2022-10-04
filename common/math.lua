@@ -18,19 +18,32 @@ function math.gaussianAdjustment(x, k)
   return math.lerp((1 - i ^ k) * math.sign(x - 0.5), x * 2 - 1, math.log(i) * k * 0.5) * 0.5 + 0.5
 end
 
----Builds a list of points (vec2) arranged in a circle with poisson distribution.
+---Builds a list of points arranged in a square with poisson distribution.
+---@param size integer @Number of points.
+---@param tileMode boolean? @If set to `true`, resulting points would be tilable without breaking poisson distribution.
+---@return vec2[]
+function math.poissonSamplerSquare(size, tileMode)
+  size = math.floor(tonumber(size) or 0)
+  if size < 1 then return {} end
+  local arr = ffi.C.lj_poissonsampler_square(size, tileMode == true)
+  local result = {}
+  for i = 1, size do
+    result[i] = arr[i - 1]:clone()
+  end
+  return result
+end
+
+---Builds a list of points arranged in a circle with poisson distribution.
 ---@param size integer @Number of points.
 ---@return vec2[]
 function math.poissonSamplerCircle(size)
-  if not poissonData then
-    poissonData = __bound_array(ffi.typeof('vec2'), nil)
-  end
-  ffi.C.lj_poissonsampler_circle(poissonData, size)
+  size = math.floor(tonumber(size) or 0)
+  if size < 1 then return {} end
+  local arr = ffi.C.lj_poissonsampler_circle(size)
   local result = {}
-  for i = 1, #poissonData do
-    result[i] = poissonData:get(i)
+  for i = 1, size do
+    result[i] = arr[i - 1]:clone()
   end
-  poissonData:clear()
   return result
 end
 

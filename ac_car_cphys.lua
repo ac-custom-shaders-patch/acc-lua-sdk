@@ -4,6 +4,13 @@ __allow 'cphys'
 
 require './common/internal_import'
 
+--[[ ac.TractionType = __enum({ cpp = 'TractionType' }, {
+  RWD = 0,
+  FWD = 1,
+  AWD = 2,
+  AWD2 = 3,
+}) ]]
+
 -- automatically generated entries go here:
 __definitions()
 

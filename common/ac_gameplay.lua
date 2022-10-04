@@ -32,7 +32,7 @@ typedef struct {
 ---@return nil|string
 function ac.grabCamera(reason)
   local r = ffi.C.lj_grabbedcamera_new__gp(reason ~= nil and tostring(reason) or nil)
-  if r == nil then return nil, __util.strref(ffi.C.lj_grabbedcamera_lasterror__gp()) end
+  if r == nil then return nil, __util.strrefp(ffi.C.lj_grabbedcamera_lasterror__gp()) end
   return ffi.gc(r, ffi.C.lj_grabbedcamera_gc__gp), nil
 end
 

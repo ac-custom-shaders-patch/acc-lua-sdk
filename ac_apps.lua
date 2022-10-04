@@ -33,7 +33,7 @@ local _sslv, _ssrn
 ---@return {name: string, label: string, min: integer, max: integer, step: integer, value: integer, readOnly: boolean, units: string?, items: string[]?, defaultValue: integer?, showClicksMode: integer?}[]
 function ac.getSetupSpinners()
   if not _ssrn then _ssrn = refnumber() end
-  ffi.C.lj_getSetupSpinnerIDs_inner__apps(_ssrn)
+  ffi.C.lj_getSetupSpinners_inner__apps(_ssrn)
   _sslv = __getResult__() or _sslv
   return _sslv or error('Failed to get data', 2)
 end

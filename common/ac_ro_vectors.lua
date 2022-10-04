@@ -1,7 +1,7 @@
 --[[? for (const TYPE of ['int', 'float']){ out(]]
 
-ffi.cdef [[ typedef struct { const __TYPE__* _begin; const __TYPE__* _end; const __TYPE__* _cap; } lua_vector___TYPE__; ]]
-ffi.metatype('lua_vector___TYPE__', { 
+ffi.cdef [[ typedef struct { const __TYPE__* _begin; const __TYPE__* _end; const __TYPE__* _cap; } luavec___TYPE__; ]]
+ffi.metatype('luavec___TYPE__', { 
   __len = function (v)
     return v._end - v._begin
   end,

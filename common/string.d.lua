@@ -1,11 +1,12 @@
 ---Splits string into an array using separator.
 ---@param self string @String to split.
----@param separator string @Separator. If empty, string will be split into individual characters.
+---@param separator string? @Separator. If empty, string will be split into individual characters. Default value: ` `.
 ---@param limit integer? @Limit for pieces of string. Once reached, remaining string is put as a list piece.
 ---@param trimResult boolean? @Set to `true` to trim found strings. Default value: `false`.
 ---@param skipEmpty boolean? @Set to `false` to keep empty strings. Default value: `true` (for compatibility reasons).
+---@param splitByAnyChar boolean? @Set to `true` to split not by a string `separator`, but by any characters in `separator`.
 ---@return string[]
-function string.split(self, separator, limit, trimResult, skipEmpty) end
+function string.split(self, separator, limit, trimResult, skipEmpty, splitByAnyChar) end
 
 ---Splits string into a bunch of numbers (not in an array). Any symbol that isn’t a valid part of number is considered to be a delimiter. Does not create an array
 ---to keep things faster. To make it into an array, simply wrap the call in `{}`.
@@ -59,7 +60,7 @@ function string.pad(self, targetLength, pad, direction) end
 ---
 ---Note: regular expressions currently are in ECMAScript format, so backtracking is not supported. Also, in most cases they are slower than regular Lua patterns.
 ---@param self string @String to search in.
----@param pattern integer @Regular expression.
+---@param pattern string @Regular expression.
 ---@param init integer? @1-based offset to start searching from. Default value: `1`.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return integer? @1-based index of where the match occured, or `nil` if no match has been found.
@@ -72,7 +73,7 @@ function string.regfind(self, pattern, init, ignoreCase) end
 ---
 ---Note: regular expressions currently are in ECMAScript format, so backtracking is not supported. Also, in most cases they are slower than regular Lua patterns.
 ---@param self string @String to search in.
----@param pattern integer @Regular expression.
+---@param pattern string @Regular expression.
 ---@param init integer? @1-based offset to start searching from. Default value: `1`.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return string @Captured elements if there are any capture groups in the pattern, or the whole captured string otherwise.
@@ -83,7 +84,7 @@ function string.regmatch(self, pattern, init, ignoreCase) end
 ---
 ---Note: regular expressions currently are in ECMAScript format, so backtracking is not supported. Also, in most cases they are slower than regular Lua patterns.
 ---@param self string @String to search in.
----@param pattern integer @Regular expression.
+---@param pattern string @Regular expression.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return fun():string, ... @Iterator with captured elements if there are any capture groups in the pattern, or the whole captured string otherwise.
 ---@nodiscard
@@ -93,7 +94,7 @@ function string.reggmatch(self, pattern, ignoreCase) end
 ---
 ---Note: regular expressions currently are in ECMAScript format, so backtracking is not supported. Also, in most cases they are slower than regular Lua patterns.
 ---@param self string @String to search in.
----@param pattern integer @Regular expression.
+---@param pattern string @Regular expression.
 ---@param repl    string|table|function @Replacement value. Used in the same way as with `string.gsub()`, could be a table or a function.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return string @String with found entries replaced.

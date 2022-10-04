@@ -7,6 +7,11 @@ __dirname = nil
 ---Main CSP namespace.
 ac = {}
 
+---Get car tags. If there is no such car, returns `nil`.
+---@param carIndex integer @0-based car index.
+---@return string[]?
+function ac.getCarTags(carIndex) end
+
 ---FFI-accelerated list, acts like a regular list (consequent items, size and capacity, automatically growing, etc.)
 ---Doesn’t store nil values to act more like a Lua table.
 ---

@@ -24,7 +24,7 @@ typedef struct {
 } binaryinput;
 ]]
 
----@alias ac.ControlButtonModifiers {ctrl: boolean, shift: boolean, alt: boolean, ignore: boolean}
+---@alias ac.ControlButtonModifiers {ctrl: boolean, shift: boolean, alt: boolean, ignore: boolean, gamepad: boolean}
 
 ---@param id string
 ---@param key ui.KeyIndex?
@@ -38,6 +38,7 @@ function ac.ControlButton(id, key, modifiers, repeatPeriod)
     if modifiers.shift then m = m + 8 end
     if modifiers.alt then m = m + 4 end
     if modifiers.ignore then m = -1 end
+    if modifiers.gamepad then m = -2 end
   end
   return ffi.gc(ffi.C.lj_binaryinput_new__game(tostring(id), tonumber(key) or 0, m, tonumber(repeatPeriod) or 1e9), ffi.C.lj_binaryinput_gc__game)
 end
@@ -54,6 +55,13 @@ ffi.metatype('binaryinput', {
     pressed = ffi.C.lj_binaryinput_pressed__game,
 
     ---@return boolean
-    down = ffi.C.lj_binaryinput_down__game
+    down = ffi.C.lj_binaryinput_down__game,
+
+    ---@param value boolean? @Default value: `true`.
+    ---@return ac.ControlButton
+    setAlwaysActive = function(s, value)
+      ffi.C.lj_binaryinput_setalwaysactive__game(s, value ~= false)
+      return s
+    end
   }
 })

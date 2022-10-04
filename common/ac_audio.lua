@@ -4,6 +4,7 @@ ffi.cdef [[
 typedef struct {
   void* host_;
   void* nativeEvent_;
+  void* nativeChannel_;
   mat4x4 transform_;
   vec3 velocity_;
   float volume;
@@ -13,20 +14,24 @@ typedef struct {
   float cameraTrackMultiplier;
   bool inAutoLoopMode;
   bool reverbResponse_;
-  void* eventName_[4];
 } audioevent;
 ]]
 
 local __audioEventKeepAlive = {}
 
----@param eventName string @Event name, for example, `'/cars/lada_revolution/door'` (leading “/” or “event:” prefix are optional).
----@param reverbResponse boolean @Set to true if audio event should be affected by reverb in tunnels and such.
----@return ac.AudioEvent
-function ac.AudioEvent(eventName, reverbResponse)
-  local created = ffi.C.lj_audioevent_new(tostring(eventName), reverbResponse and true or false)
-  __audioEventKeepAlive[#__audioEventKeepAlive + 1] = created
-  return ffi.gc(created, ffi.C.lj_audioevent_gc)
-end
+ac.AudioEvent = setmetatable({
+  fromFile = function(params, reverbResponse)
+    local created = ffi.C.lj_audioevent_newfile(__util.json(params), reverbResponse and true or false)
+    __audioEventKeepAlive[#__audioEventKeepAlive + 1] = created
+    return ffi.gc(created, ffi.C.lj_audioevent_gc)
+  end
+}, {
+  __call = function(_, eventName, reverbResponse)
+    local created = ffi.C.lj_audioevent_new(tostring(eventName), reverbResponse and true or false)
+    __audioEventKeepAlive[#__audioEventKeepAlive + 1] = created
+    return ffi.gc(created, ffi.C.lj_audioevent_gc)
+  end
+})
 
 ---Audio event is a audio emitter which uses a certain event from one of loaded FMOD soundbanks.
 ---@class ac.AudioEvent
@@ -56,7 +61,7 @@ ffi.metatype('audioevent', { __index = {
 
   ---Returns `true` if event is loaded successfully. If event does not load, make sure soundbank is loaded first, and that event name is correct.
   ---@return boolean
-  isValid = function (s) return s.host_ ~= nil and s.nativeEvent_ ~= nil end,
+  isValid = function (s) return s.host_ ~= nil and (s.nativeEvent_ ~= nil or s.nativeChannel_ ~= nil) end,
 
   ---Returns `true` if audio event is playing.
   ---@return boolean

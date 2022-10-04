@@ -121,35 +121,40 @@ ac.getServerPortTCP(): integer
 ac.getServerPortUDP(): integer
 ac.isTaggedAsFriend(username: string): boolean
 ac.tagAsFriend(username: string, isFriend: boolean = true)
+ac.refreshCarShape(carIndex: integer = 0)
+ac.refreshCarColor(carIndex: integer = 0)
 ac.updateDriverModel(carIndex: integer = -1)
 ac.encodeHalf(v: number): integer
 ac.encodeHalf2(v: vec2): integer
 ac.decodeHalf(v: integer): number
 ac.decodeHalf2(v: integer): vec2
+ac.onSessionStart(callback: integer): lua_linked_id
 ac.onCarJumped(carIndex: integer, callback: integer): lua_linked_id
 ac.onClientConnected(callback: integer): lua_linked_id
 ac.onClientDisconnected(callback: integer): lua_linked_id
+ac.onControlSettingsChanged(callback: integer): lua_linked_id
 ac.onFolderChanged(folder: string, filter: string, recursive: boolean, callback: integer): lua_linked_id
 ac.onCSPConfigChanged(cspModuleID: string, callback: integer): lua_linked_id
 ac.onScreenshot(callback: integer): lua_linked_id
-ac.checksumSHA256(data: string): string
-ac.checksumXXH(data: string): integer
+ac.checksumSHA256(data: string|any): string
+ac.checksumXXH(data: string|any): integer
 ac.uniqueMachineKey(): string
-ac.compress(data: string, type: ac.CompressionType, level: integer = 9): string
-ac.decompress(data: string): string
-ac.encodeBase64(data: string, trimResult: boolean = false): string
+ac.compress(data: string|any, type: ac.CompressionType, level: integer = 9): string
+ac.decompress(data: string|any): string
+ac.encodeBase64(data: string|any, trimResult: boolean = false): string
 ac.decodeBase64(data: string): string
 ac.utf8To16(data: string): string
-ac.utf16To8(data: string): string
-ac.broadcastSharedEvent(key: string, data: string): integer // Returns number of listeners to the event with given key.
+ac.utf16To8(data: string|any): string
+ac.broadcastSharedEvent(key: string, data: string|any): integer // Returns number of listeners to the event with given key.
 ac.onSharedEvent(key: string, callback: integer): lua_linked_id
 ac.setVRHandBusy(hand: integer, busy: boolean)
 ac.setVRHandVibration(hand: integer, frequency: number, amplitude: number, duration: number = 0.01)
+ac.getCarIndexInFront(carMainIndex: integer, distance: refnumber = nullptr): integer
 ac.getGapBetweenCars(carMainIndex: integer, carComparingToIndex: integer): number
 io.getAttributes(filename: string): lua_file_attributes
 io.loadAsync(filename: string, callback: integer)
-io.save(filename: string, data: string): boolean
-io.saveAsync(filename: string, data: string, callback: integer)
+io.save(filename: string, data: string|any): boolean
+io.saveAsync(filename: string, data: string|any, callback: integer)
 io.exists(filename: string): boolean
 io.dirExists(filename: string): boolean
 io.fileExists(filename: string): boolean
@@ -233,8 +238,11 @@ struct ac.StateWheel {
 	const float tyreLoadedRadius;
 	const float waterThickness; // Water thickness in meters
 	const float dz; // @hidden
+	const float dx;
 	const float dy;
 	const float mz; // Self aligning torque
+	const float fx;
+	const float fy;
 	const vec3 contactNormal; // Normal of a contact point surface
 	const vec3 contactPoint; // Contact point position in world coordinates
 	const vec3 pos; // @hidden
@@ -342,10 +350,10 @@ struct ac.StateCar {
 	const int lastLapCutsCount; // Number of lap cuts in last lap
 	const float aiLevel; // AI level from 0 to 1 (or -1 if there is no AI)
 	const float aiAggression; // AI aggression from 0 to 1 (or -1 if there is no AI)
-	const lua_vector_int currentSplits; // Time for different splits of current lap, in milliseconds
-	const lua_vector_int lastSplits; // Time for different splits of last lap, in milliseconds
-	const lua_vector_int bestSplits; // Best splits times (and not splits of best lap), in milliseconds
-	const lua_vector_int bestLapSplits; // Splits times of best lap (not necessarily best split times in itself), in milliseconds
+	const luavec_int currentSplits; // Time for different splits of current lap, in milliseconds
+	const luavec_int lastSplits; // Time for different splits of last lap, in milliseconds
+	const luavec_int bestSplits; // Best splits times (and not splits of best lap), in milliseconds
+	const luavec_int bestLapSplits; // Splits times of best lap (not necessarily best split times in itself), in milliseconds
 	const state_wheel wheels[4];
 	const bool isActive; // True if car is currently active (changes to `false` for disconnected cars if server does not have them visible)
 	const bool isConnected; // True if car is currently connected (cars can be disconnected online), or if car is not a remote one
@@ -410,6 +418,7 @@ struct ac.StateCar {
 	const int currentSector; // 0-based index of current track split
 	const int previousSectorTime; // Time of previous split in milliseconds, or 0 if it’s a first split
 	const int racePosition; // Position of a car in the race, 1 for first, 2 for second, etc.
+	const float drivenInRace; // Distance driven in current race in meters (can be used for estimating race position, based on number of completed laps and current lap progress, in practice or qualify session resets each lap)
 	const int estimatedLapTimeMs; // Based on best lap and performance meter (delta of this lap time vs best lap time)
 	const float performanceMeter; // Performance meter comparing this lap with best, seconds
 	const float performanceMeterSpeedDifferenceMs; // In AC performance app, there is that red/green bar, it shows this value
@@ -496,6 +505,15 @@ struct ac.StateWheelPhysics {
 	const float shaftInertia;
 }
 
+struct ac.StateWingPhysics {
+	const float cd; // Drag coefficient (wing area is already taken into account here)
+	const float cl; // Lift coefficient, negative for downforce (wing area is already taken into account here)
+	const float aoa; // Angle of attack
+	const float angle;
+	const float yawAngle;
+	const float groundHeight;
+}
+
 struct ac.StateCarPhysics {
 	const int _inner; // @hidden
 	const bool isAvailable;
@@ -511,6 +529,8 @@ struct ac.StateCarPhysics {
 	const float clutchState;
 	const state_wheel_physics wheels[4];
 	const float scriptControllerInputs[8];
+	const luavec_float gearRatios;
+	const luavec_state_wing_physics wings;
 }
 
 struct ac.StateSim {
@@ -619,7 +639,7 @@ struct ac.StateSim {
 	const float baseAltitude; // Altitude in meters above sea level associated with Y=0 level.
 	const int connectedCars; // Number of currently connected cars
 	const int randomSeed; // Synced between clients online
-	const lua_vector_float lapSplits; // Normalized positions of track splits
+	const luavec_float lapSplits; // Normalized positions of track splits
 	const double handshakeServerTime; // Server time of the handshake, in milliseconds
 	const double currentServerTime; // Current server time (synced on all clients), in milliseconds. Resets to 0 when new race session (P/Q/R) starts.
 	const rgb skyColor; // Sky color

@@ -48,6 +48,22 @@ function ac.INIConfig.load(filename, format, includeFolders)
   return ac.INIConfig(tonumber(format) or 0, ret, filename)
 end
 
+---Load car data INI file. Supports “data.acd” files as well. Returned files might be tweaked by
+---things like custom physics virtual tyres. To get original file, use `ac.INIConfig.load()`.
+---
+---Returned file can’t be saved.
+---@param carIndex number @0-based car index.
+---@param fileName string @Car data file name, such as `'tyres.ini'`.
+---@return ac.INIConfig
+function ac.INIConfig.carData(carIndex, fileName)
+  ffi.C.lj_load_cardata_ini(tonumber(carIndex) or 0, tostring(fileName))
+  local ret = __getResult__()
+  if ret == nil then error('Failed to parse data', 2) end
+  local c = ac.INIConfig(1, ret, nil)
+  c.__car = { carIndex, fileName }
+  return c
+end
+
 ---Load track data INI file. Can be used by track scripts which might not always  have access to those files directly.
 ---
 ---Returned file can’t be saved.
@@ -124,6 +140,7 @@ function ac.INIConfig:tryGetLut(section, key)
   local data = self:get(section, key, '')
   if not data then return nil end
   data = data:trim()
+  if data == '' then return nil end
   if data:startsWith('(') and data:endsWith(')') then
     return ac.DataLUT11.parse(data)
   end

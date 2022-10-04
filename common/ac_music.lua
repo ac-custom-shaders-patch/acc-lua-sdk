@@ -43,13 +43,13 @@ function ac.currentlyPlaying()
   end
   local r = ffi.C.lj_get_music_data__music(_cps)
   if r == 2 or _cpw.title == nil then
-    _cpw.title = __util.strref_ref(_cps.__title)
-    _cpw.album = __util.strref_ref(_cps.__album)
-    _cpw.artist = __util.strref_ref(_cps.__artist)
-    _cpw.sourceID = __util.strref_ref(_cps.__source_id)
+    _cpw.title = __util.strrefr(_cps.__title)
+    _cpw.album = __util.strrefr(_cps.__album)
+    _cpw.artist = __util.strrefr(_cps.__artist)
+    _cpw.sourceID = __util.strrefr(_cps.__source_id)
   end
   if _cpw.coverID == nil then
-    _cpw.coverID = __util.strref_ref(_cps.__cover_id)
+    _cpw.coverID = __util.strrefr(_cps.__cover_id)
   end
   return _cps
 end

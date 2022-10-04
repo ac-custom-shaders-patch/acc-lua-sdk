@@ -1,7 +1,5 @@
 __source 'lua/api_common.cpp'
 
-ac = {}
-
 -- a simple wrapper for creating new classes, similar to middleclass (check that file for more info)
 require './common/class'
 

@@ -188,7 +188,7 @@ function isRefType(type) {
 function getTypeInfo(type, customTypes) {
   if (type === 'const blob_view*') {
     return {
-      name: 'string',
+      name: 'string|any',
       default: null,
       prepare: arg => `__util.blob(${arg.name})`,
       forceExpression: true,
@@ -205,7 +205,8 @@ function getTypeInfo(type, customTypes) {
     };
   }
 
-  if (type === 'const lua_string_ref*' || type === 'const lua_string_cached_ref*') {
+  if (type === 'const lua_string_ref*' || type === 'const lua_string_cached_ref*'
+    || type === 'const lua_string_ref&' || type === 'const lua_string_cached_ref&') {
     return {
       name: 'string',
       default: '""',
@@ -320,8 +321,8 @@ function getTypeInfo(type, customTypes) {
 function toDocName(luaType, customTypes) {
   if (luaType === 'uint64_t') return 'uint64';
 
-  if (luaType === 'lua_vector_int') return 'integer[]';
-  if (luaType === 'lua_vector_float') return 'number[]';
+  if (luaType === 'luavec_int') return 'integer[]';
+  if (luaType === 'luavec_float') return 'number[]';
 
   const knownType = /^state_/.test(luaType);
   if (!knownType) {
@@ -451,6 +452,11 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
   if (defaultValue && defaultValue != 'nullptr') comment = '?' + comment;
 
   if (type == 'refbool') type = 'boolean|refbool|nil';
+  if (type == 'refnumber') type = 'number|refnumber';
+
+  if (namespace == 'ac' && (fnName == 'debug' && arg.niceName == 'value' || /^(?:log|warn|error)$/.test(fnName))){
+    return `---@param ${arg.niceName} any?`;
+  }
 
   return `---@param ${arg.niceName} ${type}${defaultValue == 'nullptr' ? '|nil' : ''}${comment}`;
 }
@@ -468,7 +474,7 @@ function getLDocType(arg, customTypes) {
 }
 
 function wrapLDocSentence(v) {
-  v = v.trim().replace(/^ (?<!:)\/\/ /, '').replace(/^[a-z]/, _ => _.toUpperCase());
+  v = v.trim().replace(/^ ?(?<!:)\/\/ /, '').replace(/^[a-z]/, _ => _.toUpperCase());
   if (!/^\s*\!\[|[.!?]|```$/.test(v)) v = v + '.';
   return v;
 }
@@ -476,7 +482,7 @@ function wrapLDocSentence(v) {
 function wrapReturnLDoc(arg, customTypes, docs, comment) {
   if (arg === 'void') return null;
   if (docs && comment) return `---@return ${getLDocType(arg, customTypes)} @${wrapLDocSentence(comment)}`;
-  return `---@return ${getLDocType(arg, customTypes)}`;
+  return `---@return ${getLDocType(arg, customTypes)}${/\*$/.test(arg) ? '?' : ''}`;
 }
 
 function wrapReturnLComment(docs, comment) {
@@ -498,7 +504,7 @@ function wrapReturnLComment(docs, comment) {
 }
 
 function needsWrappedResult(type) {
-  if (/\blua_linked_id\b|const (?:char|lua_string_ref|lua_string_cached_ref)\*/.test(type)) return true;
+  if (/\blua_linked_id\b|const (?:char|lua_string_ref|lua_string_cached_ref)[*&]/.test(type)) return true;
   return false;
 }
 
@@ -507,8 +513,9 @@ function wrapResult(type) {
   if (/lua_linked_id/.test(type)) return { callback: x => `return __util.disposable(${x})`, extraData: null };
   if (/state_/.test(type)) return { callback: x => `return __uss(${x})`, extraData: null };
   if (/const char\*/.test(type)) return { callback: x => `return ffi.string(${x})`, extraData: null };
-  if (/const lua_string_ref\*/.test(type)) return { callback: x => `return __usf(${x})`, extraData: null };
-  if (/const lua_string_cached_ref\*/.test(type)) return { callback: (x, y) => `return __${y}_c:get(${x})`, extraData: y => `local __${y}_c = __ucf()` };
+  if (/const lua_string_ref([*&])/.test(type)) { const k =  RegExp.$1 == '*' ? '__usf' : '__usr'; return { callback: x => `return ${k}(${x})`, extraData: null }; }
+  if (/const lua_string_cached_ref([*&])/.test(type)) { const k =  RegExp.$1 == '*' ? '__ucf' : '__ucr'; return { callback: (x, y) => `return __${y}_c:get(${x})`, extraData: y => `local __${y}_c = ${k}()` }; }
+  if (/const \w+\*/.test(type)) return { callback: x => `return __uss(${x})`, extraData: null };
   return { callback: x => `return ${x}`, extraData: null };
 }
 
@@ -607,6 +614,8 @@ function verifyCppFile(cpp, cppName){
 
   return cpp;
 }
+
+const vectorized = ['float', 'int'];
 
 function getLuaCode(opts, definitionsCallback) {
   const ffiDefinitions = [];
@@ -786,11 +795,12 @@ function getLuaCode(opts, definitionsCallback) {
   });
 
   function getKeyword(expr){
+    // returns computational expression to verify there are no copy-pasted repetitions
     expr = expr.split('//')[0].trim();
     if (expr[expr.length - 1] != ')') return {e1:expr};
     // const i = expr.lastIndexOf(',');
     // if (i == -1) return {e2:expr};
-    if (/(?:LUAFIELD_SET|LUASTATIC_SET)\([\w:]+, [\w:]+, ([\s\S]+)\)/.test(expr)) return RegExp.$1;
+    if (/(?:LUAFIELD_SET|LUASTATIC_SET|LUAFIELD_VECTOR_(?:FILL|STRUCT))\([\w:]+, [\w:]+, ([\s\S]+)\)/.test(expr)) return RegExp.$1;
     if (/(?:LUAFIELD_ARRAY_FILL|LUAFIELD_ARRAY_STRUCT)\([\w:]+, \d+, [\w:]+, ([\s\S]+)\)/.test(expr)) return RegExp.$1;
     if (/(?:LUAFIELD_ARRAY_CUSTOM)\([\w:]+, \d+, [\w:]+\)/.test(expr)) return RegExp.$1;
     if (/LUASTATIC_SET_KEY\([\w:]+, [\w:]+, ([\s\S]+), [^,]+\)/.test(expr)) return RegExp.$1;
@@ -819,6 +829,7 @@ function getLuaCode(opts, definitionsCallback) {
           const isStatic = /STATIC/.test(keys);
           const isDynArray = /DYNARRAY/.test(keys);
           const isArray = /ARRAY/.test(keys);
+          const isVector = /VECTOR/.test(keys);
           const isPass = /PASS/.test(keys);
           let match = data.trim().match(isDynArray ? /(\w+), ([^,]+), (\w+)(?:, (.+))?\)$/ : isArray ? /(\w+), (\d+), (\w+)(?:, (.+))?\)$/ : /(\w+), (\w+)(?:, (.+))?\)$/);
           // if (!!(match[isArray || isDynArray ? 3 : 2]) != isPass) $.fail(`failed to value existance with PASS flag: “${data}”`);
@@ -827,6 +838,7 @@ function getLuaCode(opts, definitionsCallback) {
 
           fields.push(isDynArray ? `${fieldPrefix}${baseTypeToLua(match[1])}* ${match[3]};${comment}` 
             : isArray ? `${fieldPrefix}${baseTypeToLua(match[1])} ${match[3]}[${match[2]}];${comment}`
+            : isVector ? `${fieldPrefix}luavec_${baseTypeToLua(match[1])} ${match[2]};${comment}`
             : `${fieldPrefix}${baseTypeToLua(match[1])} ${match[2]};${comment}`);
 
           if (isArray){
@@ -837,9 +849,24 @@ function getLuaCode(opts, definitionsCallback) {
               if (!ldocComment) ldocComment = ` @${match[2]} items, starts with 0.`;
               else ldocComment = `${ldocComment} ${match[2]} items, starts with 0.`;
             }
-          } else if (match[1] === 'lua_vector_int' || match[1] === 'lua_vector_float'){
-            if (!ldocComment) ldocComment = ` @Items start with 0. To get number of elements, use \`#state.${match[2]}\``;
-            else ldocComment = `${ldocComment} Items start with 0. To get number of elements, use \`#state.${match[2]}\``;
+          } else if (/^luavec_/.test(match[1]) || isVector){
+            if (!ldocComment) ldocComment = ` @Items start with 0. To get number of elements, use \`#state.${match[2]}\`.`;
+            else ldocComment = `${ldocComment} Items start with 0. To get number of elements, use \`#state.${match[2]}\`.`;
+          }
+
+          if (isVector && !vectorized.includes(match[1])){
+            vectorized.push(match[1]);
+            ffiStructures.push(`typedef struct { const ${match[1]}* _begin; const ${match[1]}* _end; const ${match[1]}* _cap; } luavec_${match[1]};`);
+            exportEntries.push(`ffi.metatype('luavec_${match[1]}', { 
+              __len = function (v)
+                return v._end - v._begin
+              end,
+              __index = function(v, k)
+                if type(k) ~= 'number' or k < 0 or v._begin + k >= v._end then return nil end
+                return v._begin[k]
+              end,
+              __newindex = function() error('This list is read-only', 2) end
+            })`);
           }
 
           if (!/@hidden\b/.test(ldocComment)) {
@@ -854,8 +881,8 @@ function getLuaCode(opts, definitionsCallback) {
               $.echo(β.yellow(`\tCouldn’t find keyword: ${_} (${JSON.stringify(kw)}`))
             }
 
-            ldFields.push(isArray
-              ? `---@field ${match[3]} ${getTypeInfo(match[1], opts.customTypes).name}[]${ldocComment}`
+            ldFields.push(isArray || isVector
+              ? `---@field ${match[isArray ? 3 : 2]} ${getTypeInfo(match[1], opts.customTypes).name}[]${ldocComment}`
               : `---@field ${match[2]} ${getTypeInfo(match[1], opts.customTypes).name}${ldocComment}`);
           }
           (isStatic ? cppStatic : cppUpdate).push(`${match[isArray ? 3 : 2]}_set(c);`);
@@ -1058,7 +1085,7 @@ function getLuaCode(opts, definitionsCallback) {
                       } else if (fn.length > 0) {
                         $.echo(β.red(`  Unexpected class method: ${l2}`))
                       }
-                      if (/^\s*(\}\s*)?\}\)\s*$/.test(l2)) {
+                      if (/^\s*(\}\s*)?(?:,\s*__call = .*?)?\}\)\s*$/.test(l2)) {
                         break;
                       }
                       fn.length = 0;
@@ -2043,7 +2070,7 @@ let filter = process.argv.filter(x => x.startsWith('--skip=')).map(x => x.substr
 for (let filename of $.glob(`./ac_*.lua`)) {
 // for (let filename of $.glob(`./ac_car_*.lua`)) {
 // for (let filename of $.glob(`./ac_apps*.lua`)) {
-  if (filename === './ac_common.lua' || filename == './ac_tfx.lua') continue;
+  if (filename === './ac_common.lua' /* || filename == './ac_tfx.lua' */) continue;
   if (filter.some(x => filename.indexOf(x) !== -1)) continue;
   await compile(filename);
 }

@@ -72,7 +72,7 @@ function ac.load(key)
   if ffi.C.lj_has_number(key) then
     return ffi.C.lj_load_number(key)
   else
-    return __util.strref(ffi.C.lj_load_string(key))
+    return __util.strrefp(ffi.C.lj_load_string(key))
   end
 end
 
@@ -123,10 +123,10 @@ end
 
 ---Given an FFI struct, returns bytes with its content. Resulting string may contain zeroes.
 ---@param data any @FFI struct (type should be “cdata”).
----@return string
+---@return string|nil @If data is `nil`, returns `nil`.
 function ac.structBytes(data)
   if type(data) ~= 'cdata' then error('Can get bytes from cdata only', 2) end
-  return __util.strref(ffi.C.lj_structBytes_inner(data, ffi.sizeof(data)))
+  return __util.strrefp(ffi.C.lj_structBytes_inner(data, ffi.sizeof(data)))
 end
 
 ---Given an FFI struct and a string of data, fills struct with that data. Works only if size of struct matches size of data. Data string can contain zeroes.

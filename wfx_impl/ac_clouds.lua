@@ -115,6 +115,7 @@ ffi.metatype('cloudmaterial', { __index = {} })
 ---@field alphaSmoothTransition number "With 0 alpha is applied as-is from textures, with 1 smoothstep function is applied to it, could be something in-between as well. Helps to make clouds look smoother. Default value: 0.\n\nOnly affects v2 clouds."
 ---@field normalFacingExponent number "Alters how normal of a cloud is calculated, increasing it might help to make cloud look rounder and nicer. Default value is kept for compatibility. Default value: 0.5.\n\nOnly affects v2 clouds."
 ---@constructor fun(): ac.SkyCloudMaterial
+
 function ac.SkyCloudMaterial()
   return ffi.gc(ffi.C.lj_cloudmaterial_new__impl(), ffi.C.lj_cloudmaterial_gc__impl) 
 end

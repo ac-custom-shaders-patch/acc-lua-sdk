@@ -5,11 +5,21 @@ ac.setWingGain(wingIndex: integer, cdGain: number, clGain: number)
 ac.setGearsFinalRatio(finalRatio: number)
 ac.setGearsGrinding(grinding: boolean)
 ac.setDrivetrainDamageRPMWindow(newValue: number)
+ac.setDrivetrainAWDFrontShare(frontShare: number)
 ac.setAntirollBars(kFront: number, kRear: number)
 ac.setEngineRPM(newValue: number)
 ac.setEngineLifeLeft(newValue: number)
 ac.setEngineStalling(value: boolean)
 ac.setTyreInflation(tyre: integer, inflation: number)
+ac.getTurboUserWastegate(index: integer): number
+ac.setTurboUserWastegate(index: integer, value: number)
+ac.setTurboMaxBoost(index: integer, value: number)
+ac.setTurboWastegate(index: integer, wastegate: number, isAdjustable: boolean)
+ac.setTurboExtras(index: integer, lagUp: number, lagDown: number, referenceRpm: number, gamma: number)
+ac.overrideTurboBoost(index: integer, newBoost: number)
+ac.getScriptSetupValue(id: string): refnumber
+ac.setScriptSetupValue(id: string, value: number): boolean // Returns `false` if there is no such item
+ac.getDynamicController(name: string): refnumber
 
 struct ac.StateCphysWheelData {
 	float angularSpeed;
@@ -35,6 +45,7 @@ struct ac.StateCphysCarData {
 	float drivetrainOriginalRPMWindow;
 	float antirollBarFront;
 	float antirollBarRear;
+	float gearsFinalRatio;
 	int absMode;
 	int tractionControlMode;
 	int gear;

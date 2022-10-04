@@ -38,10 +38,10 @@ typedef struct {
 
 ---Reads file content into a string, if such file exists, otherwise returns fallback data or `nil`.
 ---@param filename string @Filename.
----@param fallbackData nil|string @Data to return if file could not be read.
----@return string
+---@param fallbackData string|nil @Data to return if file could not be read.
+---@return string|nil @Returns `nil` if file couldn’t be read and there is no fallback data.
 function io.load(filename, fallbackData)
-  return __util.strref(ffi.C.lj_load_inner__io(filename)) or fallbackData
+  return __util.strrefp(ffi.C.lj_load_inner__io(filename)) or fallbackData
 end
 
 ---Scan directory and call callback function for each of files, passing file name (not full name, but only name of the file) and attributes. If callback function would return
@@ -69,13 +69,13 @@ function io.scanDir(directory, mask, callback, callbackData)
     r = {}
     local n = 1
     while s.exists do
-      r[n], n = __util.strref_ref(s.name__), n + 1
+      r[n], n = __util.strrefr(s.name__), n + 1
       ffi.C.lj_dirscan_next__io(s)
     end
   else
     r = nil
     while s.exists do
-      r = callback(__util.strref_ref(s.name__), s, callbackData)
+      r = callback(__util.strrefr(s.name__), s, callbackData)
       if r ~= nil then break end
       ffi.C.lj_dirscan_next__io(s)
     end

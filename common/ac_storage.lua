@@ -42,7 +42,7 @@ local storedString = createType(
   function(def) return def ~= nil and tostring(def) or nil end,
   function(ref) return ffi.C.lj_storage_ref_sync_string(ref) end,
   function(ref, value) return ffi.C.lj_storage_ref_store_string(ref, value ~= nil and tostring(value) or nil) end,
-  function(dst, value) dst.value = __util.strref(value) end, nil,
+  function(dst, value) dst.value = __util.strrefp(value) end, nil,
   function(dst, value) dst.value = value ~= nil and value or dst.default end)
 
 local function createVecType(fnType, fnSync, fnStore, fnCast)
@@ -93,7 +93,7 @@ ac.storage = {}
 setmetatable(ac.storage, {
   __index = function(s, key)
     local v = ffi.C.lj_storage_get_string(__util.str(key))
-    return v and __util.strref(v) or nil
+    return v and __util.strrefp(v) or nil
   end,
   __newindex = function(s, key, value) 
     ffi.C.lj_storage_store_string(__util.str(key), value ~= nil and tostring(value) or nil)

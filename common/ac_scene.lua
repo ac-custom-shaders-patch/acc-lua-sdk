@@ -307,7 +307,7 @@ ffi.metatype('noderef', {
     ---@return string|number|nil @Type is determined based on type of `defaultValue`.
     getAttribute = function (s, key, defaultValue) 
       if type(defaultValue) == 'number' then return ffi.C.lj_noderef_getattributenum__scene(s, tostring(key), defaultValue) end
-      return __util.strref(ffi.C.lj_noderef_getattributestr__scene(s, tostring(key))) or defaultValue
+      return __util.strrefp(ffi.C.lj_noderef_getattributestr__scene(s, tostring(key))) or defaultValue
     end,
 
     ---Reference:
@@ -480,7 +480,7 @@ ffi.metatype('noderef', {
     ---@param index integer|nil @1-based index of an element to get a name of. Default value: 1.
     ---@return string @Node or mesh name.
     name = function (s, index)
-      return __util.strref(ffi.C.lj_noderef_name__scene(s, (tonumber(index) or 1) - 1))
+      return __util.strrefr(ffi.C.lj_noderef_name__scene(s, (tonumber(index) or 1) - 1))
     end,
 
     ---Get class of an element.
@@ -494,14 +494,14 @@ ffi.metatype('noderef', {
     ---@param index integer|nil @1-based index of an element to get a material name of. Default value: 1.
     ---@return string @Material name.
     materialName = function (s, index)
-      return __util.strref(ffi.C.lj_noderef_materialname__scene(s, (tonumber(index) or 1) - 1))
+      return __util.strrefr(ffi.C.lj_noderef_materialname__scene(s, (tonumber(index) or 1) - 1))
     end,
     
     ---Get shader name of an element.
     ---@param index integer|nil @1-based index of an element to get a shader name of. Default value: 1.
     ---@return string @Shader name.
     shaderName = function (s, index)
-      return __util.strref(ffi.C.lj_noderef_shadername__scene(s, (tonumber(index) or 1) - 1))
+      return __util.strrefr(ffi.C.lj_noderef_shadername__scene(s, (tonumber(index) or 1) - 1))
     end,
     
     ---Get number of texture slots of an element.
@@ -523,7 +523,7 @@ ffi.metatype('noderef', {
     ---@param slotIndex integer|nil @1-based index of a texture slot. Default value: 1.
     ---@return string|nil @Texture slot name (like “txDiffuse” or “txNormal”) or `nil` if there is no such element or property.
     getTextureSlotName = function (s, index, slotIndex)
-      return __util.strref(ffi.C.lj_noderef_textureslotname__scene(s, (tonumber(index) or 1) - 1, slotIndex and slotIndex - 1 or 0))
+      return __util.strrefp(ffi.C.lj_noderef_textureslotname__scene(s, (tonumber(index) or 1) - 1, slotIndex and slotIndex - 1 or 0))
     end,
     
     ---Get name of a certain material property of an element.
@@ -531,7 +531,7 @@ ffi.metatype('noderef', {
     ---@param slotIndex integer|nil @1-based index of a material property. Default value: 1.
     ---@return string|nil @Material property name (like “ksDiffuse” or “ksAmbient”) or `nil` if there is no such element or property.
     getMaterialPropertyName = function (s, index, slotIndex)
-      return __util.strref(ffi.C.lj_noderef_materialpropertyname__scene(s, (tonumber(index) or 1) - 1, slotIndex and slotIndex - 1 or 0))
+      return __util.strrefp(ffi.C.lj_noderef_materialpropertyname__scene(s, (tonumber(index) or 1) - 1, slotIndex and slotIndex - 1 or 0))
     end,
 
     ---Get index of a certain texture slot of an element from the name of that slot.
@@ -559,13 +559,13 @@ ffi.metatype('noderef', {
     ---Get texture filename of a certain texture slot of an element.
     ---@param index integer|nil @1-based index of an element to get a texture filename of. Default value: 1.
     ---@param slot string|integer|nil|"'txDiffuse'"|"'txNormal'"|"'txEmissive'"|"'txMaps'" @Texture slot name or a 1-based index of a texture slot. Default value: 1.
-    ---@return string @Texture filename or `nil` if there is no such slot or element.
+    ---@return string|nil @Texture filename or `nil` if there is no such slot or element.
     ---@overload fun(s: ac.SceneReference, slot: string): string
     getTextureSlotFilename = function (s, index, slot)
       if type(index) == 'string' then index, slot = 1, index end
       index = (tonumber(index) or 1) - 1
       slot = type(slot) == 'string' and ffi.C.lj_noderef_textureslotindex__scene(s, index, slot) or (tonumber(slot) or 1) - 1
-      return __util.strref(ffi.C.lj_noderef_textureslotfilename__scene(s, index, slot))
+      return __util.strrefp(ffi.C.lj_noderef_textureslotfilename__scene(s, index, slot))
     end,
     
     ---Get value of a certain material property of an element.

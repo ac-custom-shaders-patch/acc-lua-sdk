@@ -197,7 +197,9 @@ function vec3:project(otherVector, out) end
 function vec3:rotate(quaternion, out) end
 
 ---Returns distance from point to a line. For performance reasons doesn’t do any checks, so be careful with incoming arguments.
+---@return number
 function vec3:distanceToLine(a, b) end
 
 ---Returns squared distance from point to a line. For performance reasons doesn’t do any checks, so be careful with incoming arguments.
+---@return number
 function vec3:distanceToLineSquared(a, b) end

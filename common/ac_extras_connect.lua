@@ -31,7 +31,7 @@ function ac.connect(layout, keepLive, namespace)
   if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
   if layoutStr:match('%(') then error('Invalid layout', 2) end
   if not __allowIO__ and namespace == ac.SharedNamespace.Global then error('Script of this type can’t use global namespace', 2) end
-  local name = '__con_'..__util.strref(ffi.C.lj_connect_key(layoutStr, type(namespace) == 'string' and namespace or nil))
+  local name = '__con_'..__util.strrefr(ffi.C.lj_connect_key(layoutStr, type(namespace) == 'string' and namespace or nil))
   local size = _sizes[name]
   if size == nil then
     _fficdef(ac.StructItem.__cdef(name, layoutStr, false))

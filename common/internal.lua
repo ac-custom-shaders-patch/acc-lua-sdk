@@ -73,21 +73,20 @@ function __util.secure_state(state)
   return state ~= nil and state or nil
 end
 
-function __util.strref_ref(ref)
+function __util.strrefr(ref)
   return ffi.string(ref.p2 >= 0x10 and ref.buf or ref.ins, ref.p1)
 end
 
-function __util.strref(value)
+function __util.strrefp(value)
   if value == nil then return nil end
-  local ref = value[0]
-  return ffi.string(ref.p2 >= 0x10 and ref.buf or ref.ins, ref.p1)
+  return __util.strrefr(value[0])
 end
 
 local __mtstrcref = {
   __index = {
     get = function(self, value)
       if value == nil then return nil end
-      local r = value[0]
+      local r = self.ptr and value[0] or value
       local c = self.cache[r.key]
       if c ~= nil and c.phase == r.phase then return c.str end
       local s = ffi.string(r.data.p2 >= 0x10 and r.data.buf or r.data.ins, r.data.p1)
@@ -102,8 +101,12 @@ local __mtstrcref = {
   }
 }
 
-function __util.strcref()
-  return setmetatable({ cache = {} }, __mtstrcref)
+function __util.strcrefp()
+  return setmetatable({ cache = {}, ptr = true }, __mtstrcref)
+end
+
+function __util.strcrefr()
+  return setmetatable({ cache = {}, ptr = false }, __mtstrcref)
 end
 
 function __util.str(value)

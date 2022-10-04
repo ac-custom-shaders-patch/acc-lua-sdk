@@ -178,11 +178,11 @@ function _classPool:recycled() end
 ---`ClassBase:include()`. Please read documentation for those functions before using them though, just to check.
 ---@param name string @Class name.
 ---@param parentClass ClassBase @Parent class.
----@param flags 'class.NoInitialize' | 'class.Pool' | 'class.Minimal' @Flags.
----@overload fun(name: string, flags: 'class.NoInitialize' | 'class.Pool' | 'class.Minimal')      @Regular parent-less class with some flags
----@overload fun(name: string, allocateFn: 'function()\n  return {}\nend, class.NoInitialize')    @Inline allocate function for slightly faster creation
----@overload fun(name: string, initializeFn: 'function (self)\n  \nend, class.Pool')              @With pooling for best memory reuse
----@overload fun(allocateFn: 'function()\n  return {}\nend, class.NoInitialize + class.Minimal')  @Most minimal version
+---@param flags nil | integer | 'class.NoInitialize' | 'class.Pool' | 'class.Minimal' @Flags.
+---@overload fun(name: string, flags: nil | integer | 'class.NoInitialize' | 'class.Pool' | 'class.Minimal')  @Regular parent-less class with some flags
+---@overload fun(name: string, allocateFn: function | `function() return {} end, class.NoInitialize`)    @Inline allocate function for slightly faster creation
+---@overload fun(name: string, initializeFn: `function (self) end, class.Pool`)               @With pooling for best memory reuse
+---@overload fun(allocateFn: `function() return {} end, class.NoInitialize + class.Minimal`)  @Most minimal version
 ---@return ClassDefinition @New class definition
 function class(name, parentClass, flags) end
 
