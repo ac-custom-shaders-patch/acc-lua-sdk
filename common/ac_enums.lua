@@ -511,13 +511,16 @@ ac.GamepadButton = __enum({ override = '*.*/gamepadButtonID:integer' }, {
   RightThumb = 0x80,
   LeftShoulder = 0x100,
   RightShoulder = 0x200,
+  L2 = 0x400,  -- only for DualShock and Nintendo (ZL) gamepads
+  R2 = 0x800,  -- only for DualShock and Nintendo (ZR) gamepads
   A = 0x1000,
   B = 0x2000,
   X = 0x4000,
   Y = 0x8000,
-  PlayStation = 0x10000, -- only for DualSense gamepads
-  Microphone = 0x20000, -- only for DualSense gamepads
-  Pad = 0x40000, -- only for DualSense gamepads
+  PlayStation = 0x10000, -- only for DualShock, DualSense and Nintendo (Home button) gamepads
+  Microphone = 0x20000, -- only for DualSense and Nintendo (SL button) gamepads
+  Pad = 0x40000, -- only for DualShock, DualSense and Nintendo (Capture button) gamepads
+  Extra = 0x80000, -- only for Nintendo (SR button) gamepads
 })
 
 ac.GamepadAxis = __enum({ override = '*.*/gamepadAxisID:integer' }, {
@@ -533,4 +536,14 @@ ac.GamepadType = __enum({ cpp = 'joypad_type' }, {
   None = 0, -- No gamepad in that slot.
   XBox = 1, -- Regular XBox gamepad.
   DualSense = 2, -- DualSense gamepad.
+  DualShock = 3, -- DualShock gamepad (can also be one of Nintendo gamepads; use `ac.getDualShock(…).type` to check).
+})
+
+--Due to compatibility issues DualShock and Nintendo devices are combined in an alternative API area separately from DualSense.
+ac.GamepadDualShockType = __enum({ cpp = 'dualshock_device_type' }, {
+  JoyConLeft = 1, -- Left Joy-Con
+  JoyConRight = 2, -- Right Joy-Con
+  SwitchPro = 3, -- Switch Pro Controller
+  DualShock = 4, -- DualShock 4
+  DualSense = 5, -- DualSense (can appear here if controller is configured to launch in DualShock mode in CM controls settings)
 })

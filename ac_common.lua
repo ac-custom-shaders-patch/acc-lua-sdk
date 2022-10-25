@@ -34,6 +34,7 @@ require './common/ac_storage'
 require './common/ac_configs'
 require './common/ac_reftypes'
 require './common/ac_dualsense'
+require './common/ac_dualshock'
 require './common/ac_web'
 require './common/stringify'
 

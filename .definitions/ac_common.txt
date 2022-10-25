@@ -174,6 +174,7 @@ io.loadFromZip(zipFilename: string, entryFilename: string): string
 io.checksumSHA256(filename: string, callback: integer)
 os.dateGlobal(format: string, timestamp: integer): string
 os.addDLLDirectory(filename: string)
+os.execute(cmd: string, timeoutMs: integer = -1, windowless: boolean = true): integer
 os.showMessage(msg: string, type: integer = 0): integer
 os.showInExplorer(filename: string)
 os.openInExplorer(directory: string)
@@ -197,6 +198,8 @@ ac.getVR(): ac.StateVr
 ac.getCarPhysics(index: integer): ac.StateCarPhysics
 ac.getDualSense(gamepadIndex: integer): ac.StateDualsense
 ac.setDualSense(gamepadIndex: integer, priority: number = 0, holdFor: number = 0.5): ac.StateDualsenseOutput // Returns `nil` if there is no applicable controller, make sure to check for it
+ac.getDualShock(gamepadIndex: integer): ac.StateDualshock
+ac.setDualShock(gamepadIndex: integer, priority: number = 0, holdFor: number = 0.5): ac.StateDualshockOutput // Returns `nil` if there is no applicable controller, make sure to check for it
 web.loadRemoteModel(url: string, callback: integer)
 web.loadRemoteAnimation(url: string, callback: integer)
 web.loadRemoteAssets(url: string, callback: integer)
@@ -503,6 +506,7 @@ struct ac.StateWheelPhysics {
 	const float angularInertia;
 	const float shaftVelocity;
 	const float shaftInertia;
+	const float tyreCarcassTemperature; // Only available with custom physics tyres
 }
 
 struct ac.StateWingPhysics {
@@ -729,4 +733,26 @@ struct ac.StateDualsenseOutput {
 	bool disableLEDs;
 	bool playerLEDsFade;
 	bool playerLEDs[5];
+}
+
+struct ac.StateDualshockTouch {
+	const vec2 delta;
+	const vec2 pos;
+	const int id;
+	const bool down;
+}
+
+struct ac.StateDualshock {
+	const int type;
+	const rgbm deviceColor; // Only for Nintendo devices
+	const vec3 accelerometer;
+	const vec3 gyroscope;
+	const float battery; // Might not provide accurate values for some devices
+	const state_dualshock_touch touches[2];
+	const bool connected;
+}
+
+struct ac.StateDualshockOutput {
+	rgbm lightBar;
+	int playerNumber; // player number
 }

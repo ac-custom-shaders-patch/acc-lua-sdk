@@ -84,6 +84,20 @@ function io.scanDir(directory, mask, callback, callbackData)
   return r
 end
 
+---Returns list of logical drives, each drive in “A:“ format.
+---@return string[]
+function io.scanDrives()
+  local i = ffi.C.lj_scanDrives_inner__io()
+  local j, r = 0, {}
+  while j < 25 do
+    if bit.band(i, bit.lshift(1, j)) ~= 0 then
+      r[#r + 1] = string.char(65 + j)..':'
+    end
+    j = j + 1
+  end
+  return r
+end
+
 local _szr
 __script.scanZipCallback = function (s) _szr = s end
 
