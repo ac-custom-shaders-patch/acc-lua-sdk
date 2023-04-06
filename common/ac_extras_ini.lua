@@ -85,10 +85,25 @@ function ac.INIConfig.onlineExtras()
   return ac.INIConfig(10, ret, nil)
 end
 
+---Returns race config (`cfg/race.ini`). Password and online GUID won’t be included.
+---@return ac.INIConfig
+function ac.INIConfig.raceConfig()
+  ffi.C.lj_load_race_ini()
+  return ac.INIConfig(10, __getResult__(), nil)
+end
+
+---Returns video config (`cfg/video.ini`).
+---@return ac.INIConfig
+function ac.INIConfig.videoConfig()
+  ffi.C.lj_load_video_ini()
+  return ac.INIConfig(10, __getResult__(), nil)
+end
+
 ---Load config of a CSP module by its name.
 ---@param cspModuleID ac.CSPModuleID @Name of a CSP module.
 ---@return ac.INIConfig
 function ac.INIConfig.cspModule(cspModuleID)
+  if cspModuleID == nil then error('Module ID is required', 2) end
   ffi.C.lj_loadconfig_ini(tostring(cspModuleID)..'.ini')
   local ret = __getResult__()
   if ret == nil then error('Failed to parse data', 2) end
@@ -231,12 +246,11 @@ end
 
 function ac.INIConfig:setAndSave(section, key, value)
   if not self.filename then error('Filename is not set', 2) end
-  if self.format >= 10 then error('Not available with extended format', 2) end
   local old = self:get(section, key, ac.INIConfig.OptionalString)
   self:set(section, key, value)
   local new = self:get(section, key, ac.INIConfig.OptionalString)
   if new == old then return false end
-  ffi.C.lj_write_value_ini(self.filename, section, key, new)
+  ffi.C.lj_write_value_ini(self.filename, self.format, section, key, new)
   return true
 end
 
@@ -285,6 +299,6 @@ end
 function ac.INIConfig:save(filename)
   self.filename = filename or self.filename
   if not self.filename then error('Filename is not set', 2) end
-  io.save(filename, tostring(self))
+  io.save(self.filename, tostring(self))
   return self
 end

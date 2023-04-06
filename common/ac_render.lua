@@ -54,14 +54,16 @@ require './ac_render_shader'
   depthMode: render.DepthMode = render.DepthMode.ReadOnlyLessEqual "Depth mode. Default value: `render.DepthMode.ReadOnlyLessEqual`.",
   depth: number = nil "Optional depth in meters, to use hardware-accelerated depth clipping.",
   async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
+  cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
+  defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
-  shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
+  shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/fullscreen.fx”."
 }]]
 function render.fullscreenPass(params)
   local dc = __util.setShaderParams(params, 'fullscreen.fx', render.BlendMode.Opaque)
   if not dc then return false end
-  ffi.C.lj_cshader_fullscreen__render(dc, tonumber(params.depthMode) or 4, tonumber(params.depth) or math.huge)
+  ffi.C.lj_cshader_fullscreen__render(dc, tonumber(params.depthMode) or 4, tonumber(params.depth) or math.huge, vec4.isvec4(params.region) and params.region or nil)
   return true
 end
 
@@ -119,9 +121,11 @@ end
   p4: vec3 = vec3(1, 0, 0),
   blendMode: render.BlendMode = render.BlendMode.AlphaBlend "Blend mode. Default value: `render.BlendMode.AlphaBlend`.",
   async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
+  cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
+  defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
-  shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
+  shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/quad.fx”."
 }]]
 function render.shaderedQuad(params)
   local dc = __util.setShaderParams(params, 'quad.fx')

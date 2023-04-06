@@ -221,7 +221,21 @@ stringify = setmetatable({
     end
     return variables
   end,
-  substep = _stringify
+  substep = _stringify,
+  binary = setmetatable({
+    tryParse = function (v, fallback)
+      local r, p = pcall(__util.prs().unpackString, v)
+      if r then return p end
+      return fallback
+    end,
+    parse = function (v)
+      return __util.prs().unpackString(v)
+    end,
+  }, {
+    __call = function(_, data)
+      return __util.prs().packString(data)
+    end
+  })
 }, {
   __call = function(_, v, compact, depthLimit)
     local q = _svst == nil

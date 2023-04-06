@@ -35,27 +35,7 @@ function rgbm.tmp() end
 function rgbm.from0255(r, g, b, a) end
 
 ---Predefined colors. Do not change them unless you want to have some extra fun debugging.
-rgbm.colors = {
-  transparent = rgbm(0, 0, 0, 0),
-  black = rgbm(0, 0, 0, 1),
-  silver = rgbm(0.75, 0.75, 0.75, 1),
-  gray = rgbm(0.5, 0.5, 0.5, 1),
-  white = rgbm(1, 1, 1, 1),
-  maroon = rgbm(0.5, 0, 0, 1),
-  red = rgbm(1, 0, 0, 1),
-  purple = rgbm(0.5, 0, 0.5, 1),
-  fuchsia = rgbm(1, 0, 1, 1),
-  green = rgbm(0, 0.5, 0, 1),
-  lime = rgbm(0, 1, 0, 1),
-  olive = rgbm(0.5, 0.5, 0, 1),
-  yellow = rgbm(1, 1, 0, 1),
-  orange = rgbm(1, 0.5, 0, 1),
-  navy = rgbm(0, 0, 0.5, 1),
-  blue = rgbm(0, 0, 1, 1),
-  teal = rgbm(0, 0.5, 0.5, 1),
-  cyan = rgbm(0, 0.5, 1, 1),
-  aqua = rgbm(0, 1, 1, 1),
-}
+rgbm.colors = { transparent = rgbm(0, 0, 0, 0), black = rgbm(0, 0, 0, 1), silver = rgbm(0.75, 0.75, 0.75, 1), gray = rgbm(0.5, 0.5, 0.5, 1), white = rgbm(1, 1, 1, 1), maroon = rgbm(0.5, 0, 0, 1), red = rgbm(1, 0, 0, 1), purple = rgbm(0.5, 0, 0.5, 1), fuchsia = rgbm(1, 0, 1, 1), green = rgbm(0, 0.5, 0, 1), lime = rgbm(0, 1, 0, 1), olive = rgbm(0.5, 0.5, 0, 1), yellow = rgbm(1, 1, 0, 1), orange = rgbm(1, 0.5, 0, 1), navy = rgbm(0, 0, 0.5, 1), blue = rgbm(0, 0, 1, 1), teal = rgbm(0, 0.5, 0.5, 1), cyan = rgbm(0, 0.5, 1, 1), aqua = rgbm(0, 1, 1, 1) }
 
 ---Four-channel color. Fourth value, `mult`, can be used for alpha, for brightness, anything like that. All operators are also 
 ---overloaded. White is usually `rgb=1,1,1`.
@@ -65,6 +45,12 @@ rgbm.colors = {
 ---@field b number
 ---@field rgb rgb
 ---@field mult number
+---@operator add(number|rgbm): rgbm
+---@operator sub(number|rgbm): rgbm
+---@operator mul(number|rgbm): rgbm
+---@operator div(number|rgbm): rgbm
+---@operator pow(number|rgbm): rgbm
+---@operator len: number
 ---@constructor fun(r: number?, g: number?, b: number?, mult: number?): rgbm
 
 ---Makes a copy of a vector.

@@ -1,8 +1,5 @@
 ac.debug(key: string, value: string = nullptr)
 ac.setLogSilent(value: boolean = true)
-ac.log(value: string)
-ac.warn(value: string)
-ac.error(value: string)
 ac.perfBegin(value: string)
 ac.perfEnd(value: string)
 ac.perfFrameBegin(value: integer)
@@ -39,10 +36,13 @@ ac.setTextureKey(key: string = nullptr)
 ac.encodeTexture(filename: string, outputFilename: string, key: string, applyLz4Compression: boolean)
 ac.compressTexture(filename: string, outputFilename: string)
 ac.getSoundSpeedMs(): number
+ac.getAirPressure(p: vec3): number
+ac.getAirHumidity(p: vec3): number
 ac.getLastError(): string
 ac.lapTimeToString(time: number, allowHours: boolean = false): string
 ac.getCountryName(nationCode: string): string
 ac.getAudioVolume(audioChannelKey: string): number // value from 0 to 1
+ac.getAudioOutputDevice(): string
 ac.getCarSpeedKmh(carIndex: integer): number
 ac.getGroundYApproximation(): number
 ac.getDeltaT(): number // seconds
@@ -74,8 +74,11 @@ ac.getDriverNationCode(carIndex: integer): string
 ac.getDriverNationality(carIndex: integer): string
 ac.getDriverTeam(carIndex: integer): string
 ac.getDriverNumber(carIndex: integer): integer
+ac.isCustomIconSet(carIndex: integer): boolean
 ac.getSessionName(sessionIndex: integer): string
 ac.isKeyDown(keyIndex: ac.KeyIndex): boolean
+ac.isKeyPressed(keyIndex: ac.KeyIndex): boolean
+ac.isKeyReleased(keyIndex: ac.KeyIndex): boolean
 ac.getControllerSteerValue(): number
 ac.isControllerGasPressed(): boolean
 ac.isControllerGearUpPressed(): boolean
@@ -119,8 +122,7 @@ ac.getServerIP(): string
 ac.getServerPortHTTP(): integer
 ac.getServerPortTCP(): integer
 ac.getServerPortUDP(): integer
-ac.isTaggedAsFriend(username: string): boolean
-ac.tagAsFriend(username: string, isFriend: boolean = true)
+ac.getCarByDriverName(driverName: string): integer
 ac.refreshCarShape(carIndex: integer = 0)
 ac.refreshCarColor(carIndex: integer = 0)
 ac.updateDriverModel(carIndex: integer = -1)
@@ -128,33 +130,39 @@ ac.encodeHalf(v: number): integer
 ac.encodeHalf2(v: vec2): integer
 ac.decodeHalf(v: integer): number
 ac.decodeHalf2(v: integer): vec2
+ac.getDriverHeadTransformTo(ret: mat4x4, carIndex: integer): boolean
 ac.onSessionStart(callback: integer): lua_linked_id
 ac.onCarJumped(carIndex: integer, callback: integer): lua_linked_id
 ac.onClientConnected(callback: integer): lua_linked_id
 ac.onClientDisconnected(callback: integer): lua_linked_id
 ac.onControlSettingsChanged(callback: integer): lua_linked_id
+ac.onTripleConfigurationChanged(callback: integer): lua_linked_id
 ac.onFolderChanged(folder: string, filter: string, recursive: boolean, callback: integer): lua_linked_id
 ac.onCSPConfigChanged(cspModuleID: string, callback: integer): lua_linked_id
 ac.onScreenshot(callback: integer): lua_linked_id
-ac.checksumSHA256(data: string|any): string
-ac.checksumXXH(data: string|any): integer
+ac.checksumSHA256(data: binary): string
+ac.checksumXXH(data: binary): integer
 ac.uniqueMachineKey(): string
-ac.compress(data: string|any, type: ac.CompressionType, level: integer = 9): string
-ac.decompress(data: string|any): string
-ac.encodeBase64(data: string|any, trimResult: boolean = false): string
+ac.uniqueMachineKeyAsync(callback: integer)
+ac.compress(data: binary, type: ac.CompressionType, level: integer = 9): string
+ac.decompress(data: binary): string
+ac.storageSetPath(relativePath: string, prefix: string = nullptr)
+ac.encodeBase64(data: binary, trimResult: boolean = false): string
 ac.decodeBase64(data: string): string
 ac.utf8To16(data: string): string
-ac.utf16To8(data: string|any): string
-ac.broadcastSharedEvent(key: string, data: string|any): integer // Returns number of listeners to the event with given key.
-ac.onSharedEvent(key: string, callback: integer): lua_linked_id
+ac.utf16To8(data: binary): string
+ac.broadcastSharedEvent(key: string, data: serializable): integer // Returns number of listeners to the event with given key.
+ac.onSharedEvent(key: string, callback: integer, processPostponed: boolean = false): lua_linked_id
 ac.setVRHandBusy(hand: integer, busy: boolean)
 ac.setVRHandVibration(hand: integer, frequency: number, amplitude: number, duration: number = 0.01)
+ac.isModuleActive(cspModuleID: string): boolean
 ac.getCarIndexInFront(carMainIndex: integer, distance: refnumber = nullptr): integer
 ac.getGapBetweenCars(carMainIndex: integer, carComparingToIndex: integer): number
 io.getAttributes(filename: string): lua_file_attributes
+io.getMainExecutable(): string
 io.loadAsync(filename: string, callback: integer)
-io.save(filename: string, data: string|any): boolean
-io.saveAsync(filename: string, data: string|any, callback: integer)
+io.save(filename: string, data: binary): boolean
+io.saveAsync(filename: string, data: binary, callback: integer)
 io.exists(filename: string): boolean
 io.dirExists(filename: string): boolean
 io.fileExists(filename: string): boolean
@@ -181,6 +189,7 @@ os.openInExplorer(directory: string)
 os.findAssociatedExecutable(filename: string): string
 os.openTextFile(filename: string, line: integer)
 os.openURL(url: string)
+os.preciseClock(): number
 ac.onAlbumCoverUpdate(callback: integer): lua_linked_id
 ac.mediaCurrentPeak(): vec2
 ac.mediaNextTrack()
@@ -193,6 +202,7 @@ ac.getCarState(index: integer): ac.StateCar
 ac.getSim(): ac.StateSim
 ac.getSession(index: integer): ac.StateSession
 ac.getUI(): ac.StateUi
+ac.getTripleConfiguration(): ac.StateTriple
 ac.getCar(index: integer): ac.StateCar
 ac.getVR(): ac.StateVr
 ac.getCarPhysics(index: integer): ac.StateCarPhysics
@@ -233,7 +243,8 @@ struct ac.StateWheel {
 	const float slipRatio;
 	const float ndSlip;
 	const float load; // Tyre load in N (warning: does not have correct values for remote cars online or in replays, use `.loadK` if you want a rough but stable estimation instead)
-	const float loadK; // Rough estimation of tyre load which works stable for remote cars or in replays, goes from 0 (no load) to 1 (full load)
+	const float loadK;
+	const float speedDifference; // Difference in speed between tyre and ground surface in contact point
 	const float camber; // Camber angle in degrees
 	const float toeIn; // Toe angle in degrees
 	const float suspensionDamage;
@@ -271,6 +282,8 @@ struct ac.StateWheel {
 
 struct ac.StateCar {
 	const float mass; // Car mass in kg
+	const vec3 graphicsOffset; // Graphics offset from car.ini
+	const float graphicsPitchRotation; // Graphics pitch rotation from car.ini
 	const float steerLock; // Maximum steering wheel angle in degrees
 	const float maxFuel; // Maximum amount of fuel in liters
 	const float exposureOutside; // Outboard exposure from car.ini
@@ -279,7 +292,7 @@ struct ac.StateCar {
 	const vec3 aabbCenter; // Center of AABB (calculated from LOD D or collider mesh)
 	const vec3 aabbSize; // Size of AABB in meters (calculated from LOD D or collider mesh)
 	const int index; // 0-based (0 for first car)
-	const int gearCount; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const int gearCount; // Excluding neutral and reverse. Physics-only (see `ac.CarState.physicsAvailable`)
 	const int turboCount; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const int tractionType; // 0 for rwd, 1 for fwd, 2 for awd, 3 for new awd, -1 for N/A. Physics-only (see `ac.CarState.physicsAvailable`)
 	const int enginePosition; // 0 for unspecified, 1 for front, 2 for rear, 3 for mid. Physics-only (see `ac.CarState.physicsAvailable`)
@@ -298,6 +311,8 @@ struct ac.StateCar {
 	const bool isEngineDiesel; // Check is based on car tags
 	const bool isKunosCar; // True if car is standard, from Kunos
 	const bool prefersImperialUnits; // True for cars from UK or USA
+	const bool headlightsAreHeadlights; // If set to `false`, headlights do something else (like change display mode)
+	const bool isLeftHandDrive; // If set to `true`, steering wheel is on the left side
 	const int tractionControlModes; // 0 if TC is not present. Physics-only (see `ac.CarState.physicsAvailable`)
 	const int absModes; // 0 if TC is not present. Physics-only (see `ac.CarState.physicsAvailable`)
 	const double timestamp; // time of last physics state record, in milliseconds (counting from the same point as ac.SimState.time)
@@ -316,6 +331,8 @@ struct ac.StateCar {
 	const vec3 look; // vector facing forward (normalized)
 	const vec3 side; // vector facing sideways (normalized)
 	const vec3 driverEyesPosition; // in-car coordinates for driver eyes position (can be changed by user)
+	const vec3 groundNormal; // normal of ground below car
+	const float groundDistance; // distance of ground below car (defines ground plane together with normal)
 	const float gas; // throttle, from 0 to 1
 	const float brake; // brake, from 0 to 1
 	const float clutch; // clutch, from 0 to 1 (1 for pedal fully depressed)
@@ -381,6 +398,8 @@ struct ac.StateCar {
 	const bool isDriftBonusOn; // drift bonus flag (calculated in any racing mode)
 	const bool isDriftValid; // is drift valid (calculated in any racing mode)
 	const bool isRaceFinished; // car has finished the race
+	const bool isDriverVisible; // driver can be hidden by apps or Lua scripts too
+	const bool isDriverDoorOpen;
 	const bool hazardLights;
 	const bool turningLeftLights;
 	const bool turningRightLights;
@@ -446,6 +465,7 @@ struct ac.StateCar {
 	const bool mguhChargingBatteries;
 	const bool manualPitsSpeedLimiterEnabled; // Returns `true` if manual pits speed limiter is currently active. Physics-only (see `ac.CarState.physicsAvailable`)            
 	const bool userSpeedLimiterEnabled; // Returns `true` if custom physics speed limiter is currently active. Not the same as pit limiter (or manually operated speed limiter). Physics-only (see `ac.CarState.physicsAvailable`)            
+	const bool autoClutch; // Returns `true` if auto-clutch is active. Physics-only (see `ac.CarState.physicsAvailable`)            
 	const int mgukDelivery; // starts with 0
 	const int mgukDeliveryCount;
 	const int mgukRecovery; // from 0 to 10 (for 100%)
@@ -456,6 +476,8 @@ struct ac.StateCar {
 	const int currentEngineBrakeSetting;
 	const float fuelPerLap; // Uses original AC fuel estimation. Zero until value is available. Physics-only (see `ac.CarState.physicsAvailable`)                
 	const float differentialPreload; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float differentialCoast; // Physics-only (see `ac.CarState.physicsAvailable`)
+	const float differentialPower; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float awdFrontShare; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float awdCenterLock; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const float drivetrainTorque; // Physics-only (see `ac.CarState.physicsAvailable`)
@@ -479,7 +501,8 @@ struct ac.StateCar {
 	const int p2pStatus;
 	const int p2pActivations;
 	const float altitude; // Altitude in meters above sea level.
-	const float ambientOcclusion; // Ambient occlusion value computed from prebaked data from track’s VAO patch. 0 for car fully shadowed (in a tunnel), 1 for car outside.
+	const float ambientOcclusion; // Ambient occlusion value computed from prebaked data from track’s VAO patch. 0 for car fully shadowed (in a tunnel), 1 for car outside. Affected by WeatherFX adjustments.
+	const float rawAmbientOcclusion; // Ambient occlusion value computed from prebaked data from track’s VAO patch. 0 for car fully shadowed (in a tunnel), 1 for car outside. Not affected by WeatherFX adjustments.
 	const int carCamerasCount; // Number of F6 cameras.
 	const int currentPenaltyType; // Current penalty type (set only for user car).
 	const int currentPenaltyParameter; // Parameter of current penalty (role depends on penalty type).
@@ -507,6 +530,7 @@ struct ac.StateWheelPhysics {
 	const float shaftVelocity;
 	const float shaftInertia;
 	const float tyreCarcassTemperature; // Only available with custom physics tyres
+	const float roadTemperature; // Can vary from AC road temperature in shadows if option is enabled
 }
 
 struct ac.StateWingPhysics {
@@ -523,6 +547,7 @@ struct ac.StateCarPhysics {
 	const bool isAvailable;
 	const float gearRatio;
 	const float finalRatio;
+	const float airDensity; // Air density affected by slip stream
 	const float awd2MaxTorque;
 	const float awd2CurrentLockTorque;
 	const float awd2Ramp;
@@ -554,6 +579,16 @@ struct ac.StateSim {
 	const bool isVRConnected; // True if AC runs in either Oculus or OpenVR mode and initialization went successfully
 	const bool staticReflections; // True if reflection cubemap does not update live and uses custom cubemap.kn5 instead of track model
 	const bool directMessagingAvailable; // True if it’s an online race and server supports TCP exchange of extra data between clients (allows to send online events more frequently)
+	const bool allowTyreBlankets;
+	const bool isReplayOnlyMode; // True if AC is ran in replay mode, without any racing
+	const bool isOnlineRace; // True if it’s an online race
+	const bool isShowroomMode; // True if AC has been launched in showroom mode
+	const bool isPreviewsGenerationMode; // True if AC has been launched to generate previews
+	const int allowedTyresOut;
+	const float mechanicalDamageRate; // In 0…1 range
+	const float tyreConsumptionRate; // In 0…1 range
+	const float fuelConsumptionRate; // In 0…1 range
+	const int inputMode; // Input mode selected by user
 	const double time; // game time in milliseconds (counting from the start of the simulation)
 	const vec3 cameraPosition;
 	const vec3 cameraLook; // points forward (there was some confusion with older API)
@@ -570,12 +605,13 @@ struct ac.StateSim {
 	const float dt; // Delta time in seconds, 0 when paused, affected by replay slow motion and fast forwarding
 	const bool isPaused; // If `true`, AC is currently paused
 	const bool isInMainMenu; // If `true`, main menu is currently active
+	const bool isLookingAtSessionResults; // If `true`, session results are being shown
+	const bool needsDPad; // If `true`, D-pad buttons are not used by their main bindings, but instead used by things like Quick Pits menu
 	const bool isLive; // If `true`, simulation is currently running (not paused and not in replay mode)
 	const bool isFreeCameraOutside; // Set to `true` if camera is either free or orbit (F7/F5) and not inside an interior 
 	const bool isReplayActive;
-	const bool isReplayOnlyMode; // True if AC is ran in replay mode, without any racing
-	const bool isOnlineRace; // True if it’s an online race
 	const bool isFocusedOnInterior; // True if camera is currently inside a car 
+	const bool isTripleScreenAvailable; // True if current camera allows for triple screen view
 	const bool controlsWithShifter;
 	const bool isVirtualMirrorActive;
 	const bool virtualMirrorActive; // @hidden
@@ -683,6 +719,19 @@ struct ac.StateUi {
 	const vec2 mouseDelta; // Mouse delta. Note that this is zero if either current or previous position are invalid (-FLT_MAX,-FLT_MAX), so a disappearing/reappearing mouse won't have a huge delta.
 	const float uiScale; // UI scale. Usually scripts shouldn’t worry about it, but just in case
 	const rgbm accentColor; // Theme-defined accent color
+}
+
+struct ac.StateTripleItem {
+	const vec2 left;
+	const vec2 right;
+	const float height;
+	const float xFrom;
+	const float xTo;
+	const float xWidth;
+}
+
+struct ac.StateTriple {
+	const state_triple_item screens[4];
 }
 
 struct ac.StateVrHand {

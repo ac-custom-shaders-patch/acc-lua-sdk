@@ -3,6 +3,7 @@ __source 'extensions/particles_fx/fireworks_lua.cpp'
 require './common/internal_import'
 require './common/ac_audio'
 require './common/ac_light'
+require './wfx_common/ac_weatherconditions'
 require './pfx_fireworks/ac_fireworks'
 require './pfx_fireworks/ac_lists'
 

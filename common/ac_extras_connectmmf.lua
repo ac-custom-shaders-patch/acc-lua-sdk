@@ -9,6 +9,7 @@ local _fficdef = ffi.cdef
 ---@param filename string @Shared memory file filename (without “Local\” bit).
 ---@param layout T @String for the body of the structure.
 ---@return T
+---@overload fun(filename: string, layout: string): any
 function ac.readMemoryMappedFile(filename, layout)
   if not __allowIO__ then error('Script of this type can’t access shared memory files', 2) end
   local layoutStr = ac.StructItem.__build(layout)
@@ -30,6 +31,7 @@ end
 ---@param filename string @Shared memory file filename (without “Local\” bit).
 ---@param layout T @String for the body of the structure.
 ---@return T
+---@overload fun(filename: string, layout: string): any
 function ac.writeMemoryMappedFile(filename, layout)
   if not __allowIO__ then error('Script of this type can’t access shared memory files', 2) end
   local layoutStr = ac.StructItem.__build(layout)

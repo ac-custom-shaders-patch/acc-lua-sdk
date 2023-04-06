@@ -13,9 +13,13 @@ require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_particles'
 require './common/ac_physics'
+require './common/ac_physics_ai'
 require './common/ac_gameplay'
 require './common/ac_game'
 require './common/ac_car_control'
+require './common/ac_car_control_switch'
+require './common/ac_extras_backgroundworker'
+require './wfx_common/ac_weatherconditions'
 
 -- automatically generated entries go here:
 __definitions()

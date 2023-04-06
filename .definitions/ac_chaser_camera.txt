@@ -29,3 +29,9 @@ ac.looksBehind(): boolean
 ac.loadSoundbank(soundbank: string, guids: string = nullptr): boolean // Returns `true` if both files were found. 
 ac.isAudioReady(): boolean
 ac.setAudioEventMultiplier(surfaceWav: string, mult: number): boolean
+ac.getRealTrackHeadingAngle(): number
+ac.getTimeZoneOffset(): number
+ac.getTimeZoneDstOffset(): number
+ac.getTimeZoneBaseOffset(): number
+ac.getConditionsSet(): ac.ConditionsSet
+ac.getConditionsSetTo(r: ac.ConditionsSet)

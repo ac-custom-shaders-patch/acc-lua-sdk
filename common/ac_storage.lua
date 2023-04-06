@@ -114,3 +114,14 @@ function ac.storageHasKey(storage, key)
   local d = storage ~= nil and rawget(storage, '__data__')
   return d and d[key] ~= nil
 end
+
+local _sch
+
+---Returns `true` if any storage value has changed since the previous call.
+---@return boolean
+function ac.storageChanged()
+  if not _sch then
+    _sch = refnumber(-1)
+  end
+  return ffi.C.lj_storage_changed(_sch)
+end

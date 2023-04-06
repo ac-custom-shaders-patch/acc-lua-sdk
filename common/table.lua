@@ -5,7 +5,7 @@ local _tclear = require('table.clear')
 local _tclone = require('table.clone')
 local _tnkeys = require('table.nkeys')
 local _tnew = require('table.new')
-local function isArray(t, N)
+local function __isArray(t, N)
   -- return type(t) == 'table' and _tisarray(t)
   -- return type(t) == 'table' and N == _tnkeys(t)  -- alternative implementation. note: table.nkeys iterates over all elements for counting 🙄
   -- return type(t) == 'table' and _tisarray(t) and N == _tnkeys(t)  -- might be faster with earlier check, but let’s play it safe
@@ -16,9 +16,24 @@ local function isArray(t, N)
   return k == nil or type(k) == 'number' and k > 0 and k < N  -- specially for {[1]=1,[2]=2} table (and similar ones), where N==2, but next(2) can return 1
 end
 
-local function requireArray(t, N)
-  if isArray(t, N) then return end
+local function __requireArray(t, N)
+  if __isArray(t, N) then return end
   error('Array is required', 3)
+end
+
+local function __deepCopy(t)
+  if type(t) ~= 'table' then return t end
+  local r, n = {}, #t
+  if __isArray(t, n) then
+    for i = next(t) or 1, n do
+      r[i] = __deepCopy(t[i])
+    end
+  else
+    for key, value in pairs(t) do
+      r[key] = __deepCopy(value)
+    end
+  end
+  return r
 end
 
 ---Checks if table is an array or not. Arrays are tables that only have consequtive numeric keys.
@@ -27,7 +42,7 @@ end
 function table.isArray(t)
   if type(t) ~= 'table' then return false end
   local N = #t
-  return isArray(t, N)
+  return __isArray(t, N)
 end
 
 ---Creates a new table with preallocated space for given amount of elements.
@@ -53,8 +68,13 @@ end
 
 ---Clones table using a fast LuaJIT call.
 ---@param t table
-function table.clone(t)
-  return _tclone(t)
+---@param deep boolean @Set to `true` for deep cloning.
+function table.clone(t, deep)
+  if deep then
+    return __deepCopy(t)
+  else
+    return _tclone(t)
+  end
 end
 
 ---Removes first item by value, returns true if any item was removed. Can work
@@ -65,7 +85,7 @@ end
 ---@return boolean
 function table.removeItem(t, item)
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       if t[i] == item then
         table.remove(t, i)
@@ -113,7 +133,7 @@ end
 ---@return boolean
 function table.contains(t, item)
   local N = #t
-  if isArray(t, N) then
+  if __isArray(t, N) then
     for key = next(t) or 1, N do
       if t[key] == item then
         return true
@@ -144,7 +164,7 @@ function table.random(t, filteringCallback, filteringCallbackData, randomDevice)
   local mrandom = randomDevice or math.random
   local N = #t
   local r, k = nil, nil
-  if isArray(t, N) then
+  if __isArray(t, N) then
     if filteringCallback == nil then
       k = mrandom(N)
       r = t[k]
@@ -187,7 +207,7 @@ end
 ---@return TKey|nil
 function table.indexOf(t, item)
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       if t[i] == item then
         return i
@@ -240,7 +260,7 @@ function table.join(t, itemsJoin, keyValueJoin, toStringCallback, toStringCallba
   if tjsn > 0 then _tjsn = tjsn - 1 end
 
   local pN = 1
-  if isArray(t, N) then
+  if __isArray(t, N) then
     for key = next(t) or 1, N do
       p[pN], pN = toStringCallback(t[key], key, toStringCallbackData), pN + 1
     end
@@ -286,7 +306,7 @@ end
 ---@return T[]
 function table.slice(t, from, to, step)
   local N = #t
-  requireArray(t, N)
+  __requireArray(t, N)
   if from == nil or from == 0 then from = 1 elseif from < 0 then from = N + from end
   if to == nil or to == 0 then to = N elseif to < 0 then to = N + to end
   if step == nil or step == 0 then step = 1 end
@@ -308,7 +328,7 @@ end
 function table.reverse(t)
   local N = #t
   local ret = _tnew(N, 0)
-  requireArray(t, N)
+  __requireArray(t, N)
   for i = N, next(t), -1 do
     ret[N - i + 1] = t[i]
   end
@@ -335,7 +355,7 @@ function table.map(t, callback, callbackData)
   local ret = {}
   local N = #t
   local I = 1
-  if isArray(t, N) then
+  if __isArray(t, N) then
     for key = next(t) or 1, N do
       local newValue, newKey = callback(t[key], key, callbackData)
       if newValue ~= nil then
@@ -379,7 +399,7 @@ end
 ---@return TData
 function table.reduce(t, startingValue, callback, callbackData)
   local N = #t
-  if isArray(t, N) then
+  if __isArray(t, N) then
     for key = next(t) or 1, N do
       startingValue = callback(startingValue, t[key], key, callbackData)
     end
@@ -403,7 +423,7 @@ end
 function table.filter(t, callback, callbackData)
   local ret = {}
   local N = #t
-  if isArray(t, N) then
+  if __isArray(t, N) then
     local I = 1
     for key = next(t) or 1, N do
       local value = t[key]
@@ -433,7 +453,7 @@ end
 ---@return boolean
 function table.every(t, callback, callbackData)
   local N = #t
-  if isArray(t, N) then
+  if __isArray(t, N) then
     for key = next(t) or 1, N do
       local v = callback(t[key], key, callbackData)
       if not v then
@@ -462,7 +482,7 @@ end
 ---@return boolean
 function table.some(t, callback, callbackData)
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       if callback(t[i], i, callbackData) then
         return true
@@ -489,7 +509,7 @@ end
 ---@return integer
 function table.count(t, callback, callbackData)
   local n, r = #t, 0
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       if callback(t[i], i, callbackData) then
         r = r + 1
@@ -516,7 +536,7 @@ end
 ---@return integer
 function table.sum(t, callback, callbackData)
   local n, r = #t, 0
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       local v = callback and callback(t[i], i, callbackData) or t[i]
       if v then
@@ -545,7 +565,7 @@ end
 ---@return T, TKey
 function table.findFirst(t, callback, callbackData)
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       local e = t[i]
       if callback(e, i, callbackData) then
@@ -572,7 +592,7 @@ end
 ---@return T, TKey
 function table.findByProperty(t, key, value)
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       local e = t[i]
       if e[key] == value then
@@ -602,7 +622,7 @@ function table.maxEntry(t, callback, callbackData)
   local r, k = nil, nil
   local v = -1/0
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       local l = callback and callback(t[i], i, callbackData) or t[i]
       if l > v then
@@ -635,7 +655,7 @@ function table.minEntry(t, callback, callbackData)
   local r, k = nil, nil
   local v = 1/0
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       local l = callback and callback(t[i], i, callbackData) or t[i]
       if l < v then
@@ -665,7 +685,7 @@ end
 ---@return table
 function table.forEach(t, callback, callbackData)
   local n = #t
-  if isArray(t, n) then
+  if __isArray(t, n) then
     for i = next(t) or 1, n do
       callback(t[i], i, callbackData)
     end
@@ -690,7 +710,7 @@ function table.distinct(t, callback, callbackData)
   local N = #t
   local d = {}
   local r = {}
-  if isArray(t, N) then
+  if __isArray(t, N) then
     local I = 1
     for key = next(t) or 1, N do
       local value = t[key]
@@ -732,7 +752,7 @@ end
 ---@nodiscard
 function table.findLeftOfIndex(t, testCallback, testCallbackData)
   local n = #t
-  requireArray(t, n)
+  __requireArray(t, n)
   local i = 0
   while n > 0 do
     local step = _mfloor(n / 2)
@@ -749,12 +769,11 @@ end
 function table.chain(...)
   local ret = {}
   local I = 1
-  local args = {...}
-  for i = 1, #args do
-    local t = args[i]
+  for i = 1, select('#', ...) do
+    local t = select(i, ...)
     local N = #t
-    if isArray(t, N) then
-      requireArray(t, N)
+    if __isArray(t, N) then
+      __requireArray(t, N)
       for j = next(t) or 1, N do
         ret[I] = t[j]
         I = I + 1
@@ -768,13 +787,38 @@ function table.chain(...)
   return ret
 end
 
+---Similar to JavaScript’s `Object.assign()`, works with tables and arrays, returns first argument (modified).
+---@generic T
+---@param target T
+---@param ... table
+---@return T
+function table.assign(target, ...)
+  local I = #target + 1
+  for i = 1, select('#', ...) do
+    local t = select(i, ...)
+    local N = #t
+    if __isArray(t, N) then
+      __requireArray(t, N)
+      for j = next(t) or 1, N do
+        target[I] = t[j]
+        I = I + 1
+      end
+    else
+      for key, value in pairs(t) do
+        target[key] = value
+      end
+    end
+  end
+  return target
+end
+
 ---Flattens table similar to JavaScript function with the same name. Requires an array.
 ---@param t any[]
 ---@param maxLevel integer? @Default value: 1.
 ---@return any[]
 function table.flatten(t, maxLevel)
   local N = #t
-  requireArray(t, N)
+  __requireArray(t, N)
   maxLevel = maxLevel or 1
 
   local function flattenTo(ret, t, N, level)
@@ -800,11 +844,11 @@ end
 ---@param endingIndex integer?
 ---@param startingIndex integer
 ---@param step integer?
----@param callback fun(index: integer, callbackData: TCallbackData): T
+---@param callback fun(index: integer, callbackData: TCallbackData): T, integer|string?
 ---@param callbackData TCallbackData?
 ---@return T[]
----@overload fun(endingIndex: integer, callback: fun(index: integer, callbackData: any), callbackData: any)
----@overload fun(endingIndex: integer, startingIndex: integer, callback: fun(index: integer, callbackData: any), callbackData: any)
+---@overload fun(endingIndex: integer, callback: (fun(index: integer, callbackData: any): any, integer|string?), callbackData: any)
+---@overload fun(endingIndex: integer, startingIndex: integer, callback: (fun(index: integer, callbackData: any): any, integer|string?), callbackData: any)
 function table.range(endingIndex, startingIndex, step, callback, callbackData)
   if type(startingIndex) == 'function' then startingIndex, step, callback, callbackData = 1, 1, startingIndex, step
   elseif type(step) == 'function' then step, callback, callbackData = 1, step, callback end

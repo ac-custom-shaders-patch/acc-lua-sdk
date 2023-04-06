@@ -59,7 +59,7 @@ local function createRsData(params, templateName)
       end
       error('Unsupported parameter type: '..tostring(v), 4)
     end)
-    table.sort(items, function (a, b) return a.size > b.size or a.size > b.size and a.key < b.key end)
+    table.sort(items, function (a, b) return a.size > b.size or a.size == b.size and a.key < b.key end)
     local si, fi = {}, { 'typedef struct {' }
     for i = 1, #items do
       local item = items[i]
@@ -94,14 +94,27 @@ local function createRsData(params, templateName)
     ret.ffiCastName = ffiName..'*'
   end
 
-  ret.s = ffi.C.lj_cshader_setup(params.async == true, inputTextures, inputValues, params.shader, templateName, ffiSize)
+  local inputLibs = nil
+  if params.extensions then
+    inputLibs = table.concat(params.extensions, ',')
+  end
+
+  local inputDefines = nil
+  if params.defines then
+    inputDefines = table.concat(table.map(params.defines, function (v, k)
+      if not v then return '' end
+      return string.format('#define %s %s\n', k, (type(v) == 'number' or type(v) == 'boolean') and tonumber(v) or v)
+    end), '')
+  end
+
+  ret.s = ffi.C.lj_cshader_setup(params.async == true, inputLibs, inputDefines, inputTextures, inputValues, params.shader, templateName, ffiSize, params.cacheKey or -87194889)
   return ret
 end
 
 local _rsCache = {}
 
 function __util.getRsData(params, templateName)
-  local k = ffi.C.lj_cshader_key(params.shader, templateName)
+  local k = ffi.C.lj_cshader_key(params.shader, templateName, tonumber(params.cacheKey) or 0)
   local r = _rsCache[k]
   if r == nil then
     r = createRsData(params, templateName)

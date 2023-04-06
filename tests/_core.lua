@@ -1,5 +1,6 @@
 ac = {}
 ffi = require('ffi')
+io = require('io')
 __script = {}
 package.path = package.path .. ';' .. './common/?.lua'
 
@@ -11,8 +12,9 @@ out(inc('common/ac_primitive.lua'))
 out(inc('common/internal.lua'))
 out(inc('common/string.lua'))
 out(inc('common/table.lua'))
-out(inc('common/io.lua'))
 out(inc('common/stringify.lua'))
+out(inc('common/json.lua'))
+out(inc('common/const.lua'))
 ?]]  -- we need macros working
 
 function print(v)
@@ -25,6 +27,44 @@ local successfulTests = 0
 shutdownproxy = newproxy(true)
 getmetatable(shutdownproxy).__gc = function() 
   io.write(string.format('\t%d tests passed\n', successfulTests))
+end
+
+-- Because proper version is in C++, here are some simple versions
+function string.split(inputstr, sep)
+  if sep == nil then
+    sep = "%s"
+  end
+  local t={}
+  for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+    table.insert(t, str)
+  end
+  return t
+end
+
+function string.trim(s)
+  return s:match"^%s*(.*)":match"(.-)%s*$"
+end
+
+function string.codePointToUTF8(n)
+  -- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
+  if n <= 0x7f then
+    return string.char(n)
+  elseif n <= 0x7ff then
+    return string.char(math.floor(n / 64) + 192, n % 64 + 128)
+  elseif n <= 0xffff then
+    return string.char(math.floor(n / 4096) + 224, math.floor(n % 4096 / 64) + 128, n % 64 + 128)
+  elseif n <= 0x10ffff then
+    return string.char(math.floor(n / 262144) + 240, math.floor(n % 262144 / 4096) + 128,
+      math.floor(n % 4096 / 64) + 128, n % 64 + 128)
+  end
+  return ''
+end
+
+function io.load(file)
+  local f = assert(io.open(file, "rb"))
+  local content = f:read("*all")
+  f:close()
+  return content
 end
 
 local function findCallerLine(mask)
@@ -67,8 +107,9 @@ function sameAs(a, b)
 end
 
 function serialize(a)
-  if type(a) == 'table' then return '{' .. table.join(a, ', ', serialize) .. '}' end
-  return tostring(a)
+  return stringify(a)
+  -- if type(a) == 'table' then return '{' .. table.join(a, ', ', serialize) .. '}' end
+  -- return tostring(a)
 end
 
 function expect(a, b)

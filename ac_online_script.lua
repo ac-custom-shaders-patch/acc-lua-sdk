@@ -13,9 +13,12 @@ require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_track'
 require './common/ac_gameplay'
+require './common/ac_car_control'
 require './common/ac_particles'
 require './common/ac_physics'
+require './common/ac_physics_ai'
 require './common/secure'
+require './wfx_common/ac_weatherconditions'
 
 ui.OnlineExtraFlags = __enum({ cpp = 'online_extra_flags' }, {
   None = 0,
@@ -74,7 +77,7 @@ __definitions()
 
 -- extra additions:
 
-ac.colorCorrections = __bound_array(ffi.typeof('void*'), ffi.C.lj_set_corrections)
+ac.colorCorrections = __util.boundArray(ffi.typeof('void*'), ffi.C.lj_set_corrections)
 
 ---Adds a color correction to the list of active color corrections.
 ---@param item ac.ColorCorrectionBase

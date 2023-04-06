@@ -6,7 +6,7 @@ function mat3x3.identity() end
 ---@field row1 vec3
 ---@field row2 vec3
 ---@field row3 vec3
----@constructor fun(row1: vec3, row2: vec3, row3: vec3): mat3x3
+---@constructor fun(row1: vec3?, row2: vec3?, row3: vec3?): mat3x3
 
 ---@param value mat3x3
 ---@return mat3x3
@@ -44,7 +44,7 @@ function mat4x4.scaling(scale) end
 ---@field look vec3
 ---@field side vec3
 ---@field up vec3
----@constructor fun(row1: vec4, row2: vec4, row3: vec4, row4: vec4): mat4x4
+---@constructor fun(row1: vec4?, row2: vec4?, row3: vec4?, row4: vec4?): mat4x4
 
 ---@param value mat4x4
 ---@return mat4x4

@@ -9,3 +9,4 @@ ac_tfx.*
 ac_module_*
 
 csp-lua-libs.code-workspace
+.build/node_modules

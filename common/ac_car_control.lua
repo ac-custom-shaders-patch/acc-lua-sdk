@@ -2,6 +2,13 @@ __source 'lua/api_car_control.cpp'
 __source 'extensions/smart_mirror/ac_ext_smart_mirror.cpp'
 __allow 'carc'
 
+ac.TurningLights = __enum({ cpp = 'lua_turning_lights' }, {
+  None = 0,
+  Left = 1,
+  Right = 2,
+  Hazards = 3,
+})
+
 ffi.cdef [[ 
 typedef struct {
   vec2 rotation;
@@ -43,4 +50,122 @@ function ac.getRealMirrorParams(mirrorIndex)
   local r = ffi.C.lj_getRealMirrorParams_inner__carc(mirrorIndex)
   if r.fov == -1 then return nil end
   return r
+end
+
+ac.CarAudioEventID = __enum({ cpp = 'lua_car_audio_event_id' }, {
+  EngineExt = 0,
+  EngineInt = 1,
+  GearExt = 2,
+  GearInt = 3,
+  Bodywork = 4,
+  Wind = 5,
+  Dirt = 6,
+  Downshift = 7,
+  Horn = 8,
+  GearGrind = 9,
+  BackfireExt = 10,
+  BackfireInt = 11,
+  TractionControlExt = 12,
+  TractionControlInt = 13,
+  Transmission = 14,
+  Limiter = 15,
+  Turbo = 16,
+})
+
+---Tweak car audio events live: alter volume, pitch, fading distance, position, transform parameters (same as with `[AUDIO_…]` sections
+---in car config file). Additionally, it allows to control extra FMOD event parameters in case you need to add further fidelity. Most functions,
+---apart from `ac.CarAudioTweak.parameterTransform()`, are quick enough that you can call them every frame with no issues.
+---
+---Note: if you’re making something other than a car script, please be careful with these functions, as it might override values configured 
+---by original car config or a car script. If conflicts will become an issue later on some workaround will be added (possibly a system 
+---allowing car configs or scripts to block other scripts interfering with its audio configuration).
+ac.CarAudioTweak = {}
+
+---Set volume multiplier. Overrides `[AUDIO_VOLUME]` value from car config.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param value number @New value from 0 to 1 (100%), can go above 1 as well.
+function ac.CarAudioTweak.setVolume(eventID, value)
+  ffi.C.lj_setCarAudioTweak_n__carc(tonumber(eventID) or 0, 0, tonumber(value) or 0)
+end
+
+---Get current volume multiplier set by `[AUDIO_VOLUME]` or a Lua script.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@return number @Returns `math.NaN` if there is no such event.
+function ac.CarAudioTweak.getVolume(eventID)
+  return ffi.C.lj_getCarAudioTweak_n__carc(tonumber(eventID) or 0, 0)
+end
+
+---Set pitch multiplier. Overrides `[AUDIO_PITCH]` value from car config.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param value number @New value from 0 to 1 (100%), can go above 1 as well.
+function ac.CarAudioTweak.setPitch(eventID, value)
+  ffi.C.lj_setCarAudioTweak_n__carc(tonumber(eventID) or 0, 1, tonumber(value) or 0)
+end
+
+---Get current pitch multiplier set by `[AUDIO_PITCH]` or a Lua script.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@return number @Returns `math.NaN` if there is no such event.
+function ac.CarAudioTweak.getPitch(eventID)
+  return ffi.C.lj_getCarAudioTweak_n__carc(tonumber(eventID) or 0, 1)
+end
+
+---Set attenuation start distance (at this distance volume will start decreasing). Overrides `[AUDIO_3D_DISTANCE] …_MIN`
+---value from car config.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param value number @New value in meters, or `-1` to reset to default FMOD value.
+function ac.CarAudioTweak.setDistanceMin(eventID, value)
+  ffi.C.lj_setCarAudioTweak_n__carc(tonumber(eventID) or 0, 2, tonumber(value) or 0)
+end
+
+---Get current attenuation start distance set by audio event properties, `[AUDIO_3D_DISTANCE]` or a Lua script.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@return number @Returns `math.NaN` if there is no such event, or `-1` if value is the default one from FMOD.
+function ac.CarAudioTweak.getDistanceMin(eventID)
+  return ffi.C.lj_getCarAudioTweak_n__carc(tonumber(eventID) or 0, 2)
+end
+
+---Set attenuation end distance (at this distance volume will stops decreasing, but sound might still be heard, 
+---depending on FMOD audio event configuration). Overrides `[AUDIO_3D_DISTANCE] …_MAX` value from car config.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param value number @New value in meters, or `-1` to reset to default FMOD value.
+function ac.CarAudioTweak.setDistanceMax(eventID, value)
+  ffi.C.lj_setCarAudioTweak_n__carc(tonumber(eventID) or 0, 3, tonumber(value) or 0)
+end
+
+---Get current attenuation end distance set by audio event properties, `[AUDIO_3D_DISTANCE]` or a Lua script.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@return number @Returns `math.NaN` if there is no such event, or `-1` if value is the default one from FMOD.
+function ac.CarAudioTweak.getDistanceMax(eventID)
+  return ffi.C.lj_getCarAudioTweak_n__carc(tonumber(eventID) or 0, 3)
+end
+
+---Set audio transformation (position and rotation) relative to car. Overrides `[AUDIO_TRANSFORM]` value from car config.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param value mat4x4 @Transformation matrix (make sure it’s normalized).
+function ac.CarAudioTweak.setTransform(eventID, value)
+  ffi.C.lj_setCarAudioTweak_m__carc(tonumber(eventID) or 0, 4, __util.ensure_mat4x4(value))
+end
+
+---Set LUT used for converting parameter values computed by AC into something else. Overrides `[AUDIO_PARAMETER_TRANSFORM]` value from car config.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param key string @Name of the parameter
+---@param value ac.Lut @LUT mapping original input values into custom output values.
+function ac.CarAudioTweak.setParameterTransform(eventID, key, value)
+  ffi.C.lj_setCarAudioTweak_l__carc(tonumber(eventID) or 0, 5, tostring(key), ffi.istype('numlut', value) and value or error('ac.Lut is required', 2))
+end
+
+---Set value of an FMOD audio event parameter. Feel free to call it every frame if you want to update it live.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param key string @Name of the parameter
+---@param value number @New value in a range expected by FMOD audio event.
+function ac.CarAudioTweak.setParameter(eventID, key, value)
+  ffi.C.lj_setCarAudioTweak_p__carc(tonumber(eventID) or 0, 6, tostring(key), tonumber(value) or 0)
+end
+
+---Get value of an FMOD audio event parameter.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param key string @Name of the parameter
+---@return number @Returns `math.NaN` if there is no such event or parameter.
+function ac.CarAudioTweak.getParameter(eventID, key)
+  return ffi.C.lj_getCarAudioTweak_p__carc(tonumber(eventID) or 0, 6, tostring(key))
 end

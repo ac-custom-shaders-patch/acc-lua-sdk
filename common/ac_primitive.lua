@@ -8,27 +8,40 @@ ffi.cdef [[
   typedef struct { float x, y, z, w; } quat;
 ]]
 
-local _vec2 = require './ac_primitive_vec2'
-local _vec3 = require './ac_primitive_vec3'
-local _vec4 = require './ac_primitive_vec4'
-local _rgb = require './ac_primitive_rgb'
-local _hsv = require './ac_primitive_hsv'
-local _rgbm = require './ac_primitive_rgbm'
-local _quat = require './ac_primitive_quat'
+--[[? if (!ctx.ldoc) for (let TYPE of ['vec2', 'vec3', 'vec4', 'rgb', 'hsv', 'rgbm', 'quat']) { 
 
-vec2 = ffi.metatype('vec2', _vec2.type)
-vec3 = ffi.metatype('vec3', _vec3.type)
-vec4 = ffi.metatype('vec4', _vec4.type)
-rgb = ffi.metatype('rgb', _rgb.type)
-hsv = ffi.metatype('hsv', _hsv.type)
-rgbm = ffi.metatype('rgbm', _rgbm.type)
-quat = ffi.metatype('quat', _quat.type)
+function buildMetaTable(T, INDEX_TABLE){
+  if (/__tostring/.test(INDEX_TABLE) && /__call/.test(INDEX_TABLE)) return INDEX_TABLE;
+
+  const dims = +T[3];
+  const F = ['x', 'y', 'z', 'w'].slice(0, dims);
+  const M = (s, j) => F.map(x => s.replace(/\$/g, x)).join(j || ', ');
+  const C = s => T + '(' + F.map(x => s.replace(/\$/g, x)) + ')';
+  const I = s => `ffi.istype(ct${T}, ${s})`;
+  const O = s => `function(v, u) return type(v) == 'number' and ${C(`v${s}u.$`)} or ${I('u')} and ${C(`v.$${s}u.$`)} or ${C(`v.$${s}u`)} end`;
+
+  return `{
+  __call = function(_, ${F}) return ffi.new(ct${T}, ${M('$ or 0')}) end,
+  __tostring = function(v) return string.format('(${M('%f')})', ${M('v.$')}) end,
+  __add = ${O('+')},
+  __sub = ${O('-')},
+  __mul = ${O('*')},
+  __div = ${O('/')},
+  __pow = ${O('^')},
+  __unm = function(v) return ${C('-v.$')} end,
+  __len = function(v) return v:length() end,
+  __eq = function(v, o) return ${I('v')} and ${I('o')} and ${M('v.$ == o.$', ' and ')} end,
+  __lt = function(v, o) return ${I('v')} and ${I('o')} and ${M('v.$ < o.$', ' and ')} end,
+  __le = function(v, o) return ${I('v')} and ${I('o')} and ${M('v.$ <= o.$', ' and ')} end,
+  __index = ${INDEX_TABLE}
+}`;
+}
+
+const src = ('' + fs.readFileSync('common/ac_primitive_' + TYPE + '.lua')).split(';--[[]' + ']_G()').map(x => x.trim()); 
+// out(TYPE + ' = nil\ndo ');
+out('do ');
+out(src[0] + '\n');
+out(TYPE + ' = ffi.metatype(ct' + TYPE + ', ' + buildMetaTable(TYPE, src[1].replace()) + ')\n');
+out(src[2] + ' end\n'); } ?]]
+
 smoothing = require './ac_smoothing'
-
-_vec2.init()
-_vec3.init()
-_vec4.init()
-_rgb.init()
-_hsv.init()
-_rgbm.init()
-_quat.init()

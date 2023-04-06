@@ -6,14 +6,15 @@ typedef struct {
 } mat3x3;
 ]]
 
+local ctmat3x3 = ffi.typeof('mat3x3')
 mat3x3 = ffi.metatype('mat3x3', { 
   __tostring = function(v)
     return string.format('(%s,\n %s,\n %s)', v.row1, v.row2, v.row3)
   end,
   __index = {
-    ismat3x3 = function(x) return ffi.istype('mat3x3', x) end,
+    ismat3x3 = function(x) return ffi.istype(ctmat3x3, x) end,
     set = function(s, o)
-      if not ffi.istype('mat3x3', o) then error('mat3x3 is required', 2) end
+      if not ffi.istype(ctmat3x3, o) then error('mat3x3 is required', 2) end
       s.row1:set(o.row1)
       s.row2:set(o.row2)
       s.row3:set(o.row3)
@@ -36,6 +37,7 @@ typedef struct {
 } mat4x4;
 ]]
 
+local ctmat4x4 = ffi.typeof('mat4x4')
 mat4x4 = ffi.metatype('mat4x4', { 
   __tostring = function(v)
     return string.format('(%s,\n %s,\n %s,\n %s)', v.row1, v.row2, v.row3, v.row4)
@@ -44,9 +46,9 @@ mat4x4 = ffi.metatype('mat4x4', {
     return v:mul(u)
   end,
   __index = {
-    ismat4x4 = function(x) return ffi.istype('mat4x4', x) end,
+    ismat4x4 = function(x) return ffi.istype(ctmat4x4, x) end,
     set = function(s, o)
-      if not ffi.istype('mat4x4', o) then error('mat4x4 is required', 2) end
+      if not ffi.istype(ctmat4x4, o) then error('mat4x4 is required', 2) end
       s.row1:set(o.row1)
       s.row2:set(o.row2)
       s.row3:set(o.row3)
@@ -62,6 +64,15 @@ mat4x4 = ffi.metatype('mat4x4', {
     inverseSelf = function(s)
       if s == nil then return nil end
       ffi.C.lj_mat_inverseself(s)
+      return s
+    end,
+    normalize = function(s)
+      if s == nil then return nil end
+      return ffi.C.lj_mat_normalize(s)
+    end,
+    normalizeSelf = function(s)
+      if s == nil then return nil end
+      ffi.C.lj_mat_normalizeself(s)
       return s
     end,
     transpose = function(s)

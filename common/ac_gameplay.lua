@@ -1,5 +1,6 @@
 __source 'lua/api_gameplay.cpp'
 __allow 'gp'
+__namespace 'ui'
 
 ffi.cdef [[ 
 typedef struct {
@@ -70,4 +71,18 @@ ffi.metatype('grabbedcamera', { __index = {
   ---camera matrix would undergo normalization before applying anyway. But it could be helpful if you need to access normalized `.side`,
   ---for example, right after altering `.look`.
   normalize = ffi.C.lj_grabbedcamera_normalize__gp,
+  ---Align a certain car in a viewport in a way similar to CM Showroom Preview generation. Returns a vector with camera offset.
+  ---@param carIndex integer
+  ---@param xAlign boolean
+  ---@param xOffset number
+  ---@param xOffsetRelative boolean
+  ---@param yAlign boolean
+  ---@param yOffset number
+  ---@param yOffsetRelative boolean
+  ---@return vec3
+  alignCar = function (s, carIndex, xAlign, xOffset, xOffsetRelative, yAlign, yOffset, yOffsetRelative)
+    return ffi.C.lj_grabbedcamera_aligncar__gp(s, tonumber(carIndex) or 0,
+      xAlign ~= false, tonumber(xOffset) or 0, xOffsetRelative ~= false, 
+      yAlign ~= false, tonumber(yOffset) or 0, yOffsetRelative ~= false)
+  end,
 } })

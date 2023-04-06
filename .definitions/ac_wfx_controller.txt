@@ -9,14 +9,16 @@ ac.getMoonDirectionTo(r: vec3)
 ac.getSunAltitude(): number
 ac.getTrackCoordinates(): vec2
 ac.getInputDate(): integer
+ac.getInputWeatherType(): ac.WeatherType
+ac.getInputTemperatures(): ac.TemperatureParams
+ac.getInputWind(): ac.WindParams
+ac.getInputTrackState(): ac.TrackConditions
+ac.setConditionsSet(c: ac.ConditionsSet)
+ac.setConditionsSet2(c: ac.ConditionsSet)
+ac.startBackgroundWorker(name: string, data: serializable, callback: integer)
 ac.getRealTrackHeadingAngle(): number
 ac.getTimeZoneOffset(): number
 ac.getTimeZoneDstOffset(): number
 ac.getTimeZoneBaseOffset(): number
 ac.getConditionsSet(): ac.ConditionsSet
 ac.getConditionsSetTo(r: ac.ConditionsSet)
-ac.getInputWeatherType(): ac.WeatherType
-ac.getInputTemperatures(): ac.TemperatureParams
-ac.getInputWind(): ac.WindParams
-ac.getInputTrackState(): ac.TrackConditions
-ac.setConditionsSet(c: ac.ConditionsSet)

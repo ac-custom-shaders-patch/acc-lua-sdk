@@ -3,12 +3,15 @@ typedef struct { bool value; } refbool;
 typedef struct { float value; } refnumber;
 ]]
 
+local ctrefbool = ffi.typeof('refbool')
+local ctrefnumber = ffi.typeof('refnumber')
+
 ---Stores a boolean value and can be used as a reference to it.
 ---@class refbool
 ---@field value boolean @Stored value.
-refbool = ffi.metatype('refbool', { __index = {
+refbool = ffi.metatype(ctrefbool, { __index = {
   ---@return boolean
-  isrefbool = function(x) return ffi.istype('refbool', x) end,
+  isrefbool = function(x) return ffi.istype(ctrefbool, x) end,
 
   ---For easier use with UI controls.
   ---@param newValue boolean
@@ -19,9 +22,9 @@ refbool = ffi.metatype('refbool', { __index = {
 ---Stores a numerical value and can be used as a reference to it.
 ---@class refnumber
 ---@field value number @Stored value.
-refnumber = ffi.metatype('refnumber', { __index = {
+refnumber = ffi.metatype(ctrefnumber, { __index = {
   ---@return boolean
-  isrefnumber = function(x) return ffi.istype('refnumber', x) end,
+  isrefnumber = function(x) return ffi.istype(ctrefnumber, x) end,
 
   ---For easier use with UI controls.
   ---@param newValue number

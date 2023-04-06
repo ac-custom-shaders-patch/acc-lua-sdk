@@ -38,7 +38,7 @@ os.DialogFlags = __enum({}, {
 ---Opens regular Windows file opening dialog, calls callback with either an error or a path to a file selected by user
 ---(or nil if selection was cancelled). All parameters in `params` table are optional (the whole table too).
 --[[@tableparam params {
-  title: string = 'Open' "Dialog title",
+  title: string = nil "Dialog title",
   defaultFolder: string = ac.getFolder(ac.FolderID.Root) "Default folder if there is not a recently used folder value available",
   folder: string = nil "Selected folder (unlike `defaultFolder`, overrides recently used folder)",
   fileName: string = nil "File name that appears in the File name edit box when that dialog box is opened",
@@ -60,7 +60,7 @@ end
 ---Opens regular Windows file saving dialog, calls callback with either an error or a path to a file selected by user
 ---(or nil if selection was cancelled). All parameters in `params` table are optional (the whole table too).
 --[[@tableparam params {
-  title: string = 'Save' "Dialog title",
+  title: string = nil "Dialog title",
   defaultFolder: string = ac.getFolder(ac.FolderID.Root) "Default folder if there is not a recently used folder value available",
   defaultExtension: string = nil "Sets the default extension to be added to file names.",
   folder: string = nil "Selected folder (unlike `defaultFolder`, overrides recently used folder)",
@@ -90,11 +90,22 @@ end
   workingDirectory: string = nil "Working directory.",
   timeout: integer = nil "Timeout in milliseconds. If above zero, process will be killed after given time has passed.",
   environment: table = nil "If set to a table, values from that table will be used as environment variables instead of inheriting ones from AC process",
+  inheritEnvironment: boolean = nil "Set to `true` to inherit AC environment variables before adding custom ones",
   stdin: string = nil "Optional data to pass to a process in stdin pipe",
   separateStderr: boolean = nil "Store stderr data in a separate string",
-  terminateWithScript: boolean = nil "Terminate process if this Lua script were to terminate (for example, during reload)"
+  terminateWithScript: boolean = nil "Terminate process if this Lua script were to terminate (for example, during reload)",
+  dataCallback: fun(err: boolean, data: string) = nil "If set to a function, data written in stdout and stderr will be passed to the function instead as it arrives"
 }]]
 ---@param callback nil|fun(err: string, data: os.ConsoleProcessResult)
 function os.runConsoleProcess(params, callback)
-  ffi.C.lj_run_console__os(__util.json(params), __util.expectReply(callback))
+  if type(params.dataCallback) == 'function' then
+    local callbackID = __util.setCallback(params.dataCallback)
+    params.dataCallback = nil
+    ffi.C.lj_run_console__os(__util.json(params), __util.expectReply(function (err, data)
+      __script.forgetCallback(callbackID)
+      if callback then callback(err, data) end
+    end), callbackID)
+  else
+    ffi.C.lj_run_console__os(__util.json(params), __util.expectReply(callback), 0)
+  end
 end

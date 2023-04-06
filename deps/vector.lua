@@ -2,17 +2,6 @@
 -- MIT License, see the COPYRIGHT file.
 -- https://github.com/neomantra/lds
 
-local ffi = require 'ffi'
-
-local function simple_deep_copy( x )
-  if type(x) ~= 'table' then return x end
-  local t = {}
-  for k, v in pairs(x) do
-    t[k] = simple_deep_copy(v)
-  end
-  return t
-end
-
 ffi.cdef [[
 void* lj_calloc(size_t count, size_t size);
 void* lj_realloc(void *ptr, size_t size);
@@ -36,7 +25,7 @@ local MallocAllocatorT__mt = {
 
 local function MallocAllocatorT( ct, which )
   if type(ct) ~= 'cdata' then error('argument 1 is not a valid "cdata"', 2) end
-  local t_mt = simple_deep_copy(MallocAllocatorT__mt)
+  local t_mt = table.clone(MallocAllocatorT__mt, true)
   t_mt.__index._ct = ct
   t_mt.__index._ct_size = ffi.sizeof(ct)
   local t_anonymous = ffi.typeof('struct {}')
@@ -47,14 +36,12 @@ local function MallocAllocator(ct)
   return MallocAllocatorT(ct)()
 end
 
-local VectorT__cdef = [[ struct { $ * _data; int _size; int _cap; } ]]
-
 local function VectorT__resize(v, reserve_n, shrinkToFit)
   if not reserve_n then reserve_n = 2 * v._cap end
   local new_cap = math.max(1, reserve_n, shrinkToFit and 1 or 2 * v._cap)
   if v._cap >= new_cap then return end
-  local new_data = v.__alloc:reallocate(v._data, new_cap * v.__ct_size)
-  v._data = ffi.cast(v._data, new_data)
+  local new_data = v.__alloc:reallocate(v.raw, new_cap * v.__ctSize)
+  v.raw = ffi.cast(v.raw, new_data)
   v._cap = new_cap
 end 
 
@@ -65,7 +52,7 @@ function Vector:size()
 end
 
 function Vector:sizeBytes()
-  return self._size * self.__ct_size
+  return self._size * self.__ctSize
 end
 
 function Vector:isEmpty()
@@ -77,11 +64,16 @@ function Vector:capacity()
 end
 
 function Vector:capacityBytes()
-  return self._cap * self.__ct_size
+  return self._cap * self.__ctSize
 end
 
 function Vector:reserve(reserve_n)
   VectorT__resize(self, reserve_n)
+end
+
+function Vector:resize(newSize)
+  VectorT__resize(self, newSize)
+  self._size = newSize
 end
 
 function Vector:shrinkToFit()
@@ -90,11 +82,11 @@ end
 
 function Vector:get(i)
   if i < 1 or i > self._size then return nil end
-  return self._data[i - 1]
+  return self.raw[i - 1]
 end
 
 function Vector:data()
-  return self._data
+  return self.raw
 end
 
 function Vector:set(i, x)
@@ -104,21 +96,25 @@ function Vector:set(i, x)
     VectorT__resize(self, math.max(i, self._cap * 2))
     self._size = i
   elseif i < 1 then return nil end
-  self._data[i - 1] = x
+  self.raw[i - 1] = x
   if i > self._size then self._size = i end
-  self.__keep_alive[i] = x
+  if self.__keepAlive then
+    self.__keepAlive[i] = x
+  end
 end
 
 function Vector:insert(i, x)
   if type(x) == 'nil' then self:push(i) 
-  elseif i < 1 then error("insert: index out of bounds", 2)
+  elseif i < 1 then error('insert: index out of bounds', 2)
   elseif i > self._size then self:push(x) 
   else
     if self._size + 1 > self._cap then VectorT__resize(self) end
-    ffi.C.lj_memmove(self._data + i, self._data + i - 1, (self._size - i + 1) * self.__ct_size)
-    self._data[i - 1] = x
+    ffi.C.lj_memmove(self.raw + i, self.raw + i - 1, (self._size - i + 1) * self.__ctSize)
+    self.raw[i - 1] = x
     self._size = self._size + 1
-    table.insert(self.__keep_alive, i, x)
+    if self.__keepAlive then
+      table.insert(self.__keepAlive, i, x)
+    end
   end
 end
 
@@ -150,47 +146,78 @@ end
 function Vector:remove(i)
   if type(i) == 'nil' then return self:pop() end
   if i < 1 or i > self._size then return nil end
-  local x = self._data[i - 1]
-  ffi.C.lj_memmove(self._data + i - 1, self._data + i, (self._size - i + 1) * self.__ct_size)
+  local x = self.raw[i - 1]
+  ffi.C.lj_memmove(self.raw + i - 1, self.raw + i, (self._size - i + 1) * self.__ctSize)
   self._size = self._size - 1
-  table.remove(self.__keep_alive, i)
+  if self.__keepAlive then
+    table.remove(self.__keepAlive, i)
+  end
   return x
 end
 
 function Vector:pop()
   if self._size == 0 then return nil end
-  local x = self._data[self._size - 1]
+  local x = self.raw[self._size - 1]
   self._size = self._size - 1
-  table.remove(self.__keep_alive, #self.__keep_alive)
+  if self.__keepAlive then
+    table.remove(self.__keepAlive, #self.__keepAlive)
+  end
   return x
 end
 
 function Vector:clear()
   self._size = 0
-  for k in pairs(self.__keep_alive) do
-    self.__keep_alive[k] = nil
+  if self.__keepAlive then
+    table.clear(self.__keepAlive)
   end
-  -- self.__keep_alive = {}
+end
+
+function Vector:clone()
+  if self.__cb then
+    error('Can’t clone bound arrays', 2)
+  end
+  if self.__keepAlive then
+    error('Can’t clone arrays with non-primitive data', 2)
+  end
+  local r = __util.arrayType(self.__ct)()
+  r:resize(self._size)
+  for i = 0, self._size - 1 do
+    r.raw[i] = self.raw[i]
+  end
+  return r
 end
 
 local VectorT__mt = {
-  __new = function(vt, reserve_n)
+  __new = function(vt, reserve, data)
     local self = ffi.new(vt)
-    reserve_n = 16
-    if reserve_n and reserve_n > 0 then
-      local data = self.__alloc:allocate(reserve_n)
-      if data == nil then error('VectorT.new allocation failed', 2) end
-      self._data, self._size, self._cap = data, 0, reserve_n
+    if data then
+      if type(data) == 'table' then
+        local len, j = #data, 0
+        self.raw = self.__alloc:allocate(len)
+        for i = next(data) or 1, len do
+          self.raw[j], j = data[i], j + 1
+        end
+        self._size, self._cap = j, len
+      elseif type(data) == 'number' then
+        if reserve < data then reserve = data end
+        self.raw, self._size, self._cap = self.__alloc:allocate(reserve), data, reserve
+      elseif type(data) == 'cdata' then
+        self.raw, self._size, self._cap = data, reserve, reserve
+      else
+        error('Unsupported initialization data', 2)
+      end
+    elseif reserve and reserve > 0 then
+      self.raw, self._size, self._cap = self.__alloc:allocate(reserve), 0, reserve
     else
-      self._data, self._size, self._cap = nil, 0, 0
+      self.raw, self._size, self._cap = nil, 0, 0
     end
     if self.__cb then self.__cb(self) end
     return self
   end,
-  __gc = function( self ) 
-    self.__alloc:deallocate(self._data)
-    self.__keep_alive = {}
-    self._data, self._cap, self._size = nil, 0, 0
+  __gc = function(self)
+    self.__alloc:deallocate(self.raw)
+    if self.__keepAlive then self.__keepAlive = {} end
+    self.raw, self._cap, self._size = nil, 0, 0
     if self.__cb then self.__cb(nil) end
     return self
   end,
@@ -199,27 +226,42 @@ local VectorT__mt = {
   __newindex = function (self, k, v) return self:set(k, v) end,
 }
 
-local function VectorT(ct, cb)
-  if type(ct) ~= 'cdata' then error("argument 1 is not a valid 'cdata'", 2) end
+local function VectorT(ct, cb, keepAlive)
+  if type(ct) ~= 'cdata' then error('argument 1 is not a valid “cdata”', 2) end
 
-  local vt_mt = simple_deep_copy(VectorT__mt)
-  vt_mt.__index.__ct = ct
-  vt_mt.__index.__ct_size = ffi.sizeof(ct)
-  vt_mt.__index.__alloc = MallocAllocator(ct)
-  vt_mt.__index.__keep_alive = {}
-  vt_mt.__index.__cb = cb
+  local vtmt = table.clone(VectorT__mt, true)
+  vtmt.__index.__ct = ct
+  vtmt.__index.__ctSize = ffi.sizeof(ct)
+  vtmt.__index.__alloc = MallocAllocator(ct)
+  vtmt.__index.__keepAlive = keepAlive and {} or false
+  vtmt.__index.__cb = cb or false
 
-  local vt = ffi.typeof(VectorT__cdef, ct)
-  local result = ffi.metatype(vt, vt_mt)()
-
-  -- todo: is there a better way?
-  setmetatable(vt_mt.__index, {
-    __index = function (self, k) return result:get(k) end,
-    -- __newindex = function (self, k, v) result:set(k, v) end,
-  })
-
-  return result
+  local vt = ffi.typeof([[ struct { $ * raw; int _size; int _cap; } ]], ct)
+  if keepAlive then
+    local result = ffi.metatype(vt, vtmt)
+    setmetatable(vtmt.__index, { __index = function (self, k) return result:get(k) end })
+    return result
+  else
+    return ffi.metatype(vt, vtmt)
+  end
 end
 
-__vector = Vector
-function __bound_array(ct, cb) return VectorT(ct, cb) end
+function __util.boundArray(ct, cb)
+  return VectorT(ct, cb, true)(16)
+end
+
+local __arrayTypeCache = {}
+function __util.arrayType(ct)
+  local cache = __arrayTypeCache[ct]
+  if cache then return cache end
+  local created = VectorT(ct, nil, false)
+  __arrayTypeCache[ct] = created
+  return created
+end
+
+function __util.stealVector(s, steal)
+  if not steal then return s.raw, s._size, -1 end
+  local r0, r1, r2 = s.raw, s._size, s._cap
+  s.raw, s._size, s._cap = nil, 0, 0
+  return r0, r1, r2
+end

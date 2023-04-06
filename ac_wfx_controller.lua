@@ -2,6 +2,7 @@ __source 'extensions/weather_fx/ac_ext_weather_fx__lua.h'
 __allow 'controller'
 
 require './common/internal_import'
+require './common/ac_extras_backgroundworker'
 require './wfx_common/ac_weatherconditions'
 
 -- automatically generated entries go here:

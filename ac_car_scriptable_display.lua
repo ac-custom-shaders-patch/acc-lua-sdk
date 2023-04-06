@@ -11,6 +11,7 @@ require './common/ac_scene'
 require './common/ac_ray'
 require './common/ac_car_control'
 require './common/ac_physics_raycast'
+require './wfx_common/ac_weatherconditions'
 require './car_scriptable_display/car_scriptable_display_utils'
 require './common/secure'
 

@@ -6,6 +6,55 @@ require './ac_display'
 require './ac_render_enums'
 require './ac_render_shader'
 
+-- Mesh vertex related stuff:
+
+ffi.cdef [[ typedef struct { vec3 pos; vec3 normal; vec2 uv; vec3 __extras; } lua_mesh_vertex; ]]
+
+---Mesh vertex.
+---@class ac.MeshVertex
+---@field pos vec3
+---@field normal vec3
+---@field uv vec2
+---@constructor fun(pos: vec3, normal: vec3, uv: vec2): ac.MeshVertex
+ac.MeshVertex = ffi.metatype('lua_mesh_vertex', {
+  __len = function(s) return #s.pos end,
+  __index = {
+    ---Creates new mesh vertex.
+    ---@param pos vec3
+    ---@param normal vec3
+    ---@param uv vec2
+    ---@return ac.MeshVertex
+    new = function(pos, normal, uv)
+      return ac.MeshVertex(pos, normal or vec3(0, 1, 0), uv or vec2())
+    end,
+  }
+})
+
+local __vecMeshVertices = __util.arrayType(ffi.typeof('lua_mesh_vertex'))
+local __vecMeshIndices = __util.arrayType(ffi.typeof('uint16_t'))
+
+---Buffer with mesh vertices. Contains `ac.MeshVertex` items.
+---@class ac.VertexBuffer : ac.GenericList
+---@constructor fun(size: nil|integer|ac.MeshVertex[] "Initial size or initializing values."): ac.VertexBuffer
+
+function ac.VertexBuffer(size)
+  local ret = __vecMeshVertices(0, size)
+  if type(size) == 'number' then
+    ffi.C.lj_init_vertices__scene(ret.raw, size)
+  end
+  return ret
+end
+
+---Buffer with mesh indieces. Contains `integer` items (limited by 16 bits for AC to handle).
+---@class ac.IndicesBuffer : ac.GenericList
+---@constructor fun(size: nil|integer|integer[] "Initial size or initializing values."): ac.IndicesBuffer
+
+function ac.IndicesBuffer(size)
+  return __vecMeshIndices(0, size)
+end
+
+-- Scene references:
+
 local function cr(v)
   if v == nil then return nil end
   return ffi.gc(v, ffi.C.lj_noderef_gc__scene)
@@ -69,6 +118,7 @@ ffi.metatype('noderef', {
     ---resulting value will be either 1 or 0.
     ---@param property string | "'ksEmissive'"
     ---@param value number|vec2|vec3|rgb|vec4|rgbm|boolean
+    ---@return ac.SceneReference @Returns self for easy chaining.
     setMaterialProperty = function (s, property, value)
       property = __util.str(property)
       if type(value) == 'number' then ffi.C.lj_noderef_setmaterialproperty1__scene(s, property, value)
@@ -79,6 +129,7 @@ ffi.metatype('noderef', {
       elseif rgbm.isrgbm(value) then ffi.C.lj_noderef_setmaterialproperty4c__scene(s, property, value) 
       elseif type(value) == 'boolean' then ffi.C.lj_noderef_setmaterialproperty1__scene(s, property, value and 1 or 0)
       else error('Not supported type: '..value, 2) end
+      return s
     end,
 
     ---Set material texture. Three possible uses:
@@ -214,8 +265,42 @@ ffi.metatype('noderef', {
     ---Create a new node with a given name and attach it as a child.
     ---@param name string
     ---@param keepAlive boolean @Set to `true` to create a long-lasting node which wouldn’t be removed when script is reloaded.
-    ---@return ac.SceneReference @Newly created node or nil if failed
+    ---@return ac.SceneReference @Newly created node or `nil` if failed
     createNode = function (s, name, keepAlive) return cr(ffi.C.lj_noderef_createnode__scene(s, name, keepAlive ~= true)) end,
+
+    ---Create a new mesh with a given name and attach it as a child. Steals passed vertices and indices to avoid reallocating
+    ---memory, so make sure to use `vertices:clone()` when passing if you want to keep the original data. 
+    ---@param name string
+    ---@param materialName string?
+    ---@param vertices ac.VertexBuffer
+    ---@param indices ac.IndicesBuffer
+    ---@param keepAlive boolean @Set to `true` to create a long-lasting node which wouldn’t be removed when script is reloaded.
+    ---@param moveData boolean? @Set to `true` to move vertices and indices data thus saving on reallocating memory. You can use `vertices:clone()` for one of them to retain original array. Default value: `false`.
+    ---@return ac.SceneReference @Newly created mesh or `nil` if failed
+    createMesh = function (s, name, materialName, vertices, indices, keepAlive, moveData)
+      local v0, v1, v2 = __util.stealVector(vertices, moveData)
+      local i0, i1, i2 = __util.stealVector(indices, moveData)
+      return cr(ffi.C.lj_noderef_createmesh__scene(s, name, materialName and tostring(materialName) or nil, keepAlive ~= true,
+        v0, v1, v2, i0, i1, i2))
+    end,
+
+    ---Replace mesh vertices dynamically. New number of vertices should match existing one, indices work the same. Can be used for dynamic
+    ---mesh alteration (for example, deformation). Calling it each frame with highly detailed mesh might still affect performance negatively though.
+    ---@param vertices ac.VertexBuffer
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    alterVertices = function (s, vertices)
+      ffi.C.lj_noderef_dynamicvertices__scene(s, vertices.raw, vertices._size)
+      return s
+    end,
+
+    ---Get vertices of a first mesh in selection. Makes a copy into an `ac.VertexBuffer`, so it might be expensive to call each frame, but it can be called
+    ---once for those vertices to later be used with `:alterVertices()` method.
+    ---@return ac.VertexBuffer? @Returns `nil` if there are no suitable meshes in selection.
+    getVertices = function (s)
+      local num = refnumber(0)
+      local ptr = ffi.C.lj_noderef_getvertices__scene(s, num)
+      return ptr ~= nil and __vecMeshVertices(num.value, ptr) or nil
+    end,
 
     ---Create a new bounding sphere node with a given name and attach it as a child. Using those might help with performance: children
     ---would skip bounding frustum test, and whole node would not get traversed during rendering if it’s not in frustum.
@@ -223,7 +308,7 @@ ffi.metatype('noderef', {
     ---Note: for it to work properly, it’s better to attach it to AC cars node, as that one does expect those bounding sphere nodes
     ---to be inside of it. You can find it with `ac.findNodes('carsRoot:yes')`.
     ---@param name string
-    ---@return ac.SceneReference @Can return nil if failed.
+    ---@return ac.SceneReference @Can return `nil` if failed.
     createBoundingSphereNode = function (s, name, radius) return cr(ffi.C.lj_noderef_createbsnode__scene(s, name, radius)) end,
 
     ---Load KN5 model and attach it as a child. To use remote models, first load them with `web.loadRemoteModel()`.
@@ -231,7 +316,7 @@ ffi.metatype('noderef', {
     ---Node: The way it actually works, KN5 would be loaded in a pool and then copied here (with sharing
     ---of resources such as vertex buffers). This generally helps with performance.
     ---@param filename string @KN5 filename relative to script folder or AC root folder.
-    ---@return ac.SceneReference @Can return nil if failed.
+    ---@return ac.SceneReference @Can return `nil` if failed.
     loadKN5 = function (s, filename) return cr(ffi.C.lj_noderef_loadkn5__scene(s, filename)) end,
 
     ---Load KN5 LOD model and attach it as a child. Parameter `mainFilename` should refer to the main KN5 with all the textures.
@@ -241,7 +326,7 @@ ffi.metatype('noderef', {
     ---loaded as well, but not shown, and instead kept in a pool.
     ---@param filename string @KN5 filename relative to script folder or AC root folder.
     ---@param mainFilename string @Main KN5 filename relative to script folder or AC root folder.
-    ---@return ac.SceneReference @Can return nil if failed.
+    ---@return ac.SceneReference @Can return `nil` if failed.
     loadKN5LOD = function (s, filename, mainFilename) return cr(ffi.C.lj_noderef_loadkn5lod__scene(s, filename, mainFilename)) end,
 
     ---Load KN5 model and attach it as a child asyncronously. To use remote models, first load them with `web.loadRemoteModel()`.
@@ -293,6 +378,18 @@ ffi.metatype('noderef', {
     ---@param transparent boolean
     ---@return ac.SceneReference @Returns self for easy chaining.
     setTransparent = function (s, transparent) ffi.C.lj_noderef_settransparent__scene(s, transparent == true) return s end,
+
+    ---@param mode render.BlendMode
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    setBlendMode = function (s, mode) ffi.C.lj_noderef_setblendmode__scene(s, tonumber(mode)) return s end,
+
+    ---@param mode render.CullMode
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    setCullMode = function (s, mode) ffi.C.lj_noderef_setcullmode__scene(s, tonumber(mode)) return s end,
+
+    ---@param mode render.DepthMode
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    setDepthMode = function (s, mode) ffi.C.lj_noderef_setdepthmode__scene(s, tonumber(mode)) return s end,
 
     ---Sets attribute associated with current meshes or nodes. Attributes are stored as strings, but you can access them as numbers with `:getAttibute()` by
     ---passing number as `defaultValue`. To find meshes with a certain attribute, use “hasAttribute:name” search query.
@@ -861,6 +958,8 @@ ffi.metatype('noderef', {
       uvOffset: vec2 = nil "Optional UV offset. By default CSP estimates an UV offset such that most triagles would be shown. If mapping is way off though, it might need tweaking (or even repeated calls with different offsets).",
       blendMode: render.BlendMode = render.BlendMode.BlendAccurate "Blend mode. Default value: `render.BlendMode.BlendAccurate`.",
       async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
+      cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
+      defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
       values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/project.fx” (look into it to see what fields are available)."

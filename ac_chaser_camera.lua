@@ -2,6 +2,7 @@ __source 'extensions/chaser_camera/ac_ext_chaser_camera.cpp'
 
 require './common/internal_import'
 require './common/ac_audio'
+require './wfx_common/ac_weatherconditions'
 
 -- automatically generated entries go here:
 __definitions()

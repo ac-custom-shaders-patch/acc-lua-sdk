@@ -30,3 +30,9 @@ render.debugArrow(from: vec3, to: vec3, size: number = -1, color: rgbm = rgbm(3,
 render.getRenderTargetSize(): vec2
 render.backupRenderTarget(): boolean
 render.restoreRenderTarget(): boolean
+ac.getRealTrackHeadingAngle(): number
+ac.getTimeZoneOffset(): number
+ac.getTimeZoneDstOffset(): number
+ac.getTimeZoneBaseOffset(): number
+ac.getConditionsSet(): ac.ConditionsSet
+ac.getConditionsSetTo(r: ac.ConditionsSet)

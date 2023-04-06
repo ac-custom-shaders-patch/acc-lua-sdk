@@ -38,6 +38,12 @@ function vec3.tmp() end
 ---@field x number
 ---@field y number
 ---@field z number
+---@operator add(number|vec3): vec3
+---@operator sub(number|vec3): vec3
+---@operator mul(number|vec3): vec3
+---@operator div(number|vec3): vec3
+---@operator pow(number|vec3): vec3
+---@operator len: number
 ---@constructor fun(x: number?, y: number?, z: number?): vec3
 
 ---Makes a copy of a vector.

@@ -1,3 +1,23 @@
+---Something that can be used as a texture, could be a texture filename, web URL, one of special values or an extra canvas, GIF or media player.
+---If value starts with “%” and points to an icon in a DLL file, icon will be loaded (for scripts with full IO access only). Special values:
+---- `color::X`: solid color texture (X can be three or four numbers or a hex representation).
+---- `dynamic::…`: dynamic textures (require Graphics Adjustment to work, not very reliable in general but might work for some extra effects):
+----  - `dynamic::screen`: LDR texture with scene contents.
+----  - `dynamic::hdr`: HDR texture with scene contents.
+----  - `dynamic::depth`: non-linear scene depth.
+----  - `dynamic::noise`: general 32×32 noise texture.
+---- `carN::…`: texture from a car with index N (0-based index), searches the same way car config would:
+---  - `carN::dynamic::X`: car dynamic texture with a given key.
+---  - `carN::car::X`: texture “X” from car KN5.
+---  - `carN::special::driver`: driver icon (updates live for things like active voice chat).
+---  - `carN::special::livery`: livery icon.
+---  - `carN::special::theme`: theme image based on car livery color.
+---  - Other values will look for an extension texture.
+---- `track::…`: texture the track, searches the same way car config would:
+---  - `track::track::X`: texture “X” from track KN5.
+---  - Other values will look for an extension texture.
+---@alias ui.ImageSource string|ui.ExtraCanvas|ui.GIFPlayer|ui.MediaPlayer
+
 ---Very simple thing for smooth UI animations. Call it with a number for its initial state and it would
 ---return you a function. Each frame, call this function with your new target value and it would give you
 ---a smoothly changing numerical value. Unlike functions like `math.applyLag()`, this one is a bit more

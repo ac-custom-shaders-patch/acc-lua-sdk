@@ -9,7 +9,7 @@ require './common/ac_render'
 require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_particles'
-require './common/ac_ray'
+require './common/ac_extras_backgroundworker'
 require './wfx_common/ac_weatherconditions'
 require './wfx_impl/ac_clouds'
 require './wfx_impl/ac_cloudscovers'
@@ -60,6 +60,9 @@ function script.renderSky(passID, frameIndex, uniqueKey) end
 ---@param frameIndex integer
 ---@param uniqueKey integer
 function script.renderClouds(passID, frameIndex, uniqueKey) end
+
+---Called right after the cloud shadows are rendered. Use `ac.enableRenderCallback()` to activate.
+function script.renderCloudShadows(passID, frameIndex, uniqueKey) end
 
 --[[) ?]]
 

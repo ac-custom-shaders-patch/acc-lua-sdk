@@ -17,6 +17,29 @@ typedef struct {
 } audioevent;
 ]]
 
+ac.AudioDSP = __enum({ underlying = 'string' }, {
+	Oscillator = "oscillator",         --- Generates sine/square/saw/triangle or noise tones.
+	LowPass = "lowpass",            --- Filters sound using a high quality, resonant lowpass filter algorithm but consumes more CPU time.
+	ITLowPass = "itlowpass",          --- Filters sound using a resonant lowpass filter algorithm that is used in Impulse Tracker, but with limited cutoff range (0 to 8060hz).
+	HighPass = "highpass",           --- Filters sound using a resonant highpass filter algorithm.
+	Echo = "echo",               --- Produces an echo on the sound and fades out at the desired rate.
+	Fader = "fader",              --- Pans and scales the volume of a unit.
+	Flange = "flange",             --- Produces a flange effect on the sound.
+	Distortion = "distortion",         --- Distorts the sound.
+	Normalize = "normalize",          --- Normalizes or amplifies the sound to a certain level.
+	Limiter = "limiter",            --- Limits the sound to a certain level.
+	ParamEQ = "parameq",            --- Attenuates or amplifies a selected frequency range.
+	PitchShift = "pitchshift",         --- Bends the pitch of a sound without changing the speed of playback.
+	Chorus = "chorus",             --- Produces a chorus effect on the sound.
+	SFXReverb = "sfxreverb",          --- Implements SFX reverb
+	LowPassSimple = "lowpasssimple",     --- Filters sound using a simple lowpass with no resonance, but has flexible cutoff and is fast.
+	Delay = "delay",              --- Produces different delays on individual channels of the sound.
+	Tremolo = "tremolo",            --- Produces a tremolo / chopper effect on the sound.
+	HighPassSimple = "highpasssimple",    --- Filters sound using a simple highpass with no resonance, but has flexible cutoff and is fast.
+	Pan = "pan",                --- Pans the signal, possibly upmixing or downmixing as well.
+	ThreeEQ = "threeeq",           --- Is a three-band equalizer.
+})
+
 local __audioEventKeepAlive = {}
 
 ac.AudioEvent = setmetatable({
@@ -48,7 +71,11 @@ ffi.metatype('audioevent', { __index = {
   ---@param dir vec3|nil @Direction. If missing, forwards vector is used.
   ---@param up vec3|nil @Vector directed up for full 3D orientation.
   ---@param vel vec3|nil @Velocity of audio source. If missing, sound is stationary. If you’re working on a car script, velocity is relative to car velocity.
-  setPosition = function (s, pos, dir, up, vel)  ffi.C.lj_audioevent_set_pos(s, __util.ensure_vec3(pos), __util.ensure_vec3_nil(dir), __util.ensure_vec3_nil(up), __util.ensure_vec3(vel)) end,
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  setPosition = function (s, pos, dir, up, vel)
+    ffi.C.lj_audioevent_set_pos(s, __util.ensure_vec3(pos), __util.ensure_vec3_nil(dir), __util.ensure_vec3_nil(up), __util.ensure_vec3(vel))
+    return s
+  end,
 
   ---Deprecated, now all events are alive until `:dispose()` is called.
   ---@deprecated
@@ -57,7 +84,25 @@ ffi.metatype('audioevent', { __index = {
   ---Set value of an audio event parameter.
   ---@param name string
   ---@param value number
-  setParam = function (s, name, value) ffi.C.lj_audioevent_set_param(s, __util.str(name), tonumber(value) or 0) end,
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  setParam = function (s, name, value) ffi.C.lj_audioevent_set_param(s, __util.str(name), tonumber(value) or 0) return s end,
+
+  ---Set minimum distance at which attenuation starts.
+  ---@param value number
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  setDistanceMin = function (s, value) ffi.C.lj_audioevent_set_distance_min(s, tonumber(value) or 1) return s end,
+
+  ---Set maximum distance at which attenuation ends.
+  ---@param value number
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  setDistanceMax = function (s, value) ffi.C.lj_audioevent_set_distance_max(s, tonumber(value) or 10) return s end,
+
+  ---Set DSP parameter.
+  ---@param dsp integer @0-based index of DSP.
+  ---@param key integer @0-based index of DSP parameter.
+  ---@param value number
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  setDSPParameter = function (s, dsp, key, value) ffi.C.lj_audioevent_set_dsp_param(s, tonumber(dsp) or 0, tonumber(key) or 0, tonumber(value) or 0) return s end,
 
   ---Returns `true` if event is loaded successfully. If event does not load, make sure soundbank is loaded first, and that event name is correct.
   ---@return boolean
@@ -75,19 +120,22 @@ ffi.metatype('audioevent', { __index = {
   ---for distant audio events. Although in general comparing distance with a threshold on Lua side with vectors might be faster (without
   ---going Lua→CSP→FMOD and back).
   ---@return boolean
-  isWithinRange = ffi.C.lj_audioevent_is_within_range,
+  isWithinRange = function (s) ffi.C.lj_audioevent_is_within_range(s) return s end,
 
-  resume = ffi.C.lj_audioevent_resume,
+  resume = function (s) ffi.C.lj_audioevent_resume(s) return s end,
 
   ---If condition is `true`, start an audio event if it’s stopped, resume it if it’s paused. If condition is false, stop audio event.
   ---@param condition boolean
-  resumeIf = function (s, condition) return ffi.C.lj_audioevent_resume_if(s, condition) end,
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  resumeIf = function (s, condition) ffi.C.lj_audioevent_resume_if(s, condition) return s end,
 
   ---Stop audio event.
-  stop = ffi.C.lj_audioevent_stop,
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  stop = function (s) ffi.C.lj_audioevent_stop(s) return s end,
 
   ---Start audio event.
-  start = ffi.C.lj_audioevent_start,
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  start = function (s) ffi.C.lj_audioevent_start(s) return s end,
 
   ---If you need to move audio event often, accessing its matrix directly might be the best way. But you have to be extra careful in
   ---making sure matrix is always normalized (vectors `side`, `up` and `look` should be othrogonal with lengths of 1), otherwise

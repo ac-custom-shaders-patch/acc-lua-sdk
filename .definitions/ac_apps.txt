@@ -34,11 +34,12 @@ ui.beginToolWindow(windowID: string, pos: vec2, size: vec2, noPadding: boolean)
 ui.endToolWindow()
 ui.beginTransparentWindow(windowID: string, pos: vec2, size: vec2, noPadding: boolean)
 ui.endTransparentWindow()
-ui.textHyperlink(text: string): boolean
+ui.itemHyperlink(hyperlinkColor: rgbm = rgbm(0, 0.5, 1, 1)): boolean
 ui.text(text: string)
-ui.textAligned(text: string, alignment: vec2, size: vec2 = vec2())
+ui.textHyperlink(text: string, hyperlinkColor: rgbm = rgbm(0, 0.5, 1, 1)): boolean
+ui.textAligned(text: string, alignment: vec2, size: vec2 = vec2(), ellipsis: boolean = false)
 ui.textWrapped(text: string, wrapPos: number = 0)
-ui.textColored(text: string, color: rgbm)
+ui.textColored(text: string, color: rgbm = rgbm(1, 1, 1, 1))
 ui.labelText(label: string, text: string)
 ui.textDisabled(text: string)
 ui.isKnownIcon24(iconID: string): boolean
@@ -58,23 +59,27 @@ ui.setCursorY(v: number)
 ui.offsetCursorX(v: number)
 ui.offsetCursorY(v: number)
 ui.sameLine(offsetFromStart: number = 0, spacing: number = -1)
+ui.setMaxCursorX(v: number)
+ui.setMaxCursorY(v: number)
 ui.newLine(spacing: number = -1)
 ui.beginGroup()
 ui.endGroup()
 ui.availableSpaceX(): number
 ui.availableSpaceY(): number
 ui.availableSpace(): vec2
-ui.imageSize(filename: string): vec2
-ui.decodeImage(data: string|any): string
-ui.drawImage(filename: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), keepAspectRatio: boolean = false)
-ui.drawImageRounded(filename: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), rounding: number = 1, corners: ui.CornerFlags = ImDrawCornerFlags_All)
-ui.drawImageQuad(filename: string, p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 0), uv3: vec2 = vec2(1, 1), uv4: vec2 = vec2(0, 1))
+ui.imageSize(imageSource: string): vec2
+ui.decodeImage(data: binary): string
+ui.drawImage(imageSource: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), keepAspectRatio: boolean = false)
+ui.drawIcon(iconID: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1))
+ui.drawLoadingSpinner(p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1))
+ui.drawImageRounded(imageSource: string, p1: vec2, p2: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), rounding: number = 1, corners: ui.CornerFlags = ImDrawCornerFlags_All)
+ui.drawImageQuad(imageSource: string, p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 0 ), uv3: vec2 = vec2( 1, 1 ), uv4: vec2 = vec2( 0, 1 ))
 ui.drawQuadFilled(p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm = rgbm(1, 1, 1, 1))
 ui.drawQuad(p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm = rgbm(1, 1, 1, 1))
-ui.beginTextureShade(filename: string)
-ui.endTextureShade(p1: vec2, p2: vec2, uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), clamp: boolean = true)
+ui.beginTextureShade(imageSource: string)
+ui.endTextureShade(p1: vec2, p2: vec2, uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), clamp: boolean = true)
 ui.beginGradientShade()
-ui.endGradientShade(p1: vec2, p2: vec2, col1: rgbm = rgbm(1, 1, 1, 1), col2: rgbm = rgbm(1, 1, 1, 1))
+ui.endGradientShade(p1: vec2, p2: vec2, col1: rgbm = rgbm(1, 1, 1, 1), col2: rgbm = rgbm(1, 1, 1, 1), useAlpha: boolean = false)
 ui.pushClipRect(p1: vec2, p2: vec2, intersectWithExisting: boolean = true)
 ui.pushClipRectFullScreen()
 ui.popClipRect()
@@ -82,19 +87,24 @@ ui.drawRect(p1: vec2, p2: vec2, color: rgbm, rounding: number = 0, roundingFlags
 ui.drawRectFilled(p1: vec2, p2: vec2, color: rgbm, rounding: number = 0, roundingFlags: ui.CornerFlags = ImDrawCornerFlags_All)
 ui.drawRectFilledMultiColor(p1: vec2, p2: vec2, colorTopLeft: rgbm, colorTopRight: rgbm, colorBottomRight: rgbm, colorBottomLeft: rgbm)
 ui.drawLine(p1: vec2, p2: vec2, color: rgbm, thickness: number = 1)
+ui.drawSimpleLine(p1: vec2, p2: vec2, color: rgbm, thickness: number = 1)
 ui.drawBezierCurve(p1: vec2, p2: vec2, p3: vec2, p4: vec2, color: rgbm, thickness: number = 1)
 ui.drawCircle(p1: vec2, radius: number, color: rgbm, numSegments: integer = 12, thickness: number = 1)
 ui.drawCircleFilled(p1: vec2, radius: number, color: rgbm, numSegments: integer = 12)
 ui.drawEllipseFilled(p1: vec2, radius: vec2, color: rgbm, numSegments: integer = 12)
 ui.drawTriangle(p1: vec2, p2: vec2, p3: vec2, color: rgbm, thickness: number = 1)
-ui.drawTriangleFilled(p1: vec2, p2: vec2, p3: vec2, color: rgbm)
-ui.drawText(text: string, pos: vec2, color: rgbm)
-ui.dwriteDrawText(text: string, fontSize: number, pos: vec2, color: rgbm)
+ui.drawTriangleFilled(p1: vec2, p2: vec2, p3: vec2, color: rgbm = rgbm(1, 1, 1, 1))
+ui.drawText(text: string, pos: vec2, color: rgbm = rgbm(1, 1, 1, 1))
+ui.dwriteDrawText(text: string, fontSize: number, pos: vec2, color: rgbm = rgbm(1, 1, 1, 1))
+ui.drawTextClipped(text: string, posMin: vec2, posMax: vec2, color: rgbm = rgbm(1, 1, 1, 1), alignment: vec2 = vec2(), ellipsis: boolean = false)
+ui.dwriteDrawTextClipped(text: string, fontSize: number, posMin: vec2, posMax: vec2, horizontalAligment: ui.Alignment = alignment::center, verticalAlignment: ui.Alignment = alignment::center, allowWordWrapping: boolean = false, color: rgbm = rgbm(1, 1, 1, 1))
 ui.pathClear()
 ui.pathLineTo(pos: vec2)
 ui.pathLineToMergeDuplicate(pos: vec2)
 ui.pathFillConvex(color: rgbm)
 ui.pathStroke(color: rgbm, closed: boolean = false, thickness: number = 1)
+ui.pathSimpleStroke(color: rgbm, closed: boolean = false, thickness: number = 1)
+ui.pathSmoothStroke(color: rgbm, closed: boolean = false, thickness: number = 1)
 ui.pathArcTo(center: vec2, radius: number, angleFrom: number, angleTo: number, numSegments: integer = 10)
 ui.pathUnevenArcTo(center: vec2, radius: vec2, angleFrom: number, angleTo: number, numSegments: integer = 10)
 ui.pathVariableArcTo(center: vec2, radiusFrom: number, radiusTo: number, angleFrom: number, angleTo: number, numSegments: integer = 10)
@@ -187,6 +197,7 @@ ui.popDWriteFont()
 ui.measureText(text: string, wrapWidth: number = -1): vec2
 ui.measureDWriteText(text: string, fontSize: number = 14, wrapWidth: number = -1): vec2
 ui.dwriteText(text: string, fontSize: number = 14, color: rgbm = rgbm(1, 1, 1, 1))
+ui.dwriteTextHyperlink(text: string, fontSize: number = 14, hyperlinkColor: rgbm = rgbm(0, 0.5, 1, 1)): boolean
 ui.dwriteTextWrapped(text: string, fontSize: number = 14, color: rgbm = rgbm(1, 1, 1, 1))
 ui.dwriteTextAligned(text: string, fontSize: number = 14, horizontalAligment: ui.Alignment = alignment::center, verticalAlignment: ui.Alignment = alignment::center, size: vec2 = vec2(), allowWordWrapping: boolean = false, color: rgbm = rgbm(1, 1, 1, 1))
 ui.popID()
@@ -203,17 +214,28 @@ ui.storeBool(id: integer = 0, value: boolean = false)
 ui.columns(columns: integer = 1, border: boolean = true, id: string = nullptr)
 ui.nextColumn()
 ui.setColumnWidth(columnIndex: integer, width: number)
+ui.getColumnWidth(columnIndex: integer): number
+ui.pushColumnsBackground()
+ui.popColumnsBackground()
+ui.columnSortingHeader(title: string, orderDirection: integer, alignRight: boolean = false): boolean // Returns `true` if header was clicked.
 ui.copyable(label: string)
+ui.pushDisabled()
+ui.popDisabled()
 ui.button(label: string, size: vec2 = vec2(), flags: ui.ButtonFlags = ImGuiButtonFlags_None): boolean
+ui.modernButton(label: string, size: vec2, flags: ui.ButtonFlags = ImGuiButtonFlags_None, icon: string = nullptr, iconSize: number = 16, iconBg: string = nullptr): boolean
 ui.smallButton(label: string): boolean
 ui.invisibleButton(label: string, size: vec2): boolean
 ui.dummy(size: vec2)
+ui.thinScrollbarBegin(appearOnHover: boolean = false): boolean // Returns `true` during scrolling
+ui.thinScrollbarEnd()
 ui.arrowButton(strID: string, dir: ui.Direction, size: vec2 = vec2(), flags: ui.ButtonFlags = ImGuiButtonFlags_None): boolean
 ui.bullet()
 ui.separator()
 ui.checkbox(label: string, checked: refbool): boolean // Returns `true` if checkbox was clicked.
 ui.radioButton(label: string, checked: refbool): boolean
 ui.progressBar(fraction: number, size: vec2 = vec2(), overlay: string = nullptr)
+ui.setExtraContentMark(active: boolean = true)
+ui.notificationCounter(counter: integer = -1, pos: vec2 = nullptr, noclip: boolean = false)
 ui.setNextItemWidth(width: number)
 ui.beginCombo(label: string, previewValue: string, flags: ui.ComboFlags = ImGuiComboFlags_None): boolean
 ui.selectable(label: string, selected: refbool, flags: ui.SelectableFlags = ImGuiSelectableFlags_None, size: vec2 = vec2()): boolean
@@ -228,6 +250,8 @@ ui.beginTreeNode(label: string, flags: ui.TreeNodeFlags = ImGuiTreeNodeFlags_Fra
 ui.endTreeNode()
 ui.beginPopupContextItem(id: string, mouseButton: integer = 1): boolean
 ui.endPopup()
+ui.openPopup(id: string)
+ui.beginPopup(id: string, flags: ui.WindowFlags = 0): boolean
 ui.beginTooltip(padding: vec2 = vec2(20, 8))
 ui.endTooltip()
 ui.header(text: string)
@@ -250,9 +274,9 @@ ui.getItemRectMax(): vec2
 ui.getItemRectSize(): vec2
 ui.setItemAllowOverlap()
 ui.itemToggledSelection(): boolean
-ui.image(filename: string, size: vec2, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr, uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), keepAspectRatio: boolean = false)
-ui.imageButton(filename: string, size: vec2, color: rgbm = rgbm(1, 1, 1, 1), bgColor: rgbm = nullptr, uv1: vec2 = vec2(), uv2: vec2 = vec2(1, 1), framePadding: number = -1, keepAspectRatio: boolean = false): boolean
-ui.isImageReady(filename: string): boolean
+ui.image(imageSource: string, size: vec2, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr, uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), keepAspectRatio: boolean = false)
+ui.imageButton(imageSource: string, size: vec2, bgColor: rgbm = nullptr, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), framePadding: number = -1, keepAspectRatio: boolean = false): boolean
+ui.isImageReady(imageSource: string): boolean
 ui.setAsynchronousImagesLoading(value: boolean = true)
 ui.calcItemWidth(): number
 ui.pushAllowKeyboardFocus(allowKeyboardFocus: boolean)
@@ -295,39 +319,49 @@ ui.setClipboardText(text: string)
 ui.time(): number
 ui.frameCount(): integer
 ui.modalPopup(title: string, msg: string, okText: string, cancelText: string, okIconID: string, cancelIconID: string, callback: integer)
+ui.modalDialog(title: string, callback: integer)
 ui.modalPrompt(title: string, msg: string, defaultValue: string, okText: string, cancelText: string, okIconID: string, cancelIconID: string, callback: integer)
 ui.projectPoint(pos: vec3, considerUiScale: boolean = true): vec2 // Returns vector with `inf` for values if point is outside of screen.
-ui.unloadImage(filename: string): boolean // Returns `true` if file was unloaded successfully.
+ui.unloadImage(imageSource: string): boolean // Returns `true` if file was unloaded successfully.
+ui.drawDriverIcon(carIndex: integer, pos: vec2, useCustomIcon: boolean = true)
+ui.setDriverTooltip(carIndex: integer)
+ui.setDriverPopup(id: string, carIndex: integer): boolean // Returns `false` once popup closes.
+ui.mentionDriverInChat(carIndex: integer, autofocus: boolean = true)
+ac.setAppWindowVisible(appID: string, windowFilter: string = "?", visible: boolean = true)
+ac.hasTrackPhysicsObjectCollidedWithCar(carIndex: integer, name: string, firstCollisionOnly: boolean = true): boolean
+ac.getCarIndexTrackPhysicsObjectCollidedWith(name: string): integer
+ac.getTrackPhysicsObjectNameHitByCar(carIndex: integer): string
 physics.teleportCarTo(carIndex: integer, spawnSet: string)
 physics.setCarPosition(carIndex: integer, pos: vec3, dir: vec3)
 physics.setCarVelocity(carIndex: integer, velocity: vec3)
 physics.engageGear(carIndex: integer, gearToEngage: integer)
-physics.setAILevel(carIndex: integer, level: number)
-physics.setAIAggression(carIndex: integer, aggression: number)
-physics.setAIThrottleLimit(carIndex: integer, limit: number)
-physics.setAITopSpeed(carIndex: integer, limit: number)
-physics.setAISteerMultiplier(carIndex: integer, mult: number)
-physics.setAISplineOffset(carIndex: integer, offset: number)
-physics.setExtraAIGrip(carIndex: integer, value: number)
+physics.setMGUKDelivery(carIndex: integer, level: integer)
+physics.setMGUKRecovery(carIndex: integer, level: integer)
 physics.setGentleStop(carIndex: integer, stop: boolean = true)
 physics.forceUserBrakesFor(time: number, brakingIntensity: number = 1)
 physics.forceUserThrottleFor(time: number, throttleIntensity: number = 1)
 physics.offsetUserSteering(offset: number)
 physics.overrideUserSteering(value: number, share: number)
+physics.overrideSteering(carIndex: integer, value: number)
 physics.resetCarState(carIndex: integer, fuelMult: number = 0.5)
 physics.setCarFuel(carIndex: integer, fuelLiters: number)
 physics.setCarNoInput(active: boolean = true)
-physics.setCarAutopilot(active: boolean = true)
+physics.setCarAutopilot(active: boolean = true, chooseTyres: boolean = false)
 physics.getCarInputControls(): ac_car_controls
 physics.setGripDecrease(carIndex: integer, wheels: ac.Wheel, decrease: number)
+physics.setAirDensityMultiplier(carIndex: integer, value: number)
+physics.resetTrackPhysicsObject(name: string)
 physics.blowTyres(carIndex: integer, wheels: ac.Wheel = 15)
 physics.setTyresBlankets(carIndex: integer, wheels: ac.Wheel = 15, blanketActive: boolean = true)
 physics.setTyresTemperature(carIndex: integer, wheels: ac.Wheel, temperature: number)
+physics.setTyresVirtualKM(carIndex: integer, wheels: ac.Wheel, virtualKm: number)
 physics.setCarBodyDamage(carIndex: integer, bodyDamage: vec4)
 physics.setCarEngineLife(carIndex: integer, engineLife: number)
 physics.setCarBallast(carIndex: integer, ballast: number)
 physics.setCarRestrictor(carIndex: integer, restrictor: number)
-physics.setCarCollisions(carIndex: integer, active: boolean)
+physics.setCarAutoShifter(carIndex: integer, active: boolean = true)
+physics.setCarCollisions(carIndex: integer, disable: boolean)
+physics.disableCarCollisions(carIndex: integer, disable: boolean = true)
 physics.allowCarDRS(carIndex: integer, active: boolean)
 physics.setCarDRS(carIndex: integer, active: boolean)
 physics.setCarPenalty(penaltyType: ac.PenaltyType, penaltyParam: integer = -1)
@@ -341,10 +375,26 @@ physics.setDriverTeam(team: string)
 physics.overrideRacingFlag(flag: ac.FlagType)
 physics.allowed(): boolean
 physics.raycastTrack(pos: vec3, dir: vec3, length: number, point: vec3 = nullptr, normal: vec3 = nullptr): number
+physics.setAILevel(carIndex: integer, level: number)
+physics.setAIAggression(carIndex: integer, aggression: number)
+physics.setAILookaheadBase(carIndex: integer, value: number)
+physics.setAILookaheadGasBrake(carIndex: integer, value: number)
+physics.setAIBrakeHint(carIndex: integer, value: number)
+physics.setAIThrottleLimit(carIndex: integer, limit: number)
+physics.setAITopSpeed(carIndex: integer, limit: number)
+physics.setAISteerMultiplier(carIndex: integer, mult: number)
+physics.setAISplineOffset(carIndex: integer, offset: number, overrideAiAwareness: boolean = false)
+physics.setAISplineAbsoluteOffset(carIndex: integer, offset: number, overrideAiAwareness: boolean = false)
+physics.setExtraAIGrip(carIndex: integer, value: number)
+physics.setAIPitStopRequest(carIndex: integer, value: boolean = true)
+physics.setAITyres(carIndex: integer, index: integer)
+physics.setAIBrakeMistake(carIndex: integer, time: number)
+physics.setAITractionMistake(carIndex: integer, time: number, severity: number)
 ac.checkAdminPrivileges(): boolean
 ac.setDriverChatNameColor(carIndex: integer, color: rgbm = nullptr)
 ac.setDriverVisible(carIndex: integer, isVisible: boolean)
-ac.setDriverDoorOpen(carIndex: integer, isOpen: boolean)
+ac.setDriverMouthOpened(carIndex: integer, amount: number)
+ac.setDriverDoorOpen(carIndex: integer, isOpen: boolean, instant: boolean)
 ac.setTrackCondition(key: string, value: number)
 ac.setCurrentCamera(mode: ac.CameraMode)
 ac.setCurrentDrivableCamera(mode: ac.DrivableCamera)
@@ -362,22 +412,31 @@ ac.setCameraDirection(look: vec3, up: vec3 = vec3(0, 1, 0))
 ac.setCameraFOV(fov: number)
 ac.setCameraExposure(exposure: number)
 ac.setCameraDOF(distance: number)
+ui.onDriverTooltip(callback: integer): lua_linked_id
+ui.onDriverContextMenu(callback: integer): lua_linked_id
 ac.pauseFilesWatching(pause: boolean)
 ac.debugLights(filter: string, count: integer, mode: ac.LightsDebugMode, distance: number = 100)
+ac.debugRainRacingLine(active: boolean = true)
+ac.setPhysicsDebugLines(mask: ac.PhysicsDebugLines, carsMask: integer = 1)
 ac.isPythonAppActive(appName: string): boolean
 ac.reloadPythonApp(appName: string): boolean
 ac.resetCar()
 ac.takeAStepBack()
 ac.setWeatherTimeMultiplier(multiplier: number)
-ac.setWeatherTimeOffset(offset: number)
+ac.setWeatherTimeOffset(offset: number, instant: boolean = false)
+ac.overrideReplayConditions(set: ac.ConditionsSet = nullptr)
 ac.setVAOMode(mode: ac.VAODebugMode)
 ac.getVAOMode(): ac.VAODebugMode
+ac.setCameraCPLSettings(intensity: number = 0, rotation: number = 0, offset: number = 0, photoelasticityBoost: number = 1)
 ac.setAudioVolume(audioChannelKey: string, value: number)
 ac.setWiperSpeed(carIndex: integer, wiperSpeed: integer)
 ac.markLapAsSpoiled()
 ac.setTrackCoordinatesDeg(coords: vec2)
 ac.setTrackTimezoneOffset(offset: number)
 ac.setReplayPosition(frameIndex: integer, playCounter: number)
+ac.replaceDriverModel(carIndex: integer, data: binary): boolean
+ac.packDriverModel(destination: string, lodAData: binary, lodBData: binary, configData: binary): boolean
+ac.refreshVideoSettings()
 ac.consoleExecute(command: string)
 ac.onConsoleInput(callback: integer): lua_linked_id
 ac.onAudioVolumeCalculation(callback: integer): lua_linked_id
@@ -393,7 +452,8 @@ ac.getOnboardCameraParams(carIndex: integer): ac.SeatParams
 ac.getOnboardCameraDefaultParams(carIndex: integer): ac.SeatParams
 ac.setOnboardCameraParams(carIndex: integer, params: ac.SeatParams, save: boolean = true)
 ac.areOnboardCameraParamsNeedSaving(): boolean
-ac.makeScreenshot(filename: string = nullptr)
+ac.setCarActive(carIndex: integer, active: boolean)
+ac.makeScreenshot(filename: string = nullptr, format: ac.ScreenshotFormat = 0, callback: integer = 0)
 ac.isAISplineRecorderPresent(): boolean
 ac.isAISplineRecorderActive(): boolean
 ac.isAISplineRecorderRecordingPitLane(): boolean
@@ -414,11 +474,16 @@ ac.setMGUKDelivery(level: integer)
 ac.setMGUKRecovery(level: integer)
 ac.switchToNeutralGear()
 ac.setHeadlights(active: boolean)
+ac.setWiperMode(wiperMode: integer)
 ac.setHighBeams(active: boolean)
+ac.setDaytimeLights(active: boolean)
+ac.setBrakingLightsThreshold(threshold: number = 0.01)
+ac.setTurningLights(mode: ac.TurningLights)
 ac.setExtraSwitch(index: integer, value: boolean)
 ac.getRealMirrorCount(): integer
 ac.getRealMirrorAABB(mirrorIndex: integer, min: vec3, max: vec3): boolean
 ac.setRealMirrorParams(mirrorIndex: integer, params: ac.RealMirrorParams)
+ac.setTargetCar(carIndex: integer = 0): boolean
 ac.iconColor(): vec4
 ac.teleportToServerPoint(pointIndex: integer): boolean // Returns `false` if there is no such point or it can’t be used as destination at the moment (for example, if there is already another car there)
 ac.canTeleportToServerPoint(pointIndex: integer): boolean
@@ -445,3 +510,10 @@ ac.onSetupsListRefresh(callback: integer): lua_linked_id
 ac.setMousePosition(posPixels: vec2)
 ac.setMouseLeftButtonDown(isDown: boolean)
 ac.setMouseWheel(scroll: number)
+ac.startBackgroundWorker(name: string, data: serializable, callback: integer)
+ac.getRealTrackHeadingAngle(): number
+ac.getTimeZoneOffset(): number
+ac.getTimeZoneDstOffset(): number
+ac.getTimeZoneBaseOffset(): number
+ac.getConditionsSet(): ac.ConditionsSet
+ac.getConditionsSetTo(r: ac.ConditionsSet)

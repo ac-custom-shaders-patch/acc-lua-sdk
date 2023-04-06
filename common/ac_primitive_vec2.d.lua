@@ -39,6 +39,13 @@ function vec2.intersect(p1, p2, p3, p4) end
 ---@class vec2
 ---@field x number
 ---@field y number
+---@operator add(number|vec2): vec2
+---@operator sub(number|vec2): vec2
+---@operator mul(number|vec2): vec2
+---@operator div(number|vec2): vec2
+---@operator pow(number|vec2): vec2
+---@operator len: number
+---@operation unm: vec2
 ---@constructor fun(x: number?, y: number?): vec2
 
 ---Makes a copy of a vector.

@@ -43,21 +43,6 @@ ac.DrivableCamera = __enum({ cpp = 'DrivableCamera' }, {
   Dash = 4,
 })
 
-ac.LightsDebugMode = __enum({ cpp = 'lights_debug_mode' }, { 
-  Off = 0,
-  Outline = 1,
-  BoundingBox = 2,
-  BoundingSphere = 4,
-  Text = 8,
-})
-
-ac.VAODebugMode = __enum({ cpp = 'vao_mode' }, { 
-  Active = 1,
-  Inactive = 3,
-  VAOOnly = 4,
-  ShowNormals = 5
-})
-
 ac.Wheel = __enum({ cpp = 'ac_wheel' }, { 
   FrontLeft = 1,
   FrontRight = 2,
@@ -168,6 +153,7 @@ ac.FolderID = __enum({ cpp = 'known_dir' }, {
   ExtLua = 32,          -- …/SteamApps/common/assettocorsa/extension/lua
   ExtCache = 33,        -- …/SteamApps/common/assettocorsa/cache
   AppDataTemp = 34,     -- …/AppData/Local/Temp
+  ExtInternal = 35,     -- …/SteamApps/common/assettocorsa/extension/internal
 })
 
 ac.FolderId = ac.FolderID
@@ -206,9 +192,22 @@ ac.SkyFeature = __enum({ cpp = 'sky_feature_id' }, {
   ISS = 200
 })
 
+ac.UserInputMode = __enum({ cpp = 'user_input_mode' }, {
+  Wheel = 0,
+  Gamepad = 1,
+  Keyboard = 2
+})
+
 ac.AudioChannel = __enum({ override = 'ac.*/audioChannelKey:*', underlying = 'string' }, {
   Main = 'main',
   Rain = 'rain',
+  Wind = 'wind',
+  Tyres = 'tyres',
+  Surfaces = 'surfaces',
+  Dirt = 'dirt',
+  Engine = 'engine',
+  Transmission = 'transmission',
+  Opponents = 'opponents',
 })
 
 ac.SpawnSet = __enum({ override = '*.*/spawnSet:*', underlying = 'string' }, {
@@ -297,8 +296,10 @@ ac.KeyIndex = __enum({ cpp = 'vk_key' }, {
   Accept = 0x1E,
   ModeChange = 0x1F, -- @opt
   Space = 0x20,
-  Prior = 0x21, -- @opt
-  Next = 0x22, -- @opt
+  Prior = 0x21, -- @hidden
+  PageUp = 0x21, -- @opt
+  Next = 0x22, -- @hidden
+  PageDown = 0x22, -- @opt
   End = 0x23,
   Home = 0x24,
   Left = 0x25, -- arrow ←
@@ -477,6 +478,7 @@ ac.CSPModuleID = __enum({ override = '*.*/cspModuleID:string', underlying = 'str
       const n = /FULLNAME\s*=\s*(.+)/.test($.readText(`${process.env['AC_ROOT']}/extension/config/${x}`)) ? RegExp.$1 : i;
       return `${d} = "${i}", -- ${n}`
     }).join('\n')) ?]]
+  JoypadAssist = 'gamepad_fx' -- @hidden
 })
 
 ac.ObjectClass = __enum({ }, {
@@ -539,7 +541,7 @@ ac.GamepadType = __enum({ cpp = 'joypad_type' }, {
   DualShock = 3, -- DualShock gamepad (can also be one of Nintendo gamepads; use `ac.getDualShock(…).type` to check).
 })
 
---Due to compatibility issues DualShock and Nintendo devices are combined in an alternative API area separately from DualSense.
+---Due to compatibility issues DualShock and Nintendo devices are combined in an alternative API area separately from DualSense.
 ac.GamepadDualShockType = __enum({ cpp = 'dualshock_device_type' }, {
   JoyConLeft = 1, -- Left Joy-Con
   JoyConRight = 2, -- Right Joy-Con

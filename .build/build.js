@@ -3,6 +3,12 @@
 const QUOTE = '`';
 const QUOTE_BOOLEAN = `|${QUOTE}true${QUOTE}|${QUOTE}false${QUOTE}`
 
+// {
+//   const luaJit = $[process.env['LUA_JIT']];
+//   await luaJit('-bgn', `run_compilation.lua`, `tests/run_compilation.lua`, `tests/run_compilation.raw`);
+//   return;
+// }
+
 function jsMacroEngine(file, ctx, args){
   /*
   Very simple JS macros system. Runs everything between “--[[?” and “?]]” through JS. Function “out(…)” is available for outputting things. Also,
@@ -38,6 +44,10 @@ function jsMacroEngine(file, ctx, args){
   });
 }
 
+const { XXHash3 } = require('xxhash-addon');
+function hash(v) {
+  return XXHash3.hash(Buffer.from(v)).readBigUInt64BE(0);
+};
 
 // Options:
 const minifyFfiDefinitions = true;
@@ -46,7 +56,7 @@ const minifyFfiDefinitions = true;
 const enumTypes = {};
 const luaTypes = {};
 const knownTypes = {
-  regex: /^(void|char|ray|blob_view|lua_string_ref|lua_string_cached_ref|lua_cshader_\w*|int|u?int\d+_t|size_t|float|double|bool|vec[234]|mat3x3|mat4x4|rgbm?|refbool|refnumber)$/,
+  regex: /^(void|char|ray|blob_view|lua_snb_data|lua_string_ref|lua_string_cached_ref|lua_cshader_\w*|int|u?int\d+_t|size_t|float|double|bool|vec[234]|mat3x3|mat4x4|rgbm?|refbool|refnumber|lua_lut)$/,
   ffiStructs: {},
   referencedTypes: {},
   ffiFunctions: {},
@@ -97,7 +107,7 @@ function notForExport(t) {
 }
 
 function requireToIgnore(callRequire) {
-  return callRequire == 'ffi' || /^table\.\w+$/.test(callRequire);
+  return callRequire == 'ffi' || /^internal\.serialize/.test(callRequire) || /^table\.\w+$/.test(callRequire);
 }
 
 function baseTypeToLua(t) {
@@ -188,9 +198,19 @@ function isRefType(type) {
 function getTypeInfo(type, customTypes) {
   if (type === 'const blob_view*') {
     return {
-      name: 'string|any',
+      name: 'binary',
       default: null,
       prepare: arg => `__util.blob(${arg.name})`,
+      forceExpression: true,
+      customPrepare: true
+    };
+  }
+
+  if (type === 'lua_snb_data') {
+    return {
+      name: 'serializable',
+      default: null,
+      prepare: arg => `__util.snb(${arg.name})`,
       forceExpression: true,
       customPrepare: true
     };
@@ -414,6 +434,9 @@ function findLDocType(arg, enumDefs, namespace, fnName){
       break;
     }
   }
+  if (namespace === 'ui' && arg.typeInfo.name === 'string' && /(?:draw|image)/i.test(fnName) && arg.niceName === 'filename'){
+    type = 'ui.ImageSource';
+  }
   return type;
 }
 
@@ -445,6 +468,9 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
       }
       break;
     }
+  }
+  if (namespace === 'ui' && arg.typeInfo.name === 'string' && arg.niceName === 'imageSource'){
+    type = 'ui.ImageSource';
   }
 
   if (defaultValue) comment = `${comment} Default value: ${convertLDocDefaultValue(defaultValue)}.`;
@@ -591,9 +617,10 @@ function verifyCppFile(cpp, cppName){
   verified[cppName] = true;
 
   if (cppName != 'extensions/weather_fx/ac_ext_weather_fx__lua.h'
-      && cppName != 'extensions/online_plus/online_scripts.cpp') {
+      && cppName != 'extensions/online_plus/online_scripts.cpp'
+      && cppName != 'lua/api_gameplay.cpp') {
     const ends = {};
-    cpp.replace(/\bLUAEXPORT(?:_OPT\(.+?\))?\b([^(]+)\(/g, (_, n) => {
+    cpp.replace(/\bLUA(?:EXPORT|PRIVATE)(?:_OPT\(.+?\))?\b([^(]+)\(/g, (_, n) => {
       const k = /__(\w+)/.test(n) ? RegExp.$1 : '<none>';
       (ends[k] || (ends[k] = [])).push(/(\w+)$/.test(n) ? RegExp.$1 : _);
     });
@@ -616,6 +643,7 @@ function verifyCppFile(cpp, cppName){
 }
 
 const vectorized = ['float', 'int'];
+const knownFfiFunctions = [];
 
 function getLuaCode(opts, definitionsCallback) {
   const ffiDefinitions = [];
@@ -672,7 +700,16 @@ function getLuaCode(opts, definitionsCallback) {
     return value;
   }
 
-  prepared.replace(/(?:\/\*@([\s\S]+?)\*\/\s+)?\bLUAEXPORT(?:_OPT\((.*)\))?\s+((?:const\s+)?\w+[*&]?)\s+(lj_\w+)\s*\((.*)/g, (_, docs, optCondition, resultType, name, argsLine) => {
+  prepared.replace(/(?:\/\*@([\s\S]+?)\*\/\s+)?\bLUA(EXPORT|PRIVATE)(?:_OPT\((.*)\))?\s+((?:const\s+)?\w+[*&]?)\s+(lj_\w+)\s*\((.*)/g, (_, docs, exportType, optCondition, resultType, name, argsLine) => {
+    const isPrivate = exportType == 'PRIVATE';
+    // if (isPrivate) $.echo(name);
+
+    if (isPrivate && prepared.indexOf(`(*${name.replace(/^lj_|__[a-z]+$/g, '')})(`) === -1){
+      $.echo(β.red(`Private API pass might not be set correctly: ${name}`));
+    }
+
+    if (!isPrivate && !knownFfiFunctions.includes(_)) knownFfiFunctions.push(_);
+
     let ns = 'ac';
     if (/__(\w+)$/.test(name) && !opts.allows.includes(RegExp.$1)) {
       if (opts.namespaces.includes(RegExp.$1)) {
@@ -692,7 +729,9 @@ function getLuaCode(opts, definitionsCallback) {
 
     const args = argsLine[0] == ')' ? [] : splitArgs(name, argsLine.split(/\)\s*(\{|$|(?<!:)\/\/)/)[0].trim());
     const comment = /(?<!:)\/\/@?\s+(.+)/.test(argsLine) ? ' // ' + RegExp.$1 : '';
-    ffiDefinitions.push(`${typeToFfi(resultType)} ${name}(${args.map(x => `${typeToFfi(x.type)} ${x.name}`).join(', ')});`);
+    if (!isPrivate) {
+      ffiDefinitions.push(`${typeToFfi(resultType)} ${name}(${args.map(x => `${typeToFfi(x.type)} ${x.name}`).join(', ')});`);
+    }
     if (notForExport(name)) return;
 
     const cleanName = name.replace(/^lj_|__\w+$/g, '');
@@ -765,7 +804,10 @@ function getLuaCode(opts, definitionsCallback) {
       return `opt("${overload}")`;
     }
 
-    if (args.length > 0 || needsWrappedResult(resultType)) {
+    const defName = isPrivate 
+      ? `(not __util.__ex and error('Physics API is not available here', 2) or __util.__ex.${name.replace(/^lj_|__[a-z]+$/g, '')})` 
+      : `ffi.C.${name}`;
+    if (args.length > 0 || needsWrappedResult(resultType) || isPrivate) {
       const prepared = args.map(x => prepareParam(x, wrapDefault, localDefines)).map(x => ({ x, i: !isStatementPrepare(x) }));
       const wrapResultCallback = wrapResult(resultType);
       const wrapResultPrefix = wrapResultCallback.extraData == null ? '' : wrapResultCallback.extraData(cleanName) + '\n';
@@ -776,7 +818,7 @@ function getLuaCode(opts, definitionsCallback) {
           : /\breply_fun\(/.test(x.comment) ? `${x.name} = __util.expectReply(${x.name})` 
           : null).filter(x => x).join('\n') }
         ${prepared.filter(x => !x.i).map(x => x.x).join(' ')} 
-        ${wrapResultCallback.callback(`ffi.C.${name}(${args.map((x, i) => prepared[i].i ? prepared[i].x : x.name).join(', ')})`, cleanName)} 
+        ${wrapResultCallback.callback(`${defName}(${args.map((x, i) => prepared[i].i ? prepared[i].x : x.name).join(', ')})`, cleanName)} 
       end`);
       docDefinitions.push(`${ns}.${cleanName}(${args.map(x => wrapParamDefinition(x)).join(', ')})${wrapReturnDefinition(resultType, opts.customTypes)}${comment}`);
 
@@ -785,7 +827,7 @@ function getLuaCode(opts, definitionsCallback) {
       docDeclarations.push(wrapReturnLDoc(resultType, opts.customTypes, docs, comment));
       docDeclarations.push(`function ${ns}.${cleanName}(${args.map(x => x.niceName).join(', ')}) end\n`);
     } else {
-      exportEntries.push(`${ns}.${cleanName} = ffi.C.${name}`);
+      exportEntries.push(`${ns}.${cleanName} = ${defName}`);
       docDefinitions.push(`${ns}.${cleanName}()${wrapReturnDefinition(resultType, opts.customTypes)}${comment}`);
 
       docDeclarations.push(wrapReturnLComment(docs, comment));
@@ -1076,7 +1118,7 @@ function getLuaCode(opts, definitionsCallback) {
                         collected.push(`function ${type}:${RegExp.$1}(${RegExp.$2}) end`);
                       } else if (/^\s+(\w+) = function\s*\((.*?)\)/.test(l2)) {
                         if (RegExp.$1[0] == '_') continue;
-                        $.echo(β.grey(`\tStatic method: ${type}.${RegExp.$1}(${RegExp.$2})`));
+                        // $.echo(β.grey(`\tStatic method: ${type}.${RegExp.$1}(${RegExp.$2})`));
                         collected.push('', ...fn);
                         collected.push(`function ${type}.${RegExp.$1}(${RegExp.$2}) end`);
                       } else if (/^\s+(\w+) = ffi\.C\.\w+/.test(l2)) {
@@ -1174,6 +1216,10 @@ function solveFlags(code, flags){
 function resolveRequires(code, filename, context = null) {
   const refDir = filename ? filename.replace(/[\/\\][^\/\\]+$/, '') : null;
 
+  if (/\.d\.lua$/.test(filename)){
+    code = `--[[? if (ctx.ldoc) { out(]]\n${code}\n--[[); } ?]]`;
+  }
+
   const mainNode = context == null;
   if (mainNode) {
     resetTypes();
@@ -1207,6 +1253,12 @@ function resolveRequires(code, filename, context = null) {
     // code = solveFlags(code, context.definitions.flags);
     code = jsMacroEngine(code, { flags: context.definitions.flags });
   }
+
+  code.replace(/(\w+)\.lj_.+/, (_, p) => {
+    if (p != 'C'){
+      $.fail(`Unhinged FFI call: ${_}`);
+    }
+  })
 
   let ast;
   try {
@@ -1634,7 +1686,7 @@ function finalizeLDoc(content, type){
     };
 
     const a = args.split(',').filter(x => x).map(x => {
-      if (!/\s*(\w+)\s*:\s*([\w.|?]+)\s*(".+")?/.test(x)) {
+      if (!/\s*(\w+)\s*:\s*([\w.|?\[\]]+)\s*(".+")?/.test(x)) {
         // $.echo(JSON.stringify(args));
         $.fail(`incorrectly formatted constructor argument: ${x}`);
       }
@@ -1779,7 +1831,8 @@ function verifyLDocIntegrity(code){
   }
   code.replace(/---@(?:(?:type|return)\s+|(?:field|param)\s+\S+\s+)(.+?)(?:\n|@|$| ")/g, (ctx, s) => add(s.trim(), ctx));
   for (let t in referredTypes){
-    if (code.indexOf('@class ' + t) === -1 && code.indexOf('@alias ' + t) === -1 && t !== '...'){
+    if (code.indexOf('@class ' + t) === -1 && code.indexOf('@alias ' + t) === -1 && t !== '...'
+    && !/^(?:ffi\.|(?:vec[234]|rgbm?|hsv|quat)$)/.test(t)){
       $.echo(β.red(`\tUnknown type? ${t} (ctx: “${referredTypes[t]}”)`));
     }
   }
@@ -1936,6 +1989,7 @@ function finalizeCDefs(code){
 
   for (let i = 1; i < ffiStatements.length; ++i){
     if (ffiStatements[i].startsWith('typedef')){
+      if (!/\{/.test(ffiStatements[i])) continue;
       if (!/ (\w+);$/.test(ffiStatements[i])) $.fail(`Unexpected typedef: ${ffiStatements[i]}`);
       const s = RegExp.$1;
       for (let j = 0; j < i; ++j){
@@ -1960,7 +2014,7 @@ ${code.replace(/\bffi\.C\./g, '_FC.').replace(/(?<!function )\b__util\.str(?=\()
     locals[n] = _;
 
     if (!new RegExp('(?<!local |local function )\\b' + n + '\\b').test(code)){
-      if (!/^__u(?:c[fe]|s[ofs]|t.+)$/.test(n)) $.echo(β.grey(`\tRemoving unused: ${n}`))
+      if (!/^_(?:_u(?:c[fer]|s[ofsr]|t.+)|FC)$/.test(n)) $.echo(β.grey(`\tRemoving unused: ${n}`))
       return '';
     }
     return _;
@@ -2056,21 +2110,26 @@ async function compile(filename) {
   packedPieces.push({ key: name, data: await precompileLua(name, processTarget(filename)) });
 }
 
-await compile('./ac_common.lua');
-// for (let filename of $.glob(`./tests/t*.lua`)) {
-for (let filename of $.glob(`./tests/___t*.lua`)) {
+for (let filename of $.glob(`./tests/t*.lua`)) {
+// for (let filename of $.glob(`./tests/___t*.lua`)) {
   fs.writeFileSync('./tests/_out.lua', jsMacroEngine($.readText('./tests/_core.lua') + '\n\n' + $.readText(filename), { test: true }))
   $.echo(`Running test: ${filename}`)
-  const s = Date.now();
+  // const s = Date.now();
   await luaJit('-epackage.path = package.path .. ";?.lua"', './tests/_out.lua', { cwd: '.' });
-  $.echo(β.grey(`\tTime taken: ${Date.now() - s} ms`));
+  // $.echo(β.grey(`\tTime taken: ${Date.now() - s} ms`));
 }
+
+$.echo('Tests are complete');
+// return;
+
+await compile('./ac_common.lua');
+// return;
 
 let filter = process.argv.filter(x => x.startsWith('--skip=')).map(x => x.substr(`--skip=`.length));
 for (let filename of $.glob(`./ac_*.lua`)) {
 // for (let filename of $.glob(`./ac_car_*.lua`)) {
 // for (let filename of $.glob(`./ac_apps*.lua`)) {
-  if (filename === './ac_common.lua' /* || filename == './ac_tfx.lua' */) continue;
+  if (filename === './ac_common.lua' || filename == './ac_module_ldm.lua' || filename == './ac_tfx.lua' || 0) continue;
   if (filter.some(x => filename.indexOf(x) !== -1)) continue;
   await compile(filename);
 }
@@ -2078,3 +2137,257 @@ for (let filename of $.glob(`./ac_*.lua`)) {
 const destination = path.resolve(`${process.env['LUA_OUTPUT']}/../lua.zip`);
 $.echo(`Packed to ${destination}`)
 await $.zip(packedPieces, { to: destination, comment: description.replace(/[“”’]/g, '\'') });
+
+function h32(h){
+  return (h) & 0xffffffffn;
+  // return (h) & 0xffffffffn ^ (h >> 32n) & 0xffffffffn;
+}
+const xxCollisionTest = {};
+const xxCollisionTest32 = {};
+const ffiFunctionsPrepared = knownFfiFunctions
+  .map(x => x.replace(/^[\s\S]*?LUAEXPORT(?:_OPT\(.+?\))?/, '')
+    .replace(/\s*\/\*.*?\*\/\s*|\/\/.*/g, '')
+    .replace(/\)\s*\{.+/, ')').trim().replace(/\blj_/, 'lj_') 
+    .replace(/\(.+\)/, _ => '(' + _.substr(1, _.length - 2).replace(/\(.*?\)|\{.*?\}/g, '') + ')')
+    .replace(/\s*=[^,\)]+/g, '')
+    + ';')
+  .map(x => {
+    const n = x.match(/\blj_\w+/)[0];
+    const k = hash(n);
+    if (xxCollisionTest[k]) $.fail('Key collision');
+    xxCollisionTest[k] = true;
+    if (xxCollisionTest32[h32(k)]) $.fail('Key collision');
+    xxCollisionTest32[h32(k)] = true;
+    return {k: k, n: n, x: x}
+  });
+
+ffiFunctionsPrepared.sort((a, b) => a.k == b.k ? 0 : a.k > b.k ? 1 : -1);
+const ffiFunctionsPrepared32 = ffiFunctionsPrepared.slice(0);
+ffiFunctionsPrepared32.sort((a, b) => h32(a.k) == h32(b.k) ? 0 : h32(a.k) > h32(b.k) ? 1 : -1);
+const ffiFunctionsShuffled = ffiFunctionsPrepared
+  .map(value => ({ value, sort: Math.random() }))
+  .sort((a, b) => a.sort - b.sort)
+  .map(({ value }) => value);
+
+const ffiFunctionsPrepared32B = ffiFunctionsPrepared.map(x => Object.assign({}, x));
+ffiFunctionsPrepared32B.forEach(x => {
+  const b = +((h32(x.k) & 0xffn).toString());
+  x.b = b;
+  x.K = h32(x.k);
+});
+ffiFunctionsPrepared32B.sort((a, b) => a.b == b.b ? (a.K == b.K ? 0 : a.K > b.K ? 1 : -1) : a.b > b.b ? 1 : -1);
+
+const ffiFunctionsPrepared32H = ffiFunctionsPrepared.map(x => Object.assign({}, x));
+ffiFunctionsPrepared32H.forEach(x => {
+  const b = +((h32(x.k) & 0x3ffn).toString());
+  x.b = b;
+  x.K = h32(x.k);
+});
+ffiFunctionsPrepared32H.sort((a, b) => a.b == b.b ? (a.K == b.K ? 0 : a.K > b.K ? 1 : -1) : a.b > b.b ? 1 : -1);
+
+// let buckets = {};
+// ffiFunctionsPrepared32H.forEach(x => { (buckets[x.b] || (buckets[x.b] = [])).push(x); });
+// Object.entries(buckets).map(([k, v]) => $.echo(k, v.length));
+
+function cppBinaryEncoder(data, callback){
+  let r = '', h = false;
+  function add(c){
+    c = Number(c);
+    if (c >= 32 && c <= 126 && c != 92 && c != 34 && (!h || !(c >= 48 && c <= 57))) { r += String.fromCharCode(c); h = false; }
+    else if (c == 8) { r += '\\b'; h = false; }
+    else if (c == 9) { r += '\\t'; h = false; }
+    else if (c == 10) { r += '\\n'; h = false; }
+    else if (c == 11) { r += '\\v'; h = false; }
+    else if (c == 12) { r += '\\f'; h = false; }
+    else if (c == 13) { r += '\\r'; h = false; }
+    else if (c == 34) { r += '\\"'; h = false; }
+    else if (c == 92) { r += '\\\\'; h = false; }
+    else { r += '\\' + c.toString(8); h = true; }
+  }
+  data.forEach(x => callback ? callback(x, add) : add(x));
+  // $.echo(r.length);
+  return r;
+}
+
+// $.echo(cppBinaryEncoder(fs.readFileSync('C:/Users/illvd/OneDrive/Docs/PublicKeys/rsa_public_0.dat')));
+
+const ffiModule = `// Generated automatically:
+#include "stdafx.h"
+
+#include <ac_enums/BlendMode.h>
+#include <ac_enums/CameraMode.h>
+#include <ac_enums/CullMode.h>
+#include <ac_enums/DepthMode.h>
+#include <ac_enums/DrivableCamera.h>
+#include <ac_enums/FontAlign.h>
+#include <ac_enums/GLPrimitiveType.h>
+#include <dx/dx_perlinworley.h>
+#include <extensions/car_instruments/instruments_status.h>
+#include <extensions/smart_mirror/ac_ext_smart_mirror.h>
+#include <extensions/weather_fx/ac_ext_weather_fx.h>
+#include <extensions/weather_fx/suncalc.h>
+#include <extensions/weather_fx/weather_conditions.h>
+#include <hooks/custom_types/custom_color_correction.h>
+#include <hooks/phys_debug_lines.h>
+#include <imgui/imgui_ext.h>
+#include <imgui/imgui.h>
+#include <lua/api_io.h>
+#include <lua/api_macro.h>
+#include <lua/api_macro_snb.h>
+#include <lua/lua_storage.h>
+#include <lua/lua_updateable.h>
+
+namespace ac_ext 
+{
+  enum class ac_ext_image_format;
+  enum class async_texture_state : int;
+  enum class shadows_state;
+  struct cloud_material;
+  struct cloud;
+  struct clouds_array;
+  struct clouds_cover;
+  struct clouds_covers_array;
+  struct extra_gradient;
+  struct firework;
+  struct fireworks_array;
+  struct gradients_array;
+}
+
+namespace apps 
+{
+  struct tree_leaf;
+  struct tree_vertex;
+  struct positioning_helper;
+}
+
+namespace cui 
+{
+  enum class online_extra_flags;
+}
+
+namespace hooks 
+{
+  struct binary_input;
+  enum class shaders_type : ushort;
+}
+
+namespace settings 
+{
+  enum lights_debug_mode : int;
+}
+
+namespace lua
+{
+  using namespace ac_ext;
+  using namespace AC;
+  using namespace apps;
+  using namespace cui;
+  using namespace dx;
+  using namespace ImGui;
+  using namespace utils;
+
+  enum class fog_algorithm;
+  enum class include_type;
+  enum class sky_side : uint;
+  enum class vao_mode;
+  struct corrections_array;
+  struct lua_car_shot;
+  struct lua_cshader_drawcall;
+  struct lua_cshader_shader;
+  struct lua_gif_holder;
+  struct lua_grabbedcamera;
+  struct lua_mmf_holder;
+  struct lua_pfx_flame_emitter;
+  struct lua_pfx_smoke_detractor;
+  struct lua_pfx_smoke_emitter;
+  struct lua_pfx_sparks_emitter;
+  struct lua_rigidbody;
+  struct lua_ui_rt;
+  struct lua_ui_rtcpu;
+  struct noderef;
+  struct seatparams;
+  struct state_joypad_data;
+  struct trackcondition;
+  enum class alignment;
+  struct lua_dir_scan;
+  struct lua_hashspace;
+  struct lua_lut;
+  struct lua_music_data;
+  struct lua_numlut;
+  struct lua_time_evaluation;
+  struct socialdata;
+  struct state_car_physics;
+  struct state_car;
+  struct state_dualsense_output;
+  struct state_dualsense;
+  struct state_dualsense;
+  struct state_dualshock_output;
+  struct state_dualshock;
+  struct state_session;
+  struct state_sim;
+  struct state_triple;
+  struct state_ui;
+  struct state_vr;
+
+  typedef AC::MeshVertex lua_mesh_vertex;
+  typedef instruments_status::turning_lights lua_turning_lights;
+  typedef int aa_mode;
+  typedef int compression_type;
+  typedef int dualsense_haptic_param;
+  typedef int lua_car_audio_event_id;
+  typedef int render_callback_pass_id;
+  typedef int screenshot_format;
+  typedef int sky_feature_id;
+  typedef int tonemap_function;
+  typedef int uirt_format;
+  typedef lua_storage::storage_ref storage_ref;
+  typedef phys_debug_lines::switches phys_debug_lines_switches;
+  typedef uint ri_mask_flags;
+
+  ${ffiFunctionsPrepared
+    .map(x => x.x)
+    .join('\n  ')}
+
+  void* find_ffi_function(const char* s)
+  {
+    static auto t = []
+    {
+      return std::make_tuple(
+        (uint16_t*)(void*)"${(() => {
+          let r = '', v = [], l = 0;
+          for (let i = 0; i < 1024; ++i){
+            let k = ffiFunctionsPrepared32H.indexOf(ffiFunctionsPrepared32H.filter(x => x.b == i)[0]);
+            let e = ffiFunctionsPrepared32H.indexOf(ffiFunctionsPrepared32H.filter(x => x.b == i).slice(-1)[0]);
+            if (e !== -1) l = e + 1;
+            v.push(k !== -1 ? k : l);
+          }
+          v.push(ffiFunctionsPrepared32H.length);
+          return cppBinaryEncoder(v, (x, add) => {
+            add((x >> 0) & 0xff);
+            add((x >> 8) & 0xff);
+          });
+        })()}", 
+        (uint*)"${cppBinaryEncoder(ffiFunctionsPrepared32H, (x, add) => {
+          add((x.K >> 0n) & 0xffn);
+          add((x.K >> 8n) & 0xffn);
+          add((x.K >> 16n) & 0xffn);
+          add((x.K >> 24n) & 0xffn);
+        })}", 
+        new void*[]{
+          ${ffiFunctionsPrepared32H.map((x, i) => `${x.n}`).join(',\n          ')}
+        });
+    }();
+    auto k = uint(hash_code_raw(s, strlen(s)));
+    auto b = k & 0x3ff;
+    for (auto i = std::get<0>(t)[b], e = std::get<0>(t)[b + 1]; i != e; ++i)
+    {
+      if (std::get<1>(t)[i] == k) [[likely]] return std::get<2>(t)[i];
+    }
+    return nullptr;
+  }
+}
+`.replace(/  /g, '\t')
+if ($.readText(`${cspSource}/lua/ffi_functions.cpp`) != ffiModule){
+  $.echo('Updating FFI functions');
+  fs.writeFileSync(`${cspSource}/lua/ffi_functions.cpp`, ffiModule);
+}

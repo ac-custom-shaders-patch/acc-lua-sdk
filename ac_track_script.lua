@@ -11,7 +11,9 @@ require './common/ac_scene'
 require './common/ac_track'
 require './common/ac_particles'
 require './common/ac_physics'
+require './common/ac_physics_ai'
 require './common/secure'
+require './wfx_common/ac_weatherconditions'
 
 ---Returns values from section which defined current script. Use `layout` to specify which
 ---values are needed, with their corresponding default values to determine types. This function

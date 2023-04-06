@@ -1,4 +1,5 @@
 __source 'lua/api_ui.cpp'
+__source 'lua/api_ui_ac.cpp'
 __source 'lua/api_ui_gif.cpp'
 __namespace 'ui'
 
@@ -281,30 +282,31 @@ ui.KeyIndex = __enum({ cpp = 'vk_key', override = 'ui.*/keyIndex:integer' }, {
 })
 
 ui.StyleVar = __enum({ cpp = 'ImGuiStyleVar' }, {
-  Alpha = 0,
-  WindowPadding = 1,
-  WindowRounding = 2,
-  WindowBorderSize = 3,
-  WindowMinSize = 4,
-  WindowTitleAlign = 5,
-  ChildRounding = 6,
-  ChildBorderSize = 7,
-  PopupRounding = 8,
-  PopupBorderSize = 9,
-  FramePadding = 10,
-  FrameRounding = 11,
-  FrameBorderSize = 12,
-  ItemSpacing = 13,
-  ItemInnerSpacing = 14,
-  IndentSpacing = 15,
-  ScrollbarSize = 16,
-  ScrollbarRounding = 17,
-  GrabMinSize = 18,
-  GrabRounding = 19,
-  TabRounding = 20,
-  ButtonTextAlign = 21,
-  SelectableTextAlign = 22,
-  SelectablePadding = 23,
+  Alpha = 0,  -- Expects a number.
+  WindowRounding = 1,  -- Expects a number.
+  WindowBorderSize = 2,  -- Expects a number.
+  ChildRounding = 3,  -- Expects a number.
+  ChildBorderSize = 4,  -- Expects a number.
+  PopupRounding = 5,  -- Expects a number.
+  PopupBorderSize = 6,  -- Expects a number.
+  FrameRounding = 7,  -- Expects a number.
+  FrameBorderSize = 8,  -- Expects a number.
+  IndentSpacing = 9,  -- Expects a number.
+  ScrollbarSize = 10,  -- Expects a number.
+  ScrollbarRounding = 11,  -- Expects a number.
+  GrabMinSize = 12,  -- Expects a number.
+  GrabRounding = 13,  -- Expects a number.
+  TabRounding = 14,  -- Expects a number.
+
+  WindowPadding = 15, -- Expects a `vec2` value.
+  WindowMinSize = 16, -- Expects a `vec2` value.
+  WindowTitleAlign = 17, -- Expects a `vec2` value.
+  FramePadding = 18, -- Expects a `vec2` value.
+  ItemSpacing = 19, -- Expects a `vec2` value.
+  ItemInnerSpacing = 20, -- Expects a `vec2` value.
+  ButtonTextAlign = 21, -- Expects a `vec2` value.
+  SelectableTextAlign = 22, -- Expects a `vec2` value.
+  SelectablePadding = 23, -- Expects a `vec2` value.
 })
 
 ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
@@ -363,7 +365,7 @@ ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
 ui.Icons = __enum({ override = 'ui.*/*conID:string', underlying = 'string' }, {
   --[[? out($.readText(`${process.env['CSP_ROOT']}/source/imgui/icons.h`).split('\n')
     .map(x => /ICON_24_(\w+)/.test(x) && RegExp.$1).filter(x => x)
-    .map(x => `${x.toLowerCase().replace(/^(?:gps|fm)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.ru/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
+    .map(x => `${x.toLowerCase().replace(/^(?:gps|fm|qr|vip)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.ru/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
 })
 
 local weatherIcons = {
@@ -424,39 +426,45 @@ ui.ButtonFlags = __enum({ cpp = 'ImGuiButtonFlags' }, {
   PressedOnDragDropHold     = 0x1000,    -- Press when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
   NoNavFocus                = 0x2000,    -- Don’t override navigation focus when activated
   NoHoveredOnNav            = 0x4000,    -- Don’t report as hovered when navigated on
+  Error                     = 0x8000,    -- For modern buttons
+  Confirm                   = 0x10000,   -- For modern buttons
+  Cancel                    = 0x20000,   -- For modern buttons
+  VerticalLayout            = 0x40000,   -- For modern buttons
+  TextAsIcon                = 0x80000,   -- For modern buttons
   Active                    = 0x100000,  -- Button is correctly active (checked)
   Activable                 = 0x200000,  -- If not set, _Active would make background brighter
 })
 
 ui.WindowFlags = __enum({ cpp = 'ImGuiWindowFlags' }, {
   None                      = 0,
-  NoTitleBar                = 0x1,        -- Disable title-bar
-  NoResize                  = 0x2,        -- Disable user resizing with the lower-right grip
-  NoMove                    = 0x4,        -- Disable user moving the window
-  NoScrollbar               = 0x8,        -- Disable scrollbars (window can still scroll with mouse or programmatically)
-  NoScrollWithMouse         = 0x10,       -- Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
-  NoCollapse                = 0x20,       -- Disable user collapsing window by double-clicking on it
-  AlwaysAutoResize          = 0x40,       -- Resize every window to its content every frame
-  NoBackground              = 0x80,       -- Disable drawing background and outside border.
-  NoSavedSettings           = 0x100,      -- Never load/save settings in .ini file
-  NoMouseInputs             = 0x200,      -- Disable catching mouse, hovering test with pass through.
-  MenuBar                   = 0x400,      -- Has a menu-bar
-  HorizontalScrollbar       = 0x800,      -- Allow horizontal scrollbar to appear (off by default)
-  NoFocusOnAppearing        = 0x1000,     -- Disable taking focus when transitioning from hidden to visible state
-  NoBringToFrontOnFocus     = 0x2000,     -- Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
-  AlwaysVerticalScrollbar   = 0x4000,     -- Always show vertical scrollbar (even if ContentSize.y < Size.y)
-  AlwaysHorizontalScrollbar = 0x8000,     -- Always show horizontal scrollbar (even if ContentSize.x < Size.x)
-  AlwaysUseWindowPadding    = 0x10000,    -- Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
-  NoNavInputs               = 0x40000,    -- No gamepad/keyboard navigation within the window
-  NoNavFocus                = 0x80000,    -- No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
-  UnsavedDocument           = 0x100000,   -- Append “*” to title without affecting the ID, as a convenience to avoid using the “###” operator
-  NoNav                     = 0xc0000,    -- NoNavInputs | NoNavFocus,
-  NoDecoration              = 0x2b,       -- NoTitleBar | NoResize | NoScrollbar | NoCollapse,
-  NoInputs                  = 0xc0200,    -- NoMouseInputs | NoNavInputs | NoNavFocus,
-  ToolTip                   = 0x2000000,  -- @hidden
-  Popup                     = 0x4000000,  -- @hidden
-  Modal                     = 0x8000000,  -- @hidden
-  Topmost                   = 0x20000000, -- @hidden
+  NoTitleBar                = 0x1,         -- Disable title-bar
+  NoResize                  = 0x2,         -- Disable user resizing with the lower-right grip
+  NoMove                    = 0x4,         -- Disable user moving the window
+  NoScrollbar               = 0x8,         -- Disable scrollbars (window can still scroll with mouse or programmatically)
+  NoScrollWithMouse         = 0x10,        -- Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
+  NoCollapse                = 0x20,        -- Disable user collapsing window by double-clicking on it
+  AlwaysAutoResize          = 0x40,        -- Resize every window to its content every frame
+  NoBackground              = 0x80,        -- Disable drawing background and outside border
+  NoSavedSettings           = 0x100,       -- Never load/save settings in .ini file
+  NoMouseInputs             = 0x200,       -- Disable catching mouse, hovering test with pass through
+  MenuBar                   = 0x400,       -- Has a menu-bar
+  HorizontalScrollbar       = 0x800,       -- Allow horizontal scrollbar to appear (off by default)
+  NoFocusOnAppearing        = 0x1000,      -- Disable taking focus when transitioning from hidden to visible state
+  NoBringToFrontOnFocus     = 0x2000,      -- Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
+  AlwaysVerticalScrollbar   = 0x4000,      -- Always show vertical scrollbar (even if ContentSize.y < Size.y)
+  AlwaysHorizontalScrollbar = 0x8000,      -- Always show horizontal scrollbar (even if ContentSize.x < Size.x)
+  AlwaysUseWindowPadding    = 0x10000,     -- Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
+  NoNavInputs               = 0x40000,     -- No gamepad/keyboard navigation within the window
+  NoNavFocus                = 0x80000,     -- No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
+  UnsavedDocument           = 0x100000,    -- Append “*” to title without affecting the ID, as a convenience to avoid using the “###” operator
+  NoNav                     = 0xc0000,     -- NoNavInputs | NoNavFocus
+  NoDecoration              = 0x2b,        -- NoTitleBar | NoResize | NoScrollbar | NoCollapse
+  NoInputs                  = 0xc0200,     -- NoMouseInputs | NoNavInputs | NoNavFocus
+  ToolTip                   = 0x2000000,   -- @hidden
+  Popup                     = 0x4000000,   -- @hidden
+  Modal                     = 0x8000000,   -- @hidden
+  Topmost                   = 0x20000000,  -- @hidden
+  ThinScrollbar             = 0x80000000   -- Thin scrollbar
 })
 
 ui.ComboFlags = __enum({ cpp = 'ImGuiComboFlags' }, {
@@ -713,8 +721,20 @@ function ui.childWindow(id, size, border, flags, content)
   if flags == nil and (__mode__ == 'track_scriptable_display' or __mode__ == 'car_scriptable_display') then
     flags = bit.bor(ui.WindowFlags.NoScrollbar, ui.WindowFlags.NoBackground)
   end
+  local thinScrollbar = type(flags) == 'number' and bit.band(flags, ui.WindowFlags.ThinScrollbar) ~= 0
+  if thinScrollbar then
+    flags = bit.bor(bit.bxor(flags, ui.WindowFlags.ThinScrollbar), ui.WindowFlags.NoScrollbar)
+  end
   if ui.beginChild(id, size, border, flags) then
-    return using(content, ui.endChild)
+    if thinScrollbar then
+      ui.thinScrollbarBegin(true)
+      return using(content, function ()
+        ui.thinScrollbarEnd()
+        ui.endChild()
+      end)
+    else
+      return using(content, ui.endChild)
+    end
   else
     ui.endChild()
   end
@@ -814,7 +834,7 @@ end
 ---@param label string @Label of the element.
 ---@param previewValue string? @Preview value.
 ---@param flags ui.ComboFlags? @Combo box flags.
----@param content fun(): T @Combo box items callback.
+---@param content fun(): T? @Combo box items callback.
 ---@return T
 ---@overload fun(label: string, previewValue: string?, content: fun())
 ---@overload fun(label: string, selectedIndex: integer, flags: ui.ComboFlags, content: string[]): integer, boolean
@@ -893,6 +913,7 @@ local _rn = refnumber()
 ---@param max number? @Default value: 1.
 ---@param format string|'%.3f'|nil @C-style format string. Default value: '%.3f'.
 ---@param power number? @Power for non-linear slider. Default value: 1 (linear).
+---@return number @Possibly updated slider value.
 ---@return boolean @True if slider has moved.
 ---@overload fun(label: string, value: number, min: number, max: number, format: string, power: number): number, boolean
 function ui.slider(label, value, min, max, format, power)
@@ -1441,6 +1462,8 @@ ffi.metatype('uirt', {
       uv2: vec2 = nil "Texture coordinates for bottom right corner. Default value: `vec2(1, 1)`.",
       blendMode: render.BlendMode = nil "Blend mode. Default value: `render.BlendMode.Opaque`.",
       async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
+      cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
+      defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
       values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
@@ -1473,6 +1496,8 @@ ffi.metatype('uirt', {
       uv2: vec2 = nil "Texture coordinates for bottom right corner. Default value: `vec2(1, 1)`.",
       blendMode: render.BlendMode = nil "Blend mode. Default value: `render.BlendMode.Opaque`.",
       async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
+      cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
+      defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
       values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
@@ -1810,6 +1835,8 @@ end
   uv2: vec2 = nil "Texture coordinates for bottom right corner. Default value: `vec2(1, 1)`.",
   blendMode: render.BlendMode = render.BlendMode.BlendAccurate "Blend mode. Default value: `render.BlendMode.BlendAccurate`.",
   async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
+  cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
+  defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
   shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
@@ -1845,8 +1872,7 @@ typedef struct {
   bool _has_anything;
   bool _is_valid;
   bool keepRunning;
-  vec2 _resolution;
-  void* _data;
+  const vec2 _resolution;
 } gifholder;
 ]]
 
@@ -1856,20 +1882,19 @@ function ui.GIFPlayer(source)
   return ffi.gc(ffi.C.lj_gifholder_new__ui(__util.blob(source)), ffi.C.lj_gifholder_gc__ui)
 end
 
----GIF player can be used to display animated GIFs.
+---GIF player can be used to display animated GIFs. Also supports regular and animated WEBP images.
 ---@class ui.GIFPlayer
 ---@field keepRunning boolean @By default GIFs stop playing if they are not actively used in rendering. If you need them to keep running in background, set this property to `true`.
 ---@explicit-constructor ui.GIFPlayer
 ffi.metatype('gifholder', { 
   __tostring = function (s)
-    s._required = true
     return string.format('$ui.GIFPlayer://?id=%d', s._id)
   end,
   __index = {
     ---Get GIF resolution. If GIF is not yet loaded, returns zeroes.
     ---@return vec2 @Width and height in pixels.
     resolution = function (s)
-      return vec2(s._resolution)
+      return s._resolution
     end,
 
     ---Rewinds GIF back to beginning.
@@ -1890,3 +1915,42 @@ ffi.metatype('gifholder', {
     end
   }
 })
+
+local _uilCache = {}
+
+---Creates a new layer with user icons.
+---@param priority number @Layer with higher priority will be used.
+---@return fun(carIndex: integer, icon: ui.Icons) @Call this function to override actual icons using 0-based car index. Note: car scripts can override icon of their drivers only.
+function ui.UserIconsLayer(priority)
+  local existing = _uilCache[priority]
+  if not existing then
+    local set = {}
+    ac.onRelease(function ()
+      for k, v in pairs(set) do
+        if v then
+          ffi.C.lj_setUserIcon_inner__ui(k, priority, nil)
+        end
+      end
+    end)
+    existing = function (carIndex, icon)
+      carIndex = tonumber(carIndex) or 0
+      if not icon and not set[carIndex] then return end
+      set[carIndex] = icon and true or false
+      ffi.C.lj_setUserIcon_inner__ui(carIndex, priority, icon and tostring(icon) or nil)
+    end
+    _uilCache[priority] = existing
+  end
+  return existing
+end
+
+---Adds a new settings item in settings list in apps.
+--[[@tableparam params {
+  iconID: ui.Icons = ui.Icons.Settings "Settings icon",
+  name: string "Name of the settings item (name of a script by default).",
+  size: {default: vec2, min: vec2, max: vec2} = nil "Size settings. Default size: `vec2(320, 240)`, default min size: `vec2(40, 20)`."
+}]]
+---@param callback fun() @Callback function to draw contents of the settings window.
+---@return ac.Disposable
+function ui.addSettings(params, callback)
+  return ffi.C.lj_addSettings_inner__ui(__util.json(params), __util.setCallback(callback))
+end

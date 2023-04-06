@@ -13,7 +13,7 @@
 ---like a class constructor, you would either need to register that function with a certain name or provide a table referring
 ---to it on deserialization. That’s because although deserialization uses `load()` function to parse and run data as Lua code,
 ---it wouldn’t allow code to access existing functions by default.
----@param obj table|number|string|boolean|nil @Object o serialize.
+---@param obj table|number|string|boolean|nil @Object to serialize.
 ---@param compact boolean? @If true, resulting string would not have spaces and line breaks, slightly faster and a lot more compact.
 ---@param depthLimit integer? @Limits how deep serialization would go. Default value: 20.
 ---@return string @String with input data presented in Lua syntax.
@@ -37,7 +37,7 @@ function stringify.parse(serialized, namespace) end
 ---
 ---Returns fallback value if failed to parse, or if `serialized` is empty or not set, or if any of initializers would raise an error.
 ---@generic T
----@param serialized string @Serialized data.
+---@param serialized string? @Serialized data.
 ---@param namespace table<string, function>|nil @Namespace table. Serialized data would be evaluated as Lua code and would have access to it.
 ---@param fallback T|nil @Value to return if parsing failed.
 ---@return T
@@ -58,6 +58,25 @@ function stringify.register(name, fn) end
 ---@param depthLimit integer @Limits how many steps down serialization can go. If 0 or below, no tables would be serialized.
 ---@return integer @Updated `ptr` value (if one item was added to `out`, should increase by 1).
 function stringify.substep(out, ptr, obj, lineBreak, depthLimit) end
+
+---Different serializer, produces binary data instead of human-readable. Faster and with even more compact output, but not human-readable.
+---@param obj table|number|string|boolean|nil @Object to serialize.
+---@return string @String with input data presented in binary format, so it won’t be readable and will contain zero bytes.
+function stringify.binary(obj) end
+
+---Parses binary data prepared with `stringify.binary()`.
+---@param serialized string @Serialized data.
+---@return table|number|string|boolean|nil
+function stringify.binary.parse(serialized) end
+
+---Tries to parse binary data prepared with `stringify.binary()`.
+---
+---Returns fallback value if failed to parse, or if `serialized` is empty or not set, or if any of initializers would raise an error.
+---@generic T
+---@param serialized string? @Serialized data.
+---@param fallback T|nil @Value to return if parsing failed.
+---@return T
+function stringify.binary.tryParse(serialized, fallback) end
 
 ---A small helper to add as a parent class for EmmyLua to work better.
 ---@class ClassStringifiable : ClassBase

@@ -1,3 +1,5 @@
+__source 'extensions/weather_fx/ac_ext_weather_fx__luacommon.h'
+
 ffi.cdef [[ 
 typedef struct {
   float ambient, road;
@@ -38,7 +40,7 @@ ac.TrackConditions = ffi.metatype('weather_conditions_track', { __index = {} })
 ac.TemperatureParams = ffi.metatype('weather_conditions_temperatures', { __index = {} })
 
 ---@class ac.WindParams
----@field direction number @Speed in km/h.
+---@field direction number @Direction in degrees.
 ---@field speedFrom number @Speed in km/h.
 ---@field speedTo number @Speed in km/h.
 ac.WindParams = ffi.metatype('weather_conditions_wind', { __index = {} })

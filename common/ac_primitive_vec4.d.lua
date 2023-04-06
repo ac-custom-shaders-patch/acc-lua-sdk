@@ -40,6 +40,12 @@ function vec4.tmp() end
 ---@field y number
 ---@field z number
 ---@field w number
+---@operator add(number|vec4): vec4
+---@operator sub(number|vec4): vec4
+---@operator mul(number|vec4): vec4
+---@operator div(number|vec4): vec4
+---@operator pow(number|vec4): vec4
+---@operator len: number
 ---@constructor fun(x: number?, y: number?, z: number?, w: number?): vec4
 
 ---Makes a copy of a vector.

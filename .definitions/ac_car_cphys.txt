@@ -5,9 +5,12 @@ ac.setWingGain(wingIndex: integer, cdGain: number, clGain: number)
 ac.setGearsFinalRatio(finalRatio: number)
 ac.setGearsGrinding(grinding: boolean)
 ac.setDrivetrainDamageRPMWindow(newValue: number)
-ac.setDrivetrainAWDFrontShare(frontShare: number)
+ac.setRainTreadEfficiencyMultiplier(wheel: integer, value: number)
 ac.setAntirollBars(kFront: number, kRear: number)
 ac.setEngineRPM(newValue: number)
+ac.getWheelsInertia(): number
+ac.setDrivetrainRootVelocity(newValue: number)
+ac.setDrivetrainDriveVelocity(newValue: number)
 ac.setEngineLifeLeft(newValue: number)
 ac.setEngineStalling(value: boolean)
 ac.setTyreInflation(tyre: integer, inflation: number)
@@ -17,9 +20,11 @@ ac.setTurboMaxBoost(index: integer, value: number)
 ac.setTurboWastegate(index: integer, wastegate: number, isAdjustable: boolean)
 ac.setTurboExtras(index: integer, lagUp: number, lagDown: number, referenceRpm: number, gamma: number)
 ac.overrideTurboBoost(index: integer, newBoost: number)
+ac.setExtraMass(pos: vec3, mass: number, massBox: vec3 = vec3(1, 1, 1))
 ac.getScriptSetupValue(id: string): refnumber
 ac.setScriptSetupValue(id: string, value: number): boolean // Returns `false` if there is no such item
 ac.getDynamicController(name: string): refnumber
+ac.setEngineRPMLimit(newValue: number, scaleInstruments: boolean = false)
 
 struct ac.StateCphysWheelData {
 	float angularSpeed;
@@ -40,9 +45,12 @@ struct ac.StateCphysCarData {
 	float speedKmh;
 	float ffb;
 	float rpm; // For changing use `ac.setEngineRPM()`
-	float engineLifeLeft; // For changing use `ac.setEngineLifeLeft()`
-	float drivetrainDamageRPMWindow; // For changing use `ac.setDrivetrainDamageRPMWindow()`
-	float drivetrainOriginalRPMWindow;
+	float rpmLimit; // For changing use `ac.setEngineRPMLimit()`
+	double engineLifeLeft; // For changing use `ac.setEngineLifeLeft()`
+	double drivetrainDamageRPMWindow; // For changing use `ac.setDrivetrainDamageRPMWindow()`
+	double drivetrainOriginalRPMWindow;
+	double drivetrainRootVelocity;
+	double drivetrainDriveVelocity;
 	float antirollBarFront;
 	float antirollBarRear;
 	float gearsFinalRatio;
@@ -53,7 +61,7 @@ struct ac.StateCphysCarData {
 	bool areControlsLocked;
 	bool isEngineStallEnabled; // For changing use `ac.setEngineStalling()`
 	bool isBlackFlagged;
-	bool enforceCustomInputScheme; // If set to `true`, use custom input scheme even if input method is not wheel (if not possible, disable input entirely)
+	bool enforceCustomInputScheme;
 	bool isGearGrinding; // For changing use `ac.setGearsGrinding()`
 	float gas; // Can be changed (unless controls are locked or car has black flag)
 	float brake; // Can be changed (unless controls are locked or car has black flag)
@@ -64,6 +72,6 @@ struct ac.StateCphysCarData {
 	bool gearUp; // Can be changed (unless controls are locked or car has black flag)
 	bool gearDown; // Can be changed (unless controls are locked or car has black flag)
 	bool isShifterSupported; // Can be changed (unless controls are locked or car has black flag)
-	float controllerInputs[8]; // Set values here and access them as SCRIPT_0...SCRIPT_7 inputs in dynamic controllers. For emissives and such, can be accessed as CPHYS_SCRIPT_0..., other Lua scripts can access via car physics state.
+	float controllerInputs[8];
 	state_cphys_wheel_data wheels[4];
 }

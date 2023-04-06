@@ -1,8 +1,24 @@
-__source 'extensions/joypad_assist/ac_ext_joypad_assist.cpp'
-__states 'extensions/joypad_assist/ac_ext_joypad_assist.cpp'
+__source 'extensions/gamepad_fx/ac_ext_gamepad_fx.cpp'
+__states 'extensions/gamepad_fx/ac_ext_gamepad_fx.cpp'
 __allow 'joypadassist'
 
 require './common/internal_import'
+require './common/ac_car_control'
+
+ac.DualSenseHapticParam = __enum({ cpp = 'dualsense_haptic_param' }, {
+  Bodywork = 0,
+  Engine = 1,
+  Gear = 2,
+  GearGrind = 3,
+  Limiter = 4,
+  Skid = 5,
+  Wheel = 6,
+  CollisionCar = 7,
+  CollisionObject = 8,
+  CollisionTrack = 9,
+  ScrapeCar = 10,
+  ScrapeTrack = 11,
+})
 
 -- automatically generated entries go here:
 __definitions()
@@ -29,6 +45,10 @@ end
 
 --[[? if (ctx.ldoc) out(]]
 
+---Index of connected car.
+---@type number
+__carIndex = nil
+
 ---Index of connected gamepad.
 ---@type number
 __gamepadIndex = nil
@@ -36,5 +56,17 @@ __gamepadIndex = nil
 ---Called each physics frame.
 ---@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
 function script.update(dt) end
+
+---Loads a separate Lua module running in render thread (for showing bits of UI or updating some other in-game elements).
+---@param name string @File name (without extension) of a module to load to run in render thread.
+function ac.loadRenderThreadModule(name) end
+
+---Loads a separate Lua module running in gamepad thread (for overriding gamepad buttons directly even when sim is paused).
+---@param name string @File name (without extension) of a module to load to run in render thread.
+function ac.loadGamepadThreadModule(name) end
+
+---Forces state of a gamepad button to pressed for the next frame. Only available from physics thread module.
+---@param gamepadButtonID ac.GamepadButton
+function ac.setButtonPressed(gamepadButtonID) end
 
 --[[) ?]]

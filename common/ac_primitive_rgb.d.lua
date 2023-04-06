@@ -32,33 +32,19 @@ function rgb.tmp() end
 function rgb.from0255(r, g, b, a) end
 
 ---Predefined colors. Do not change them unless you want to have some extra fun debugging.
-rgb.colors = {
-  transparent = rgb(0, 0, 0),
-  black = rgb(0, 0, 0),
-  silver = rgb(0.75, 0.75, 0.75),
-  gray = rgb(0.5, 0.5, 0.5),
-  white = rgb(1, 1, 1),
-  maroon = rgb(0.5, 0, 0),
-  red = rgb(1, 0, 0),
-  purple = rgb(0.5, 0, 0.5),
-  fuchsia = rgb(1, 0, 1),
-  green = rgb(0, 0.5, 0),
-  lime = rgb(0, 1, 0),
-  olive = rgb(0.5, 0.5, 0),
-  yellow = rgb(1, 1, 0),
-  orange = rgb(1, 0.5, 0),
-  navy = rgb(0, 0, 0.5),
-  blue = rgb(0, 0, 1),
-  teal = rgb(0, 0.5, 0.5),
-  cyan = rgb(0, 0.5, 1),
-  aqua = rgb(0, 1, 1),
-}
+rgb.colors = { transparent = rgb(0, 0, 0), black = rgb(0, 0, 0), silver = rgb(0.75, 0.75, 0.75), gray = rgb(0.5, 0.5, 0.5), white = rgb(1, 1, 1), maroon = rgb(0.5, 0, 0), red = rgb(1, 0, 0), purple = rgb(0.5, 0, 0.5), fuchsia = rgb(1, 0, 1), green = rgb(0, 0.5, 0), lime = rgb(0, 1, 0), olive = rgb(0.5, 0.5, 0), yellow = rgb(1, 1, 0), orange = rgb(1, 0.5, 0), navy = rgb(0, 0, 0.5), blue = rgb(0, 0, 1), teal = rgb(0, 0.5, 0.5), cyan = rgb(0, 0.5, 1), aqua = rgb(0, 1, 1) }
 
 ---Three-channel color. All operators are overloaded. White is usually `rgb=1,1,1`.
 ---@class rgb
 ---@field r number
 ---@field g number
 ---@field b number
+---@operator add(number|rgb): rgb
+---@operator sub(number|rgb): rgb
+---@operator mul(number|rgb): rgb
+---@operator div(number|rgb): rgb
+---@operator pow(number|rgb): rgb
+---@operator len: number
 ---@constructor fun(r: number?, g: number?, b: number?): rgb
 
 ---Makes a copy of a vector.

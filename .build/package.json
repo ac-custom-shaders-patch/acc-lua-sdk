@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "xxhash-addon": "^2.0.1"
+  }
+}

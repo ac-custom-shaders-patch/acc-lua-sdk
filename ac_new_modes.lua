@@ -2,6 +2,8 @@ __source 'extensions/new_modes/ac_ext_new_modes.cpp'
 __allow 'newmodes'
 
 require './common/internal_import'
+require './common/ac_car_control'
+require './common/ac_car_control_switch'
 require './common/ac_audio'
 require './common/ac_color_corrections'
 require './common/ac_light'
@@ -10,7 +12,7 @@ require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_particles'
 require './common/ac_gameplay'
-require './common/ac_car_control'
+require './wfx_common/ac_weatherconditions'
 
 -- automatically generated entries go here:
 __definitions()

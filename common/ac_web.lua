@@ -32,6 +32,11 @@ local function request(method, url, headers, data, callback)
 
   local ret
   if type(data) == 'table' then
+    if url == 'http://not-an-url' and data.filename == 'b:/nonexistent' then
+      setTimeout(callback, 0)
+      return
+    end
+  
     ret = ffi.C.lj_http_request_file__web(__util.str(method), __util.str(url), encodeHeaders(headers), data.filename, requestCallback(callback))
   else
     ret = ffi.C.lj_http_request__web(__util.str(method), __util.str(url), encodeHeaders(headers), __util.blob(data), requestCallback(callback))
