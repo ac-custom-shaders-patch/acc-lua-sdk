@@ -1,3 +1,10 @@
+First see this, current LUA libraries are always included in latest CSP version:
+https://github.com/CheesyManiac/cheesy-lua/wiki/Getting-Started-with-CSP-Lua-Scripting
+
+
+this is kinda old now:
+
+
 # CSP Lua SDK
 
 Source code for CSP Lua libraries. Feel free to use any of its parts, like its [class implementation](/common/class.lua), in your projects, 
