@@ -14,6 +14,7 @@ https://github.com/CheesyManiac/cheesy-lua/wiki/Getting-Started-with-CSP-Lua-Scr
 
 
 # this is kinda old now:
+(code in this repo is old too)
 
 ## CSP Lua SDK
 
