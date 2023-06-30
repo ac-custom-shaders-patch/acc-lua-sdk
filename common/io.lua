@@ -44,6 +44,16 @@ function io.load(filename, fallbackData)
   return __util.strrefp(ffi.C.lj_load_inner__io(filename)) or fallbackData
 end
 
+---@alias io.ZipEntry {filename: string}|{data: binary}|binary
+
+---Creates a new ZIP asyncronously.
+---@param filename string? @Pass `nil` to instead get the binary data in the callback.
+---@param data table<string, io.ZipEntry> @Keys store entry names (use “/” as separator for creating sub-folders), and values store either binary data or tables in `io.ZipEntry` format.
+---@param callback fun(err: string, data: binary?)? @Callback will contain reference to binary data if `filename` is `nil`.
+function io.createZipAsync(filename, data, callback)
+  __util.native('create_zip', filename, data, __util.expectReply(callback))
+end
+
 ---Scan directory and call callback function for each of files, passing file name (not full name, but only name of the file) and attributes. If callback function would return
 ---a non-nil value, iteration will stop and value returned by callback would return from this function. This could be used to
 ---find a certain file without going through all files in the directory. Optionally, a mask can be used to pre-filter received files
@@ -106,6 +116,6 @@ __script.scanZipCallback = function (s) _szr = s end
 ---@return string[]
 function io.scanZip(filename)
   _szr = nil
-  ffi.C.lj_scanZip_inner__io(filename)
+  ffi.C.lj_scanZip_inner__io(__util.blob(filename))
   return _szr or {}
 end

@@ -1,5 +1,3 @@
-ac.debug(key: string, value: string = nullptr)
-ac.setLogSilent(value: boolean = true)
 ac.perfBegin(value: string)
 ac.perfEnd(value: string)
 ac.perfFrameBegin(value: integer)
@@ -137,11 +135,13 @@ ac.onClientConnected(callback: integer): lua_linked_id
 ac.onClientDisconnected(callback: integer): lua_linked_id
 ac.onControlSettingsChanged(callback: integer): lua_linked_id
 ac.onTripleConfigurationChanged(callback: integer): lua_linked_id
+ac.onFileChanged(filename: string, callback: integer): lua_linked_id
 ac.onFolderChanged(folder: string, filter: string, recursive: boolean, callback: integer): lua_linked_id
 ac.onCSPConfigChanged(cspModuleID: string, callback: integer): lua_linked_id
 ac.onScreenshot(callback: integer): lua_linked_id
 ac.checksumSHA256(data: binary): string
 ac.checksumXXH(data: binary): integer
+ac.isLuaAppRunning(appID: string): boolean
 ac.uniqueMachineKey(): string
 ac.uniqueMachineKeyAsync(callback: integer)
 ac.compress(data: binary, type: ac.CompressionType, level: integer = 9): string
@@ -158,6 +158,7 @@ ac.setVRHandVibration(hand: integer, frequency: number, amplitude: number, durat
 ac.isModuleActive(cspModuleID: string): boolean
 ac.getCarIndexInFront(carMainIndex: integer, distance: refnumber = nullptr): integer
 ac.getGapBetweenCars(carMainIndex: integer, carComparingToIndex: integer): number
+ac.setLogSilent(value: boolean = true)
 io.getAttributes(filename: string): lua_file_attributes
 io.getMainExecutable(): string
 io.loadAsync(filename: string, callback: integer)
@@ -171,6 +172,8 @@ io.creationTime(filename: string): integer
 io.lastAccessTime(filename: string): integer
 io.lastWriteTime(filename: string): integer
 io.createDir(filename: string): boolean
+io.createFileDir(filename: string): boolean
+io.getParentPath(filename: string, level: integer = 1): string
 io.isFileNameAcceptable(fileName: string): boolean
 io.isFilePathAcceptable(filename: string): boolean
 io.move(existingFilename: string, newFilename: string): boolean
@@ -178,7 +181,8 @@ io.copyFile(existingFilename: string, newFilename: string, failIfExists: boolean
 io.deleteFile(filename: string): boolean
 io.deleteDir(filename: string): boolean
 io.recycle(filename: string): boolean
-io.loadFromZip(zipFilename: string, entryFilename: string): string
+io.saveToZip(zipFilename: string, entryFilename: string, data: binary): boolean
+io.loadFromZip(zipFilename: binary, entryFilename: string): string
 io.checksumSHA256(filename: string, callback: integer)
 os.dateGlobal(format: string, timestamp: integer): string
 os.addDLLDirectory(filename: string)
@@ -261,11 +265,12 @@ struct ac.StateWheel {
 	const vec3 contactPoint; // Contact point position in world coordinates
 	const vec3 pos; // @hidden
 	const vec3 position; // Wheel position in world coordinates
-	const vec3 look; // Wheel heading vector
-	const vec3 up; // Wheel vector directed upwards
+	const vec3 look; // Wheel (SUSP_…) heading vector
+	const vec3 up; // Wheel (SUSP_…) vector directed updwards
 	const vec3 outside; // Points outside of car (to the left of tyre for left tyres, to the right for right)
 	const vec3 velocity;
-	const mat4x4 transform; // Wheel transformation
+	const mat4x4 transform; // Wheel (SUSP_…) transformation
+	const mat4x4 transformWheel; // Wheel (WHEEL_…) transformation
 	const float surfaceDirt; // Dirt additive coefficient of the surface below the wheel
 	const int surfaceSectorID; // Sector ID of the surface below the wheel
 	const float surfaceGrip; // Grip of the surface below the wheel
@@ -289,6 +294,7 @@ struct ac.StateCar {
 	const float exposureOutside; // Outboard exposure from car.ini
 	const float exposureInside; // Onboard exposure from car.ini
 	const float shakeMultiplier; // SHAKE_MUL value from car.ini
+	const rgb headlightsColor;
 	const vec3 aabbCenter; // Center of AABB (calculated from LOD D or collider mesh)
 	const vec3 aabbSize; // Size of AABB in meters (calculated from LOD D or collider mesh)
 	const int index; // 0-based (0 for first car)
@@ -315,9 +321,10 @@ struct ac.StateCar {
 	const bool isLeftHandDrive; // If set to `true`, steering wheel is on the left side
 	const int tractionControlModes; // 0 if TC is not present. Physics-only (see `ac.CarState.physicsAvailable`)
 	const int absModes; // 0 if TC is not present. Physics-only (see `ac.CarState.physicsAvailable`)
+	const bool hasEngineBrakeSettings;
+	const mat4x4 pitTransform; // transformation of pit position
 	const double timestamp; // time of last physics state record, in milliseconds (counting from the same point as ac.SimState.time)
 	const mat4x4 transform; // car physics transformation in world space (does not match body transformation! for it, use `bodyTransform`)
-	const mat4x4 pitTransform; // transformation of pit position
 	const mat4x4 bodyTransform; // car visual transformation (the one applied to 3D model)
 	const mat4x4 worldToLocal; // inverse of car visual transformation
 	const vec3 pos; // @hidden
@@ -414,7 +421,6 @@ struct ac.StateCar {
 	const bool extraF;
 	const bool kersCharging;
 	const bool turningLightsActivePhase;
-	const rgb headlightsColor;
 	const float kersCharge;
 	const float kersInput;
 	const float kersCurrentKJ;
@@ -452,7 +458,6 @@ struct ac.StateCar {
 	const bool absInAction; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool tractionControlInAction; // Physics-only (see `ac.CarState.physicsAvailable`)
 	const bool hasUserBrakeBias; // Physics-only (see `ac.CarState.physicsAvailable`)
-	const bool hasEngineBrakeSettings;
 	const bool hasCockpitMGUHMode;
 	const bool hasCockpitERSDelivery;
 	const bool hasCockpitERSRecovery;
@@ -589,6 +594,7 @@ struct ac.StateSim {
 	const float tyreConsumptionRate; // In 0…1 range
 	const float fuelConsumptionRate; // In 0…1 range
 	const int inputMode; // Input mode selected by user
+	const uint64_t windowHandle; // Main window handle
 	const double time; // game time in milliseconds (counting from the start of the simulation)
 	const vec3 cameraPosition;
 	const vec3 cameraLook; // points forward (there was some confusion with older API)
@@ -636,6 +642,7 @@ struct ac.StateSim {
 	const int timestamp; // Timestamp for in-game time (whole number seconds since 01/01/1970)
 	const int dayOfYear; // Returns number of current day in the year, from 1 to 366
 	const int raceFlagType;
+	const int raceFlagCause; // 0-based index of a car that triggered blue or yellow flag, or -1
 	const bool isSessionStarted;
 	const int raceSessionType;
 	const double timeToSessionStart; // Time to session start in milliseconds

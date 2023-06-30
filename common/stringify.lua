@@ -140,6 +140,7 @@ local function _stringify(out, ptr, obj, lineBreak, depthLimit)
       [ 'refbool', ['value'] ],
       [ 'refnumber', ['value'] ],
     ]) out(`    if ${type}.is${type}(obj) then
+      if rawequal(obj, ${type}) then out[ptr] = 'nil' return ptr + 1 end  
       if ${fields.map(x => `obj.${x} == 0`).join(' and ')} then out[ptr] = '${type}()' return ptr + 1 end
       out[ptr] = '${type}('
 ${fields.map((x, i) => `      out[ptr + ${i * 2 + 1}] = tostring(obj.${x})\n      out[ptr + ${i * 2 + 2}] = ${i == fields.length - 1 ? `')'` : 'comma'}`).join('\n')}
@@ -159,7 +160,7 @@ ${fields.map((x, i) => `      out[ptr + ${i * 2 + 1}] = tostring(obj.${x})\n    
   -- can’t really stringify these, but let’s at least give back something
   local fallback
   if objType == 'function' then
-    local info = debug.getinfo(obj)
+    local info = (debug and debug.getinfo or _dbg)(obj)
     fallback = string.format(lineBreak and '{ type = "function", name = %q, source = %q, what = %q }' or '{type="function",name=%q,source=%q,what=%q}', info.name, info.source, info.what)
   else
     fallback = string.format(lineBreak and '{ type = %q, tostring = %q }' or '{type=%q,tostring=%q}', objType, tostring(obj))
@@ -199,7 +200,7 @@ end
 stringify = setmetatable({
   tryParse = function(v, env, fallback)
     local r, p = pcall(_stringifyParse, v, env)
-    if r then return p end
+    if r and p ~= nil then return p end
     return fallback
   end,
   parse = _stringifyParse,
@@ -210,7 +211,7 @@ stringify = setmetatable({
   locals = function ()
     local variables = {}
     local idx = 1
-    while true do
+    while debug do
       local ln, lv = debug.getlocal(2, idx)
       if ln ~= nil then
         variables[ln] = lv

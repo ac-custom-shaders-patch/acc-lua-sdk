@@ -55,7 +55,7 @@ typedef struct {
 
 local __lightSourceKeepAlive = {}
 
----Light source on the scene. Starts working immediattely after creation. Use `:dispose()` to remove it.
+---Light source on the scene. Starts working immediately after creation. Use `:dispose()` to remove it.
 ---@param lightType ac.LightType?
 ---@param position vec3?
 ---@return ac.LightSource
@@ -67,7 +67,7 @@ function ac.LightSource(lightType, position)
   return ffi.gc(created, ffi.C.lj_lightsource_gc)
 end
 
----Light source on the scene. Starts working immediattely after creation. Use `:dispose()` to remove it.
+---Light source on the scene. Starts working immediately after creation. Use `:dispose()` to remove it.
 ---@class ac.LightSource
 ---@field lightType ac.LightType @Type of light source.
 ---@field position vec3 @Light position.

@@ -14,16 +14,17 @@ typedef struct {
 } lua_cshader_drawcall;
 ]]
 
-local function createRsData(params, templateName)
+local function createRsData(params, templateName, startingTextureSlot)
   local ret = {}
 
   local inputTextures = nil
+  if not startingTextureSlot then startingTextureSlot = 0 end
   if params.textures then
     local t = {}
     local l = table.map(params.textures, function (v, k) return k end)
     table.sort(l, function (a, b) return a < b end)
     for i = 1, #l do
-      if i == 33 then error('Too many textures', 3) end
+      if i == 33 - startingTextureSlot then error('Too many textures', 3) end
 
       local key = l[i]
       local textureName = tostring(params.textures[key])
@@ -33,9 +34,9 @@ local function createRsData(params, templateName)
         or 'Texture2D'
       local dimension = key:match('%.[1234]$')
       if dimension then
-        t[i] = string.format('%s<float%s> %s : register(t%d);', textureType, dimension:sub(2), key:sub(1, #key - 2), i - 1)
+        t[i] = string.format('%s<float%s> %s : register(t%d);', textureType, dimension:sub(2), key:sub(1, #key - 2), i - 1 + startingTextureSlot)
       else
-        t[i] = string.format('%s %s : register(t%d);', textureType, key, i - 1)
+        t[i] = string.format('%s %s : register(t%d);', textureType, key, i - 1 + startingTextureSlot)
       end
     end
     inputTextures = table.concat(t)
@@ -107,26 +108,26 @@ local function createRsData(params, templateName)
     end), '')
   end
 
-  ret.s = ffi.C.lj_cshader_setup(params.async == true, inputLibs, inputDefines, inputTextures, inputValues, params.shader, templateName, ffiSize, params.cacheKey or -87194889)
+  ret.s = ffi.C.lj_cshader_setup(params.async == true, inputLibs, inputDefines, inputTextures, inputValues, params.shader, templateName, ffiSize, tonumber(params.cacheKey) or -87194889)
   return ret
 end
 
 local _rsCache = {}
 
-function __util.getRsData(params, templateName)
-  local k = ffi.C.lj_cshader_key(params.shader, templateName, tonumber(params.cacheKey) or 0)
+function __util.getRsData(params, templateName, startingTextureSlot)
+  local k = ffi.C.lj_cshader_key(params.shader, templateName, tonumber(params.cacheKey) or -87194889)
   local r = _rsCache[k]
   if r == nil then
-    r = createRsData(params, templateName)
+    r = createRsData(params, templateName, startingTextureSlot)
     _rsCache[k] = r
   end
   return r
 end
 
-function __util.setShaderParams(params, templateName, defaultBlendMode)
+function __util.setShaderParams(params, templateName, defaultBlendMode, startingTextureSlot)
   if type(params) ~= 'table' then error('Table “params” is required', 3) end
 
-  local d = __util.getRsData(params, templateName)
+  local d = __util.getRsData(params, templateName, startingTextureSlot)
   local dc = ffi.C.lj_cshader_start(d.s)
   if dc == nil then return nil end
 

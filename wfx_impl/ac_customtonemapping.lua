@@ -1,0 +1,14 @@
+---Override current tonemapping function. If you’re using a table and need texture coordinates, add `__CSP_PROVIDE_TEXCOORDS = true` define.
+---@param v ac.TonemapFunction|string|{textures: table, values: table, defines: table, shader: string, cacheKey: integer}
+function ac.setPpTonemapFunction(v)
+  if type(v) == 'table' then
+    local dc = __util.setShaderParams(v, 'tonemapping.fx', nil, 4)
+    if not dc then return end
+    ffi.C.lj_setPpTonemapFunction_dynamic__impl(dc)
+  elseif type(v) == 'string' then    
+    ffi.C.lj_setPpTonemapFunction_str__impl(v)
+  else
+    ffi.C.lj_setPpTonemapFunction_base__impl(__util.cast_enum(v, 0, 14, 0))
+  end
+end
+

@@ -105,13 +105,13 @@ end
 function ac.StructItem.string(capacity) return tostring(capacity or 32) end
 
 local __slTypes = {
-  [-0.08] = { 'int8_t %s;', 1, function (v) return v / 127 end, function (v) return _mmax(_mmin(v, 1), -1) * 127 end },
-  [0.08] = { 'uint8_t %s;', 1, function (v) return v / 255 end, function (v) return _mmax(_mmin(v, 1), 0) * 255 end },
-  [-0.16] = { 'int16_t %s;', 2, function (v) return v / 32767 end, function (v) return _mmax(_mmin(v, 1), -1) * 32767 end },
-  [0.16] = { 'uint16_t %s;', 2, function (v) return v / 65535 end, function (v) return _mmax(_mmin(v, 1), 0) * 65535 end },
-  [0.5] = { 'uint16_t %s;', 2, function (v) return ac.decodeHalf(v) end, function (v) return ac.encodeHalf(v) end },
-  [1.5] = { 'float %s;', 4 },
-  [2.5] = { 'double %s;', 8 },
+  [-0.08] = { 'int8_t %s;', 1, function (v) return v / 127 end, function (v) return _mmax(_mmin(v, 1), -1) * 127 end, false, 3 },
+  [0.08] = { 'uint8_t %s;', 1, function (v) return v / 255 end, function (v) return _mmax(_mmin(v, 1), 0) * 255 end, false, 4 },
+  [-0.16] = { 'int16_t %s;', 2, function (v) return v / 32767 end, function (v) return _mmax(_mmin(v, 1), -1) * 32767 end, false, 5 },
+  [0.16] = { 'uint16_t %s;', 2, function (v) return v / 65535 end, function (v) return _mmax(_mmin(v, 1), 0) * 65535 end, false, 6 },
+  [0.5] = { 'uint16_t %s;', 2, function (v) return ac.decodeHalf(v) end, function (v) return ac.encodeHalf(v) end, false, 2 },
+  [1.5] = { 'float %s;', 4, false, false, false, 1 },
+  [2.5] = { 'double %s;', 8, false, false, false, 0 },
   [-1] = { 'char %s;', 1 },
   [1] = { 'uint8_t %s;', 1 },
   [-8] = { 'int8_t %s;', 1 },
@@ -123,13 +123,13 @@ local __slTypes = {
   [-64] = { 'int64_t %s;', 8 },
   [64] = { 'uint64_t %s;', 8 },
   [true] = { 'bool %s;', 1 },
-  [vec2.tmp()] = { 'vec2 %s;', 8 },
-  [vec3.tmp()] = { 'vec3 %s;', 12 },
-  [vec4.tmp()] = { 'vec4 %s;', 16 },
-  [rgb.tmp()] = { 'rgb %s;', 12 },
-  [rgbm.tmp()] = { 'rgbm %s;', 16 },
-  [hsv.tmp()] = { 'hsv %s;', 12 },
-  [quat.tmp()] = { 'quat %s;', 16 },
+  [vec2.tmp()] = { 'vec2 %s;', 8, false, false, false, 201 },
+  [vec3.tmp()] = { 'vec3 %s;', 12, false, false, false, 301 },
+  [vec4.tmp()] = { 'vec4 %s;', 16, false, false, false, 401 },
+  [rgb.tmp()] = { 'rgb %s;', 12, false, false, false, 301 },
+  [rgbm.tmp()] = { 'rgbm %s;', 16, false, false, false, 401 },
+  [hsv.tmp()] = { 'hsv %s;', 12, false, false, false, 301 },
+  [quat.tmp()] = { 'quat %s;', 16, false, false, false, 401 },
   ['string'] = { 
     function(def) return string.format('char %%s[%d];', tonumber(def) or error('Incorrect type: '..def, 2)) end,
     function(def) return -tonumber(def) or error('Incorrect type: '..def, 2) end,
@@ -164,7 +164,7 @@ function __slProxy(value)
   return __slGet(value, 3) or false, __slGet(value, 4) or false, __slGet(value, 5) or false
 end
 
-function ac.StructItem.__build(items)
+function ac.StructItem.__build(items, callback)
   if type(items) == 'string' then return items end
   if type(items) ~= 'table' or table.isArray(items) then
     error('Associative table is required', 2)
@@ -175,10 +175,10 @@ function ac.StructItem.__build(items)
       if item.key then
         key = tostring(item.key)
       elseif item.array then
-        return { name = index, type = __slType(item[1]), array = item.array, size = __slSize(item[1]) }
+        return { name = index, type = __slType(item[1]), replayType = __slGet(item[1], 6), array = item.array, size = __slSize(item[1]) }
       end
     else
-      return { name = index, type = __slType(item), size = __slSize(item) }
+      return { name = index, type = __slType(item), replayType = __slGet(item, 6), size = __slSize(item) }
     end
   end)
   table.sort(ordered, function (a, b)
@@ -202,12 +202,15 @@ function ac.StructItem.__build(items)
     end
     i = i + 1
   end
+  if callback then
+    callback(reordered)
+  end
   local prepared = table.map(reordered, function(item) 
     if item.array then return string.format(item.type, item.name..'['..item.array..']') end
     return string.format(item.type, item.name) 
   end)
   if key then table.insert(prepared, '//'..tostring(key)) end
-  return table.concat(prepared)
+  return table.concat(prepared), reordered
 end
 
 function ac.StructItem.__cdef(name, layout, compact)

@@ -8,7 +8,7 @@ local _dslv, _dsrn
 function ac.getDualSenseControllers()
   if not _dsrn then _dsrn = refnumber(-1) end
   ffi.C.lj_getDualSenseControllers_inner(_dsrn)
-  _dslv = __getResult__() or _dslv
+  _dslv = __util.result() or _dslv
   return _dslv or error('Failed to get data', 2)
 end
 

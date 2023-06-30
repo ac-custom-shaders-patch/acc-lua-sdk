@@ -38,7 +38,7 @@ local _sslv, _ssrn
 function ac.getSetupSpinners()
   if not _ssrn then _ssrn = refnumber() end
   ffi.C.lj_getSetupSpinners_inner__apps(_ssrn)
-  _sslv = __getResult__() or _sslv
+  _sslv = __util.result() or _sslv
   return _sslv or error('Failed to get data', 2)
 end
 

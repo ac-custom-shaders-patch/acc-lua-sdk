@@ -363,6 +363,7 @@ ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
 })
 
 ui.Icons = __enum({ override = 'ui.*/*conID:string', underlying = 'string' }, {
+  LoadingSpinner = 'fx:loading',
   --[[? out($.readText(`${process.env['CSP_ROOT']}/source/imgui/icons.h`).split('\n')
     .map(x => /ICON_24_(\w+)/.test(x) && RegExp.$1).filter(x => x)
     .map(x => `${x.toLowerCase().replace(/^(?:gps|fm|qr|vip)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.ru/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
@@ -518,7 +519,8 @@ ui.TabBarFlags = __enum({ cpp = 'ImGuiTabBarFlags' }, {
   NoTooltip                         = 0x20,  -- Disable tooltips when hovering a tab
   FittingPolicyResizeDown           = 0x40,  -- Resize tabs when they don’t fit
   FittingPolicyScroll               = 0x80,  -- Add scroll buttons when tabs don’t fit
-  IntegratedTabs                    = 0x8000 -- Integrates tab bar into a window title (call it first when drawing a window)
+  IntegratedTabs                    = 0x8000, -- Integrates tab bar into a window title (call it first when drawing a window)
+  SaveSelected                      = 0x10000, -- Save selected tab based on tab ID (make sure tab ID is unique)
 })
 
 ui.TabItemFlags = __enum({ cpp = 'ImGuiTabItemFlags' }, {
@@ -603,11 +605,12 @@ local __itep = refbool()
 ---@param label string
 ---@param str string
 ---@param flags ui.InputTextFlags?
+---@param size vec2? @If specified, text input is multiline.
 ---@return string
 ---@return boolean
 ---@return boolean
-function ui.inputText(label, str, flags)
-  local changed = ffi.C.lj_inputText_inner__ui(__util.str(label), __util.str(str), tonumber(flags) or 0, __itep)
+function ui.inputText(label, str, flags, size)
+  local changed = ffi.C.lj_inputText_inner__ui(__util.str(label), __util.str(str), tonumber(flags) or 0, __itep, __util.ensure_vec2_nil(size))
   if changed == nil then return str, false, __itep.value end
   return ffi.string(changed), true, __itep.value
 end
@@ -1392,8 +1395,9 @@ typedef struct { int _something; } uirtcpu;
 ---@return ui.ExtraCanvas
 ---@overload fun(resolution: vec2|integer, mips: integer, textureFormat: render.TextureFormat)
 function ui.ExtraCanvas(resolution, mips, antialiasingMode, textureFormat)
-  if type(resolution) == 'number' then resolution = vec2(resolution, resolution) end
-  if not vec2.isvec2(resolution) then error('Resolution is required', 2) end
+  if type(resolution) == 'number' then resolution = vec2(resolution, resolution)
+  elseif not vec2.isvec2(resolution) then error('Resolution is required', 2) 
+  else resolution = resolution:clone() end
   resolution.x = math.clamp(math.ceil(resolution.x), 1, 8192)
   resolution.y = math.clamp(math.ceil(resolution.y), 1, 8192)
 
@@ -1606,14 +1610,14 @@ ffi.metatype('uirt', {
       end
     end,
 
-    ---Copies contents from another canvas or from CPU canvas data. Faster than copying by drawing, but works only
-    ---if size and number of MIP maps match. If not, fails quietly.
-    ---@param other ui.ExtraCanvas|ui.ExtraCanvasData @Canvas to copy content from.
+    ---Copies contents from another canvas, CPU canvas data, image or an icon. Faster than copying by drawing. If source is disposed or missing,
+    ---does not alter the contents of the canvas.
+    ---@param other ui.ExtraCanvas|ui.ExtraCanvasData|ui.Icons @Canvas to copy content from.
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
     copyFrom = function(s, other)
       if ffi.istype('uirt*', other) then ffi.C.lj_uirt_copyfrom__ui(s, other)
       elseif ffi.istype('uirtcpu*', other) then ffi.C.lj_uirt_fromcpu__ui(s, other)
-      else error('Can copy from ui.ExtraCanvas or ui.ExtraCanvasData only', 2) end
+      else ffi.C.lj_uirt_copyfromtex__ui(s, tostring(other)) end
       return s;
     end,
 
@@ -1675,7 +1679,17 @@ ffi.metatype('uirtcpu', {
       return ffi.C.lj_uirtcpu_datasize__ui(s)
     end,
 
-    ---Returns color of a pixel. If coordinates are outside, or data has been disposed, returns zeroes.
+    ---Returns numeric value of a pixel of R32FLOAT texture. If coordinates are outside, or data has been disposed, returns zeroes.
+    ---@param x integer @0-based X coordinate.
+    ---@param y integer @0-based Y coordinate.
+    ---@return number @Pixel color from 0 to 1.
+    ---@overload fun(s: ui.ExtraCanvasData, pos: vec2): number
+    floatValue = function(s, x, y)
+      if vec2.isvec2(x) then x, y = x.x, x.y end
+      return ffi.C.lj_uirtcpu_float__ui(s, tonumber(x) or 0, tonumber(y) or 0)
+    end,
+
+    ---Returns color of a pixel of RGBA8888 texture. If coordinates are outside, or data has been disposed, returns zeroes.
     ---@param x integer @0-based X coordinate.
     ---@param y integer @0-based Y coordinate.
     ---@return rgbm @Pixel color from 0 to 1.
@@ -1747,7 +1761,7 @@ local _scmt = {
 ---Returns a function which returns `true` when keyboard shortcut is pressed.
 --[[@tableparam key {key: ui.KeyIndex = ui.KeyIndex.A, ctrl: boolean, alt: boolean = nil, shift: boolean = nil, super: boolean = nil} ]]
 ---@return fun(withRepeat: boolean|nil): boolean
----@overload fun(key: ui.KeyIndex, ...): function
+---@overload fun(key: ui.KeyIndex|integer, ...): function
 function ui.shortcut(key, ...)
   if not _uiState then _uiState, _simState = ac.getUI(), ac.getSim() end
   local k = {key, ...}
@@ -1779,7 +1793,7 @@ function ui.renderTexture(params)
   if type(params) ~= 'table' then error('Table “params” is required', 2) end
   ffi.C.lj_renderTexture_inner__ui(__util.str(params.filename), __util.ensure_vec2(params.p1), __util.ensure_vec2(params.p2), 
     __util.ensure_rgbm_nil(params.color), __util.ensure_rgbm_nil(params.colorOffset), __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2), 
-    tonumber(params.blendMode) or 15,
+    tonumber(params.blendMode) or 13,
     params.mask1 and tostring(params.mask1) or nil, __util.ensure_vec2_nil(params.mask1UV1), __util.ensure_vec2_nil(params.mask1UV2), tonumber(params.mask1Flags) or 6,
     params.mask2 and tostring(params.mask2) or nil, __util.ensure_vec2_nil(params.mask2UV1), __util.ensure_vec2_nil(params.mask2UV2), tonumber(params.mask2Flags) or 6)
 end
@@ -1945,7 +1959,7 @@ end
 
 ---Adds a new settings item in settings list in apps.
 --[[@tableparam params {
-  iconID: ui.Icons = ui.Icons.Settings "Settings icon",
+  icon: ui.Icons = ui.Icons.Settings "Settings icon",
   name: string "Name of the settings item (name of a script by default).",
   size: {default: vec2, min: vec2, max: vec2} = nil "Size settings. Default size: `vec2(320, 240)`, default min size: `vec2(40, 20)`."
 }]]

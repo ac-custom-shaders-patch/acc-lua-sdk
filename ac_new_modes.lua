@@ -12,7 +12,18 @@ require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_particles'
 require './common/ac_gameplay'
+require './common/ac_game'
+require './common/ac_physics'
+require './common/ac_physics_ai'
 require './wfx_common/ac_weatherconditions'
+
+---@param message string
+---@param successfulRun boolean? @Default value: `true`.
+---@param sessionResults {cancelled: boolean?, place: integer?, summary: string, message: string}? @Use `1` for gold medal and `4` as an unremarkable place. Default value: `nil`.
+---@return boolean @Returns `false` if the call is inappropriate.
+function ac.endSession(message, successfulRun, sessionResults)
+  ffi.C.lj_endSession_inner__newmodes(tostring(message), not not successfulRun, sessionResults and JSON.stringify(sessionResults) or nil)
+end
 
 -- automatically generated entries go here:
 __definitions()

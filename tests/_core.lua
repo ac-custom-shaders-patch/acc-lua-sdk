@@ -1,4 +1,5 @@
 ac = {}
+__util = {}
 ffi = require('ffi')
 io = require('io')
 __script = {}
@@ -156,7 +157,7 @@ end
 
 function expectError(fn, error)
   local success, err = pcall(fn)
-  if success or err:find(error) == nil then
+  if success or err:match(error) == nil then
     local caller = findCallerLine()
     if success then
       io.stderr:write(string.format('\t%s: expected an error “%s”, didn’t happen\n', caller, error))

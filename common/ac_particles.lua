@@ -81,8 +81,11 @@ ffi.metatype('pfxsparksemitter', {
 -- Smoke particles:
 
 ffi.cdef [[ 
-typedef struct { rgbm color; float colorConsistency; float thickness; float life; float size; float spreadK; float growK; float targetYVelocity; } pfxsmokeemitter;
+typedef struct { rgbm color; float colorConsistency; float thickness; float life; float size; float spreadK; float growK; float targetYVelocity; int flags; } pfxsmokeemitter;
 ]]
+
+---Smoke flags for emitters.
+ac.Particles.SmokeFlags = { FadeIn = 1, DisableCollisions = 256 }
 
 --[[@tableparam params {
   color: rgbm = rgbm(0.5, 0.5, 0.5, 0.5) "Smoke color with values from 0 to 1. Alpha can be used to adjust thickness. Default alpha value: 0.5.",
@@ -112,6 +115,7 @@ end
 ---@field spreadK number @How randomized is smoke spawn (mostly, speed and direction). Default value: 1.
 ---@field growK number @How fast smoke expands. Default value: 1.
 ---@field targetYVelocity number @Neutral vertical velocity. Set above zero for hot gasses and below zero for cold, to collect at the bottom. Default value: 0.
+---@field flags integer @Emitter flags. Default value: 0.
 ---@explicit-constructor ac.Particles.Smoke
 ffi.metatype('pfxsmokeemitter', {
   __index = {

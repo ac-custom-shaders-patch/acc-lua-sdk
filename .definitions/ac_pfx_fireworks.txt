@@ -18,7 +18,6 @@ render.glEnd()
 render.circle(pos: vec3, dir: vec3, radius: number, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr)
 render.rectangle(pos: vec3, dir: vec3, width: number, height: number, color: rgbm = rgbm(1, 1, 1, 1))
 render.quad(p1: vec3, p2: vec3, p3: vec3, p4: vec3, color: rgbm = rgbm(1, 1, 1, 1), texture: string = nullptr)
-render.setTransform(t: mat4x4, applySceneOriginOffset: boolean = false)
 render.debugText(pos: vec3, text: string, color: rgbm = rgbm(1, 1, 1, 1), scale: number = 1, align: render.FontAlign = AC::FontAlign::center)
 render.debugSphere(center: vec3, radius: number, color: rgbm = rgbm(3, 0, 0, 1))
 render.debugCross(center: vec3, size: number, color: rgbm = rgbm(3, 0, 0, 1))
@@ -30,6 +29,12 @@ render.debugArrow(from: vec3, to: vec3, size: number = -1, color: rgbm = rgbm(3,
 render.getRenderTargetSize(): vec2
 render.backupRenderTarget(): boolean
 render.restoreRenderTarget(): boolean
+ac.hasTrackPhysicsObjectCollidedWithCar(carIndex: integer, name: string, firstCollisionOnly: boolean = true): boolean
+ac.getCarIndexTrackPhysicsObjectCollidedWith(name: string): integer
+ac.getTrackPhysicsObjectNameHitByCar(carIndex: integer): string
+render.createRay(pos: vec3, dir: vec3, length: number = -1): ray
+render.createMouseRay(): ray
+render.createPointRay(onscreenPoint: vec2): ray
 ac.getRealTrackHeadingAngle(): number
 ac.getTimeZoneOffset(): number
 ac.getTimeZoneDstOffset(): number

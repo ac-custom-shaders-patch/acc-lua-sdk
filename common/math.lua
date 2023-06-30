@@ -240,12 +240,30 @@ function math.project(x, y) return x:clone():project(y) end
 function math.radians(x) return x * math.pi / 180 end
 function math.degress(x) return x * 180 / math.pi end
 
----Checks if value is NaN.
+---Checks if value is not-a-number.
 ---@param x number
 ---@return boolean
-function math.isNaN(x) return x ~= x end
+function math.isnan(x) return x ~= x end
+
+---Checks if value is positive or negative infinity.
+---@param x number
+---@return boolean
+function math.isinf(x) return x == math.huge or x == -math.huge end
+
+---Checks if value is finite (not infinite or nan).
+---@param x number
+---@return boolean
+function math.isfinite(x) x = tonumber(x) return x ~= nil and not math.isnan(x) and not math.isinf(x) end
 
 ---@type number
+math.nan = 0/0
+
+-- For compatibility:
+
+---@deprecated Use math.isnan instead.
+function math.isNaN(x) return x ~= x end
+
+---@deprecated Use math.nan instead.
 math.NaN = 0/0
 
 -- Value used by applyLag, if called a lot with the same lag, might be better to cache it.
@@ -257,12 +275,19 @@ function math.lagMult(lag, dt)
 end
 
 -- Simple smooth movement towards target value.
----@param value number
----@param target number
+---@generic T : number|vec2|vec3|vec4
+---@param value T
+---@param target T
 ---@param lag number
 ---@param dt number
----@return number
+---@return T
 function math.applyLag(value, target, lag, dt) 
   if lag <= 0 then return target end
-  return value + (target - value) * math.lagMult(lag, dt)
+  if type(value) == 'number' then
+    return value + (target - value) * math.lagMult(lag, dt)
+  elseif type(value.scale) == 'function' then
+    return (target - value):scale(math.lagMult(lag, dt)):add(value)
+  else
+    error('Wrong type', 2)
+  end
 end

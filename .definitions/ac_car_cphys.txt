@@ -1,8 +1,17 @@
-ac.accessCarPhysics(): ac.StateCphysCarData
+ac.accessCarPhysics(): ac.StateCphysCar
+ac.accessCarDamper(index: integer): ac.StateCphysDamper
+ac.getCarWheelSurface(index: integer): ac.StateCphysSurface
 ac.addForce(position: vec3, posLocal: boolean, force: vec3, forceLocal: boolean)
+ac.addHubForce(wheelIndex: integer, position: vec3, force: vec3, driven: boolean, addSteerTorque: boolean)
+ac.addTorque(torque: vec3, torqueLocal: boolean)
 ac.setColliderOffset(index: integer, offset: vec3): boolean // Returns `false` if there is no such collider.
 ac.setWingGain(wingIndex: integer, cdGain: number, clGain: number)
 ac.setGearsFinalRatio(finalRatio: number)
+ac.setDifferentialCoast(coast: number)
+ac.setDifferentialPower(power: number)
+ac.setDifferentialPreload(value: number)
+ac.setAWDCenterDifferentialPreload(value: number)
+ac.awakeCarPhysics()
 ac.setGearsGrinding(grinding: boolean)
 ac.setDrivetrainDamageRPMWindow(newValue: number)
 ac.setRainTreadEfficiencyMultiplier(wheel: integer, value: number)
@@ -14,30 +23,64 @@ ac.setDrivetrainDriveVelocity(newValue: number)
 ac.setEngineLifeLeft(newValue: number)
 ac.setEngineStalling(value: boolean)
 ac.setTyreInflation(tyre: integer, inflation: number)
+ac.shiftPatchTemperatures(tyre: integer, targetTemperature: number, transfer: number)
 ac.getTurboUserWastegate(index: integer): number
 ac.setTurboUserWastegate(index: integer, value: number)
 ac.setTurboMaxBoost(index: integer, value: number)
 ac.setTurboWastegate(index: integer, wastegate: number, isAdjustable: boolean)
 ac.setTurboExtras(index: integer, lagUp: number, lagDown: number, referenceRpm: number, gamma: number)
-ac.overrideTurboBoost(index: integer, newBoost: number)
+ac.overrideTurboBoost(index: integer, newBoost: number = INFINITY, instrumentsBoost: number = INFINITY)
+ac.overrideEngineTorque(newTorque: number)
+ac.overrideBrakesTorque(wheelIndex: integer, torque: number, handbrakeTorque: number, discTemperature: number = 0)
+ac.debugSleep(sleepMs: integer)
+ac.isDebugDrawActive(): boolean
+ac.drawDebugLine(from: vec3, to: vec3, color: rgbm)
+ac.drawDebugArrow(from: vec3, to: vec3, color: rgbm)
+ac.drawDebugSquare(pos: vec3, nm: vec3, size: number, color: rgbm)
+ac.drawDebugBox(center: vec3, size: vec3, color: rgbm)
 ac.setExtraMass(pos: vec3, mass: number, massBox: vec3 = vec3(1, 1, 1))
 ac.getScriptSetupValue(id: string): refnumber
 ac.setScriptSetupValue(id: string, value: number): boolean // Returns `false` if there is no such item
 ac.getDynamicController(name: string): refnumber
 ac.setEngineRPMLimit(newValue: number, scaleInstruments: boolean = false)
 
-struct ac.StateCphysWheelData {
+struct ac.StateCphysWheel {
 	float angularSpeed;
+	float coreTemperature;
+	float insideTemperature;
+	float middleTemperature;
+	float outsideTemperature;
 	float slip;
 	float slipAngle; // Slip angle in radians
 	float slipRatio;
 	float ndSlip;
 	float load;
+	float depth;
 	float inflation; // For changing use `ac.setTyreInflation(tyreIndex, pressure)`
+	float suspensionTravel;
+	float damperSpeed;
+	mat4x4 transform; // TODO: save space and copying time with unions
+	vec3 position;
+	vec3 look;
+	vec3 up;
+	vec3 side;
+	vec3 velocity;
+	vec3 contactPoint;
+	vec3 contactNormal;
+	vec3 test_FinalForce; // @hidden
+	vec3 test_GroundVelocity; // @hidden
+	vec3 test_ForceAlteration; // @hidden
+	float test_HeightOffset; // @hidden
+	float test_ContactPatchArea; // @hidden
+	float test_NormalSmoothing; // @hidden
+	bool test_SpecialSurface; // @hidden
+	vec4 test_GroundDeformation; // @hidden
+	vec2 test_FinalForceMult; // @hidden
 }
 
-struct ac.StateCphysCarData {
+struct ac.StateCphysCar {
 	int inputMethod;
+	mat4x4 transform;
 	vec3 gForces;
 	vec3 localAngularVelocity;
 	vec3 localVelocity; // Car velocity relative to car
@@ -54,6 +97,7 @@ struct ac.StateCphysCarData {
 	float antirollBarFront;
 	float antirollBarRear;
 	float gearsFinalRatio;
+	float engineTorque;
 	int absMode;
 	int tractionControlMode;
 	int gear;
@@ -73,5 +117,5 @@ struct ac.StateCphysCarData {
 	bool gearDown; // Can be changed (unless controls are locked or car has black flag)
 	bool isShifterSupported; // Can be changed (unless controls are locked or car has black flag)
 	float controllerInputs[8];
-	state_cphys_wheel_data wheels[4];
+	state_cphys_wheel wheels[4];
 }

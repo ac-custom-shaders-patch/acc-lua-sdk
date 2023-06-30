@@ -70,6 +70,8 @@ function _ac_genericList:clear() end
 ---@return ac.GenericList
 function _ac_genericList:clone() end
 
+--[[? if (!ctx.flags.withPhysics) out(]]
+
 ---Custom FFI namespace. Be very careful around here.
 ---@class ffilibex
 ---@field C nil @Avoid using functions directly.
@@ -111,3 +113,37 @@ function ffi.metatype(ct, metatable) end
 ---@param finalizer? function
 ---@return ffi.cdata*
 function ffi.gc(cdata, finalizer) end
+
+---Namespace only available for background workers. Use `ac.startBackgroundWorker()` to start a background worker.
+worker = {}
+
+---Input data passed to a worker during launch.
+---@type nil|boolean|number|string|table
+worker.input = nil
+
+---Input data passed to a worker during launch.
+---@type nil|boolean|number|string|table
+worker.input = nil
+
+---Available only in background worker scripts. Sleep function pauses execution for a certain time. 
+---Before unpaused, any callbacks (such as `setTimeout()`, `setInterval()` and
+---other custom enqueued callbacks) will be called. This is the only way for those callbacks to fire in a background worker. Note:
+---if parent thread is closed, `worker.sleep()` won’t return back and instead script will be unloaded, this way worker can be reloaded
+---as well.
+---
+---If your worker does a lot of async operations, consider using `worker.wait()` instead, setting resulting value with `worker.result`.
+---Or maybe not even use anything at all: for basic (non-repeating) callbacks, timers and intervals script will continue running until
+---all the postponed actions are complete (updating once every 100 ms).
+---@param time number @Time in seconds to pause worker by.
+function worker.sleep(time) end
+
+---Wait for `worker.result` value to be set. Stops the worker once `worker.result` value has been provided (or any `error()` has been raised).
+---Works the best if your worker uses a lot of async operations. 
+---@param time number? @Time in seconds for timeout. Default value: 60. Feel free to pass something like `math.huge` if you don’t need timeout for some reason.
+function worker.wait(time) end
+
+---Resulting value used when using `worker.wait()`.
+---@type nil|boolean|number|string|table
+worker.result = nil
+
+--[[) ?]]

@@ -9,7 +9,7 @@ local _silv, _sirn
 function ac.getSetupItems()
   if not _sirn then _sirn = refnumber() end
   ffi.C.lj_getSetupItems_inner__cphys(_ssrn)
-  _silv = __getResult__() or _silv
+  _silv = __util.result() or _silv
   return _silv or error('Failed to get data', 2)
 end
 

@@ -1,6 +1,6 @@
 local function _argsCount(fn)
-  if type(fn) == 'function' and debug and type(debug.getinfo) == 'function' then
-    local i = debug.getinfo(fn)
+  if type(fn) == 'function' and (debug and debug.getinfo or _dbg) then
+    local i = (debug and debug.getinfo or _dbg)(fn)
     if i ~= nil then
       return i.nparams
     end

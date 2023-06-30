@@ -30,6 +30,13 @@ function mat4x4.translation(offset) end
 ---@return mat4x4
 function mat4x4.rotation(angle, axis) end
 
+---Creates a rotation matrix from Euler angles in radians.
+---@param head number
+---@param pitch number
+---@param roll number
+---@return mat4x4
+function mat4x4.euler(head, pitch, roll) end
+
 ---Creates a scaling matrix.
 ---@param scale vec3
 ---@return mat4x4
@@ -78,6 +85,14 @@ function mat4x4:inverse() end
 ---Modifies current matrix.
 ---@return mat4x4 @Returns self for easy chaining.
 function mat4x4:inverseSelf() end
+
+---Creates a new matrix.
+---@return mat4x4
+function mat4x4:normalize() end
+
+---Modifies current matrix.
+---@return mat4x4 @Returns self for easy chaining.
+function mat4x4:normalizeSelf() end
 
 ---Creates a new matrix.
 ---@return mat4x4

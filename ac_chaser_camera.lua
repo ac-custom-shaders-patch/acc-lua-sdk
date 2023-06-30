@@ -9,6 +9,25 @@ __definitions()
 
 -- extra additions:
 
+---Reference to information about state of associated car.
+---@type ac.StateCar
+car = nil
+
+---Reference to information about state of simulation.
+---@type ac.StateSim
+sim = nil
+
+function __script.updateChaserState(carIndex)
+  ac.debug('carIndex', carIndex)
+  if not car or car.index ~= carIndex then
+    car = ac.getCar(carIndex)
+    ac.debug('car', car ~= nil)
+    if not sim then
+      sim = ac.getSim()
+    end
+  end
+end
+
 ---Gets chase camera settings.
 ---@return { distance: number, height: number, pitch: number }
 function ac.getCameraParameters(index)

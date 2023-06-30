@@ -11,7 +11,10 @@ local _sdch = {}
 local function _sdca(d, i)
   local e = _sdch[d]
   if not e then
-    e = ffi.new('socialdata')
+    if not _t_socialdata then
+      _t_socialdata = ffi.typeof('socialdata')
+    end
+    e = _t_socialdata()
     _sdch[d] = e
   end
   ffi.C.lj_socialdata_sync(e, i, d)

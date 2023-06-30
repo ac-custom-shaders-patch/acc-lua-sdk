@@ -69,7 +69,7 @@ end
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param url string @URL.
 ---@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
----@param data WebPayload @Optional data.
+---@param data WebPayload? @Optional data.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(url: string, data: string, callback: fun(err: string, response: WebResponse))
 ---@overload fun(url: string, callback: fun(err: string, response: WebResponse))
@@ -86,7 +86,7 @@ end
 ---@param method "'GET'"|"'POST'"|"'PUT'"|"'HEAD'"|"'DELETE'"|"'PATCH'"|"'OPTIONS'" @HTTP method.
 ---@param url string @URL.
 ---@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
----@param data WebPayload @Optional data.
+---@param data WebPayload? @Optional data.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(method: string, url: string, data: string, callback: fun(err: string, response: WebResponse))
 ---@overload fun(method: string, url: string, callback: fun(err: string, response: WebResponse))

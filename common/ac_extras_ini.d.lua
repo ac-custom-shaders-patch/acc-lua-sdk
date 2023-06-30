@@ -67,7 +67,7 @@ function ac.INIConfig:mapConfig(defaults) end
 ---@return ac.INIConfig @Returns itself for chaining several methods together.
 function ac.INIConfig:set(section, key, value) end
 
----Set an INI value and save file immediattely using special old Windows function to edit a single INI value. Compatible only with default
+---Set an INI value and save file immediately using special old Windows function to edit a single INI value. Compatible only with default
 ---INI format. Doesn’t provide major peformance improvements, but might be useful if you prefer to keep original formatting as much as possible
 ---when editing a single value only.
 ---@param section string

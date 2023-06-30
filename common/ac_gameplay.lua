@@ -21,6 +21,7 @@ typedef struct {
   float lodMultiplier;
   const float lodMultiplierOriginal;
   float ownShare;
+  float cameraRestoreThreshold;
 } grabbedcamera;
 ]]
 
@@ -61,6 +62,7 @@ end
 ---@field exposure number @Camera exposure to be applied next frame.
 ---@field exposureOriginal number @Original camera exposure.
 ---@field ownShare number @Value for mixing original and custom camera parameters. Default value: 1. If 0, camera is controlled by Assetto Corsa. If 1, parameters set in `ac.GrabbedCamera` are used. If 0.5, parameters are mixed evenly.
+---@field cameraRestoreThreshold number @Camera switches to original mode (for rendering logic) once `ownShare` drops below this value.
 ffi.metatype('grabbedcamera', { __index = {
   ---Returns `true` if camera holder is currently holding camera and was not disposed.
   ---@return boolean

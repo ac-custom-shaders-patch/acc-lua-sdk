@@ -76,8 +76,11 @@ function clearInterval(cancellationID)
   return clearTimeout(cancellationID)
 end
 
+function __util.timersLeft()
+  return _timeoutsN
+end
+
 function __script.updateInner(dt)
-  __util.updateInner(dt)
   for i = _timeoutsN, 1, -1 do
     local t = _timeouts[i]
     t.delay = t.delay - dt
@@ -91,7 +94,23 @@ function __script.updateInner(dt)
       local s, err = pcall(t.callback)
       if not s then
         ac.error('Error in timer callback: '..tostring(err))
+        if worker then
+          worker.__error = tostring(err)
+        end
       end
+    end
+  end
+end
+
+function __script.updateCombined(dt, a1, a2)
+  __script.updateInner(dt)
+  local u = script.update
+  if type(u) == 'function' then
+    u(dt, a1, a2) 
+  else
+    u = update
+    if type(u) == 'function' then
+      u(dt, a1, a2)
     end
   end
 end

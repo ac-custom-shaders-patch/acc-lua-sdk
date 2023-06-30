@@ -8,7 +8,7 @@ local _dhlv, _dhrn
 function ac.getDualShockControllers()
   if not _dhrn then _dhrn = refnumber(-1) end
   ffi.C.lj_getDualShockControllers_inner(_dhrn)
-  _dhlv = __getResult__() or _dhlv
+  _dhlv = __util.result() or _dhlv
   return _dhlv or error('Failed to get data', 2)
 end
 

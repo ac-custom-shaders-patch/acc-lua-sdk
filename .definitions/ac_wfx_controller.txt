@@ -13,6 +13,8 @@ ac.getInputWeatherType(): ac.WeatherType
 ac.getInputTemperatures(): ac.TemperatureParams
 ac.getInputWind(): ac.WindParams
 ac.getInputTrackState(): ac.TrackConditions
+ac.getInputHumidity(): number
+ac.getInputPressure(): number
 ac.setConditionsSet(c: ac.ConditionsSet)
 ac.setConditionsSet2(c: ac.ConditionsSet)
 ac.startBackgroundWorker(name: string, data: serializable, callback: integer)

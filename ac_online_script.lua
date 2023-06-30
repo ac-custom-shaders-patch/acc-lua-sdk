@@ -1,6 +1,6 @@
 __source 'extensions/online_plus/online_scripts.cpp'
 
---[[? ctx.flags.withPhysics = true; ?]]
+--[[? ctx.flags.withPhysics = true; ctx.flags.withoutIO = true; ?]]
 
 require './common/internal_import'
 require './common/ac_audio'

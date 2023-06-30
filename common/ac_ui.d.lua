@@ -16,7 +16,7 @@
 ---- `track::…`: texture the track, searches the same way car config would:
 ---  - `track::track::X`: texture “X” from track KN5.
 ---  - Other values will look for an extension texture.
----@alias ui.ImageSource string|ui.ExtraCanvas|ui.GIFPlayer|ui.MediaPlayer
+---@alias ui.ImageSource string?|ui.ExtraCanvas|ui.GIFPlayer|ui.MediaPlayer
 
 ---Very simple thing for smooth UI animations. Call it with a number for its initial state and it would
 ---return you a function. Each frame, call this function with your new target value and it would give you

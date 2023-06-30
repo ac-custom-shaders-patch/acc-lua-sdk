@@ -16,7 +16,6 @@ render.glEnd()
 render.circle(pos: vec3, dir: vec3, radius: number, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr)
 render.rectangle(pos: vec3, dir: vec3, width: number, height: number, color: rgbm = rgbm(1, 1, 1, 1))
 render.quad(p1: vec3, p2: vec3, p3: vec3, p4: vec3, color: rgbm = rgbm(1, 1, 1, 1), texture: string = nullptr)
-render.setTransform(t: mat4x4, applySceneOriginOffset: boolean = false)
 render.debugText(pos: vec3, text: string, color: rgbm = rgbm(1, 1, 1, 1), scale: number = 1, align: render.FontAlign = AC::FontAlign::center)
 render.debugSphere(center: vec3, radius: number, color: rgbm = rgbm(3, 0, 0, 1))
 render.debugCross(center: vec3, size: number, color: rgbm = rgbm(3, 0, 0, 1))
@@ -64,7 +63,7 @@ ui.sameLine(offsetFromStart: number = 0, spacing: number = -1)
 ui.setMaxCursorX(v: number)
 ui.setMaxCursorY(v: number)
 ui.newLine(spacing: number = -1)
-ui.beginGroup()
+ui.beginGroup(width: number = 0)
 ui.endGroup()
 ui.availableSpaceX(): number
 ui.availableSpaceY(): number
@@ -125,6 +124,8 @@ ui.beginSharpening()
 ui.endSharpening(sharpening: number = 1)
 ui.beginBlurring()
 ui.endBlurring(blurring: vec2)
+ui.beginSubtraction()
+ui.endSubtraction()
 ui.beginRotation()
 ui.endRotation(deg: number, offset: vec2 = vec2())
 ui.endPivotRotation(deg: number, pivot: vec2, offset: vec2 = vec2())
@@ -239,6 +240,7 @@ ui.progressBar(fraction: number, size: vec2 = vec2(), overlay: string = nullptr)
 ui.setExtraContentMark(active: boolean = true)
 ui.notificationCounter(counter: integer = -1, pos: vec2 = nullptr, noclip: boolean = false)
 ui.setNextItemWidth(width: number)
+ui.setNextItemIcon(iconID: string, color: rgbm = nullptr)
 ui.beginCombo(label: string, previewValue: string, flags: ui.ComboFlags = ImGuiComboFlags_None): boolean
 ui.selectable(label: string, selected: refbool, flags: ui.SelectableFlags = ImGuiSelectableFlags_None, size: vec2 = vec2()): boolean
 ui.endCombo()
@@ -278,6 +280,7 @@ ui.setItemAllowOverlap()
 ui.itemToggledSelection(): boolean
 ui.image(imageSource: string, size: vec2, color: rgbm = rgbm(1, 1, 1, 1), borderColor: rgbm = nullptr, uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), keepAspectRatio: boolean = false)
 ui.imageButton(imageSource: string, size: vec2, bgColor: rgbm = nullptr, color: rgbm = rgbm(1, 1, 1, 1), uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), framePadding: number = -1, keepAspectRatio: boolean = false): boolean
+ui.iconButton(iconID: string, size: vec2 = nullptr, color: rgbm = nullptr, bgColor: rgbm = nullptr, framePadding: number = -1, uv1: vec2 = vec2(), uv2: vec2 = vec2( 1, 1 ), keepAspectRatio: boolean = true, flags: ui.ButtonFlags = ImGuiButtonFlags_None): boolean
 ui.isImageReady(imageSource: string): boolean
 ui.setAsynchronousImagesLoading(value: boolean = true)
 ui.calcItemWidth(): number
@@ -321,7 +324,7 @@ ui.setClipboardText(text: string)
 ui.time(): number
 ui.frameCount(): integer
 ui.modalPopup(title: string, msg: string, okText: string, cancelText: string, okIconID: string, cancelIconID: string, callback: integer)
-ui.modalDialog(title: string, callback: integer)
+ui.modalDialog(title: string, callback: integer, autoclose: boolean = false)
 ui.modalPrompt(title: string, msg: string, defaultValue: string, okText: string, cancelText: string, okIconID: string, cancelIconID: string, callback: integer)
 ui.projectPoint(pos: vec3, considerUiScale: boolean = true): vec2 // Returns vector with `inf` for values if point is outside of screen.
 ui.unloadImage(imageSource: string): boolean // Returns `true` if file was unloaded successfully.
@@ -330,6 +333,7 @@ ui.setDriverTooltip(carIndex: integer)
 ui.setDriverPopup(id: string, carIndex: integer): boolean // Returns `false` once popup closes.
 ui.mentionDriverInChat(carIndex: integer, autofocus: boolean = true)
 ac.setAppWindowVisible(appID: string, windowFilter: string = "?", visible: boolean = true)
+ac.setAppOpen(appID: string)
 ac.hasTrackPhysicsObjectCollidedWithCar(carIndex: integer, name: string, firstCollisionOnly: boolean = true): boolean
 ac.getCarIndexTrackPhysicsObjectCollidedWith(name: string): integer
 ac.getTrackPhysicsObjectNameHitByCar(carIndex: integer): string
@@ -338,10 +342,14 @@ ac.currentDisplayPosition(): vec2
 ac.currentDisplaySize(): vec2
 ac.currentDisplayTextureResolution(): vec2
 ac.checkAdminPrivileges(): boolean
+ac.checkIfServerRequiresPasswordAsync(callback: integer)
 ac.setDriverChatNameColor(carIndex: integer, color: rgbm = nullptr)
+ac.hideCarLabels(carIndex: integer, hide: boolean = true)
 ac.setDriverVisible(carIndex: integer, isVisible: boolean)
 ac.setDriverMouthOpened(carIndex: integer, amount: number)
 ac.setDriverDoorOpen(carIndex: integer, isOpen: boolean, instant: boolean)
+ac.disableCarRecovery(disable: boolean = true)
+ac.disableQuickMenuPitstop(disable: boolean = true)
 ac.setTrackCondition(key: string, value: number)
 ac.setCurrentCamera(mode: ac.CameraMode)
 ac.setCurrentDrivableCamera(mode: ac.DrivableCamera)
@@ -401,13 +409,13 @@ physics.setCarFuel(carIndex: integer, fuelLiters: number)
 physics.setCarNoInput(active: boolean = true)
 physics.setCarAutopilot(active: boolean = true, chooseTyres: boolean = false)
 physics.getCarInputControls(): ac_car_controls
-physics.setGripDecrease(carIndex: integer, wheels: ac.Wheel, decrease: number)
+physics.setGripDecrease(carIndex: integer, wheels: ac.Wheel = 60, decrease: number = 0)
 physics.setAirDensityMultiplier(carIndex: integer, value: number)
 physics.resetTrackPhysicsObject(name: string)
-physics.blowTyres(carIndex: integer, wheels: ac.Wheel = 15)
-physics.setTyresBlankets(carIndex: integer, wheels: ac.Wheel = 15, blanketActive: boolean = true)
-physics.setTyresTemperature(carIndex: integer, wheels: ac.Wheel, temperature: number)
-physics.setTyresVirtualKM(carIndex: integer, wheels: ac.Wheel, virtualKm: number)
+physics.blowTyres(carIndex: integer, wheels: ac.Wheel = 60)
+physics.setTyresBlankets(carIndex: integer, wheels: ac.Wheel = 60, blanketActive: boolean = true)
+physics.setTyresTemperature(carIndex: integer, wheels: ac.Wheel = 60, temperature: number = 25)
+physics.setTyresVirtualKM(carIndex: integer, wheels: ac.Wheel = 60, virtualKm: number = 0)
 physics.setCarBodyDamage(carIndex: integer, bodyDamage: vec4)
 physics.setCarEngineLife(carIndex: integer, engineLife: number)
 physics.setCarBallast(carIndex: integer, ballast: number)
@@ -419,7 +427,10 @@ physics.allowCarDRS(carIndex: integer, active: boolean)
 physics.setCarDRS(carIndex: integer, active: boolean)
 physics.setCarPenalty(penaltyType: ac.PenaltyType, penaltyParam: integer = -1)
 physics.awakeCar(carIndex: integer)
-physics.addForce(carIndex: integer, position: vec3, posLocal: boolean, force: vec3, forceLocal: boolean)
+physics.getPointVelocity(carIndex: integer, position: vec3, posLocal: boolean): vec3
+physics.addForce(carIndex: integer, position: vec3, posLocal: boolean, force: vec3, forceLocal: boolean, wheelIndex: integer = -1)
+physics.addWheelTorque(carIndex: integer, wheels: ac.Wheel = 60, torque: number = 0)
+physics.setWheelAngularVelocity(carIndex: integer, wheels: ac.Wheel = 60, angularVelocity: number = 0)
 physics.markLapAsSpoiled(carIndex: integer)
 physics.setEngineStallEnabled(carIndex: integer, value: boolean = true)
 physics.setEngineRPM(carIndex: integer, rpm: number)
@@ -429,7 +440,10 @@ physics.overrideRacingFlag(flag: ac.FlagType)
 physics.allowed(): boolean
 physics.raycastTrack(pos: vec3, dir: vec3, length: number, point: vec3 = nullptr, normal: vec3 = nullptr): number
 physics.setAILevel(carIndex: integer, level: number)
+physics.setAINoInput(carIndex: integer, active: boolean = true, stall: boolean = false)
+physics.setAICarPosition(carIndex: integer, pos: vec3, dir: vec3)
 physics.setAIAggression(carIndex: integer, aggression: number)
+physics.setAICaution(carIndex: integer, caution: number)
 physics.setAILookaheadBase(carIndex: integer, value: number)
 physics.setAILookaheadGasBrake(carIndex: integer, value: number)
 physics.setAIBrakeHint(carIndex: integer, value: number)

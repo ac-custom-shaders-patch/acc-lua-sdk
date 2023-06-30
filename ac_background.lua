@@ -8,20 +8,39 @@ __definitions()
 ---@single-instance
 script = {}
 
---[[? if (ctx.ldoc) out(]]
+do
+  local __hasResponse, __response, __error
+  worker = setmetatable({}, {
+    __index = function (s, key)
+      if key == 'input' then return __input end
+      if key == 'sleep' then return os.sleep end
+      if key == 'result' then return __response end
+      if key == 'wait' then
+        return function (time)
+          time = (time or 60) + os.preciseClock()
+          while not __hasResponse do
+            os.sleep(0.1)
+            if os.preciseClock() > time then
+              error('Timeout', 1)
+            end
+          end
+        end
+      end
+    end,
+    __newindex = function (s, key, value)
+      if key == 'result' then __response, __hasResponse = value, true end
+      if key == '__error' then __error, __hasResponse = value, true end
+    end
+  })
 
----Available only in background worker scripts. Stores input data passed to `ac.startBackgroundWorker()` 
----function. Passed tables are serialized and deserialized using a binary format.
----@type any
-__input = nil
-
----Available only in background worker scripts. Sleep function pauses execution for a certain time. 
----Before unpaused, any callbacks (such as `setTimeout()`, `setInterval()` and
----other custom enqueued callbacks) will be called. This is the only way for those callbacks to fire in a background worker. Note:
----if parent thread is closed, `ac.sleep()` won’t return back and instead script will be unloaded, this way worker can be reloaded
----as well.
----@param time number @Time in seconds to pause worker by.
-function os.sleep(time) end
-
---[[) ?]]
+  function __worker_finalize()
+    while __util.awaitingCallback() and not __hasResponse do
+      os.sleep(0.1)
+    end
+    if __error then
+      error(__error, 2)
+    end
+    return __response
+  end
+end
 

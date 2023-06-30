@@ -4,38 +4,8 @@ __script = {}
 ---from a function to cancel out whatever happened there. For example, unsubscribe from an event.
 ---@alias ac.Disposable fun()
 
----Prints a message to a CSP log and to Lua App Debug log. To speed things up and only use Lua Debug app, call `ac.setLogSilent()`.
----@param ... string|number|boolean @Values.
-function ac.log(...)
-  local n, s = select('#', ...), ''
-  for i = 1, n do
-    s = i > 1 and s..', '..tostring(select(i, ...)) or tostring(select(i, ...))
-  end
-  ffi.C.lj_log_inner(s)
-end
-
----Prints a warning message to a CSP log and to Lua App Debug log. To speed things up and only use Lua Debug app, call `ac.setLogSilent()`.
----@param ... string|number|boolean @Values.
-function ac.warn(...)
-  local n, s = select('#', ...), ''
-  for i = 1, n do
-    s = i > 1 and s..', '..tostring(select(i, ...)) or tostring(select(i, ...))
-  end
-  ffi.C.lj_warn_inner(s)
-end
-
----Prints an error message to a CSP log and to Lua App Debug log. To speed things up and only use Lua Debug app, call `ac.setLogSilent()`.
----@param ... string|number|boolean @Values.
-function ac.error(...)
-  local n, s = select('#', ...), ''
-  for i = 1, n do
-    s = i > 1 and s..', '..tostring(select(i, ...)) or tostring(select(i, ...))
-  end
-  ffi.C.lj_error_inner(s)
-end
-
 ---For better compatibility, acts like `ac.log()`.
-function print(v) ac.log(v) end
+function print(...) ac.log(...) end
 
 ---Not doing anything anymore, kept for compatibility.
 ---@deprecated

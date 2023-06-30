@@ -1,3 +1,8 @@
+---Function won’t work: while CSP tries its best to guarantee API compatibility, ABI compatibility is not a priority at all,
+---and the underlying LuaJIT implementation frequently changes and might even be replaced with something else in the future.
+---@return nil
+function string.dump() return nil end
+
 ---Splits string into an array using separator.
 ---@param self string @String to split.
 ---@param separator string? @Separator. If empty, string will be split into individual characters. Default value: ` `.

@@ -126,7 +126,7 @@ function typeToLua(t, origin) {
   if (t == 'lua_linked_id') return t;
 
   let m = 0;
-  t = t.replace(/^(const\s*)?([\w:]+)([&*])?$/, (_, p, v, x) => {
+  t = t.replace(/^(const\s*)?([\w:]+)([&*]*)$/, (_, p, v, x) => {
     ++m;
     const y = baseTypeToLua(v);
     knownTypes.referencedTypes[y] = _ + '; origin: ' + origin;
@@ -365,6 +365,7 @@ function prepareParam(arg, wrapDefault, localDefines) {
     }
 
     if (arg.typeInfo.name === 'number') {
+      if (arg.default == 'INFINITY') return `tonumber(${arg.name}) or (1/0)`;
       return `tonumber(${arg.name}) or ${arg.default}`;
     }
 
@@ -419,7 +420,7 @@ function convertLDocDefaultValue(value){
   if (value == 'rgbm(1, 1, 1, 1)') return '`rgbm.colors.white`';
   if (value == 'rgbm(0, 0, 0, 1)') return '`rgbm.colors.black`';
   if (value == 'rgbm(0, 0, 0, 0)') return '`rgbm.colors.transparent`';
-  if (value == 'nullptr') return '`nil`';
+  if (value == 'nullptr' || value == 'INFINITY') return '`nil`';
   if (/^"(.*)"$/.test(value)) return `'${RegExp.$1}'`;
   return `\`${value}\``;
 }
@@ -452,6 +453,7 @@ function wrapParamLDoc(arg, enumDefs, namespace, fnName) {
 
   if (arg.comment) { 
     comment = `${comment} ${arg.comment.replace(/^@/, '').trim().replace(/^[a-z]/, _ => _.toUpperCase())}`; 
+    comment = comment.replace(/`/g, '\\`');
     if (!/[.?!]$/.test(comment)) comment += '.';
   }
 
@@ -530,7 +532,7 @@ function wrapReturnLComment(docs, comment) {
 }
 
 function needsWrappedResult(type) {
-  if (/\blua_linked_id\b|const (?:char|lua_string_ref|lua_string_cached_ref)[*&]/.test(type)) return true;
+  if (/\blua_linked_id\b|const (?:char|lua_string_ref|lua_string_cached_ref)[*&]|^state_(?!sim|ui)/.test(type)) return true;
   return false;
 }
 
@@ -620,7 +622,7 @@ function verifyCppFile(cpp, cppName){
       && cppName != 'extensions/online_plus/online_scripts.cpp'
       && cppName != 'lua/api_gameplay.cpp') {
     const ends = {};
-    cpp.replace(/\bLUA(?:EXPORT|PRIVATE)(?:_OPT\(.+?\))?\b([^(]+)\(/g, (_, n) => {
+    cpp.replace(/\bLUA(?:EXPORT|NATIVE|PRIVATE)(?:_OPT\(.+?\))?\b([^(]+)\(/g, (_, n) => {
       const k = /__(\w+)/.test(n) ? RegExp.$1 : '<none>';
       (ends[k] || (ends[k] = [])).push(/(\w+)$/.test(n) ? RegExp.$1 : _);
     });
@@ -700,15 +702,16 @@ function getLuaCode(opts, definitionsCallback) {
     return value;
   }
 
-  prepared.replace(/(?:\/\*@([\s\S]+?)\*\/\s+)?\bLUA(EXPORT|PRIVATE)(?:_OPT\((.*)\))?\s+((?:const\s+)?\w+[*&]?)\s+(lj_\w+)\s*\((.*)/g, (_, docs, exportType, optCondition, resultType, name, argsLine) => {
+  prepared.replace(/(?:\/\*@([\s\S]+?)\*\/\s+)?\bLUA(EXPORT|NATIVE|PRIVATE)(?:_OPT\((.*)\))?\s+((?:const\s+)?\w+[*&]*)\s+(lj_\w+)\s*\((.*)/g, (_, docs, exportType, optCondition, resultType, name, argsLine) => {
     const isPrivate = exportType == 'PRIVATE';
+    const isNative = exportType == 'PRIVATE';
     // if (isPrivate) $.echo(name);
 
     if (isPrivate && prepared.indexOf(`(*${name.replace(/^lj_|__[a-z]+$/g, '')})(`) === -1){
       $.echo(β.red(`Private API pass might not be set correctly: ${name}`));
     }
 
-    if (!isPrivate && !knownFfiFunctions.includes(_)) knownFfiFunctions.push(_);
+    if (!isPrivate && !isNative && !knownFfiFunctions.includes(_)) knownFfiFunctions.push(_);
 
     let ns = 'ac';
     if (/__(\w+)$/.test(name) && !opts.allows.includes(RegExp.$1)) {
@@ -729,7 +732,7 @@ function getLuaCode(opts, definitionsCallback) {
 
     const args = argsLine[0] == ')' ? [] : splitArgs(name, argsLine.split(/\)\s*(\{|$|(?<!:)\/\/)/)[0].trim());
     const comment = /(?<!:)\/\/@?\s+(.+)/.test(argsLine) ? ' // ' + RegExp.$1 : '';
-    if (!isPrivate) {
+    if (!isPrivate && !isNative) {
       ffiDefinitions.push(`${typeToFfi(resultType)} ${name}(${args.map(x => `${typeToFfi(x.type)} ${x.name}`).join(', ')});`);
     }
     if (notForExport(name)) return;
@@ -795,9 +798,14 @@ function getLuaCode(opts, definitionsCallback) {
           if (i >= overload.length) $.fail('Fixme1');
           
           const argsToReassign = args.slice(i, overload.length + 1);
-          // const argsToReassign = args.slice(i);
+          const remapped = argsToReassign.map((x, j) => remapV(j));
+          const fixes = [];
+          for (let u of argsToReassign.map((x, j) => i + j >= overload.length ? null : args[i + j].name).filter(x => x && !remapped.includes(x))){
+            fixes.push(u);
+          }
           return `${overloadIndex > 0 ? 'elseif' : 'if'} ${typeMatches(args[i].name, overload[i][1])}${conditionExtra} then 
-            ${argsToReassign.map((x, j) => remapV(j)).join(', ')} = ${argsToReassign.map((x, j) => i + j >= overload.length ? 'nil' : args[i + j].name).join(', ')} 
+            ${remapped.join(', ')} = ${argsToReassign.map((x, j) => i + j >= overload.length ? 'nil' : args[i + j].name).join(', ')} 
+            ${fixes.length ? `${fixes.join(', ')} = ${fixes.map(x => 'nil').join(', ')}` : ''}
           ${overloadIndex < overloads.length - 1 ? '' : 'end'}`;
         }
       }
@@ -806,6 +814,8 @@ function getLuaCode(opts, definitionsCallback) {
 
     const defName = isPrivate 
       ? `(not __util.__ex and error('Physics API is not available here', 2) or __util.__ex.${name.replace(/^lj_|__[a-z]+$/g, '')})` 
+      : isNative
+      ? `(ac.__native.${name.replace(/^lj_|__[a-z]+$/g, '')})` 
       : `ffi.C.${name}`;
     if (args.length > 0 || needsWrappedResult(resultType) || isPrivate) {
       const prepared = args.map(x => prepareParam(x, wrapDefault, localDefines)).map(x => ({ x, i: !isStatementPrepare(x) }));
@@ -1302,7 +1312,7 @@ function resolveRequires(code, filename, context = null) {
 
   function analyzeReturnValues(p){
     const name = resolveName(p.identifier);
-    if (name === 'ui.combo' || name === 'ui.slider') return;
+    if (name === 'ui.combo' || name === 'ui.slider' || name === 'ac.StructItem.__build') return;
 
     let retCount = null;
     function iterateEntries(o, f){
@@ -2001,9 +2011,10 @@ function finalizeCDefs(code){
   }
 
   // code = `ffi.cdef [[${ffiStatements.join('\n')}]]
-  code = `ffi.cdef "${ffiStatements.join('').replace(/\} /g, '}')}"
-local _FC = ffi.C
-${code.replace(/\bffi\.C\./g, '_FC.').replace(/(?<!function )\b__util\.str(?=\()/g, '__ust')}`;
+  code = `local _F, _FC = ffi, ffi.C
+_F.cdef "${ffiStatements.join('').replace(/\} /g, '}')}"
+string.dump = function () return '' end
+${code.replace(/\bffi\.C\./g, '_FC.').replace(/\bffi\./g, '_F.').replace(/(?<!function )\b__util\.str(?=\()/g, '__ust')}`;
 
   const locals = {};
   code = code.replace(/\nlocal(?: function)? (\w+)(?: = .+)?/g, (_, n) => { 
@@ -2035,7 +2046,7 @@ function consumeSpecial(_, i, g){
 }
 
 function verifyIntegrity(code){
-  if (/\bscript\.(\w+)/.test(code)){
+  if (/\bscript\.(\w+)/.test(code) && RegExp.$1 !== 'update'){
     $.echo(β.red(`\tWrongly defined script function: ${RegExp.$1}`));
   }
   
@@ -2071,7 +2082,7 @@ const luaJit = $[process.env['LUA_JIT']];
 
 async function precompileLua(name, script) {
   fs.writeFileSync(`.out/${name}.lua`, script);
-  await luaJit('-bgn', name, `${name}.lua`, `${name}.raw`, { cwd: '.out' });
+  await luaJit('-bn', name, `${name}.lua`, `${name}.raw`, { cwd: '.out' });
   return fs.readFileSync(`.out/${name}.raw`);
 }
 
@@ -2134,6 +2145,8 @@ for (let filename of $.glob(`./ac_*.lua`)) {
   await compile(filename);
 }
 
+// return;
+
 const destination = path.resolve(`${process.env['LUA_OUTPUT']}/../lua.zip`);
 $.echo(`Packed to ${destination}`)
 await $.zip(packedPieces, { to: destination, comment: description.replace(/[“”’]/g, '\'') });
@@ -2156,7 +2169,7 @@ const ffiFunctionsPrepared = knownFfiFunctions
     const k = hash(n);
     if (xxCollisionTest[k]) $.fail('Key collision');
     xxCollisionTest[k] = true;
-    if (xxCollisionTest32[h32(k)]) $.fail('Key collision');
+    if (xxCollisionTest32[h32(k)]) $.fail('32-bit key collision');
     xxCollisionTest32[h32(k)] = true;
     return {k: k, n: n, x: x}
   });
@@ -2255,9 +2268,10 @@ namespace ac_ext
 
 namespace apps 
 {
+  struct camera_scene_adjustments;
+  struct positioning_helper;
   struct tree_leaf;
   struct tree_vertex;
-  struct positioning_helper;
 }
 
 namespace cui 
@@ -2273,7 +2287,7 @@ namespace hooks
 
 namespace settings 
 {
-  enum lights_debug_mode : int;
+  enum struct lights_debug_mode : int;
 }
 
 namespace lua
@@ -2314,6 +2328,7 @@ namespace lua
   struct lua_lut;
   struct lua_music_data;
   struct lua_numlut;
+  struct lua_replayextension;
   struct lua_time_evaluation;
   struct socialdata;
   struct state_car_physics;

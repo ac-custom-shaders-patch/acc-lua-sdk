@@ -771,16 +771,18 @@ function table.chain(...)
   local I = 1
   for i = 1, select('#', ...) do
     local t = select(i, ...)
-    local N = #t
-    if __isArray(t, N) then
-      __requireArray(t, N)
-      for j = next(t) or 1, N do
-        ret[I] = t[j]
-        I = I + 1
-      end
-    else
-      for key, value in pairs(t) do
-        ret[key] = value
+    if t then
+      local N = #t
+      if __isArray(t, N) then
+        __requireArray(t, N)
+        for j = next(t) or 1, N do
+          ret[I] = t[j]
+          I = I + 1
+        end
+      else
+        for key, value in pairs(t) do
+          ret[key] = value
+        end
       end
     end
   end

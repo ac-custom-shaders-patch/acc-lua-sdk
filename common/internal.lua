@@ -38,22 +38,27 @@ typedef const lua_snb_value* lua_snb_data;
 
 do
 
-__util = {}
+local _t_cchar = ffi.typeof('char*')
+local _t_blobview = ffi.typeof('blob_view')
+local _t_snb = ffi.typeof('lua_snb_value')
+local _lastb = {}
 
 function __util.blob(data)
   if type(data) ~= 'string' then
     if not data then return nil end
     if type(data) == 'cdata' then
-      local b = ffi.new('blob_view')
-      b.p_begin = ffi.cast('const char*', data)
+      local b = _t_blobview()
+      b.p_begin = ffi.cast(_t_cchar, data)
       b.p_end = b.p_begin + ffi.sizeof(data)
       return b
     end
     data = tostring(data)
   end
-  local b = ffi.new('blob_view')
+  if _lastb.input == data then return _lastb.blob end 
+  local b = _t_blobview()
   b.p_begin = data
   b.p_end = b.p_begin + #data
+  _lastb.input, _lastb.blob = data, b
   return b
 end
 
@@ -67,7 +72,7 @@ function __util.prs()
 end
 
 function __util.snb(data)
-  local r = ffi.new('lua_snb_value')
+  local r = _t_snb()
   local tdata = type(data)
   if tdata == 'number' then
     r.type = 3
@@ -379,6 +384,9 @@ local tb = debug.traceback
 function __util.cbCall(fn, ...)
   local s, err = xpcall(fn, tb, ...)
   if not s then
+    if worker then
+      worker.__error = tostring(err)
+    end
     ac.error('Error in callback: '..tostring(err))
   end
 end
@@ -405,8 +413,8 @@ function __script.processReply(replyID, ...)
   end
 end
 
+local _timeoutsN = 0
 local __callbackListeners = {}
-local __callbackListenersAny = false
 function __util.expectImmediateReply(callback)
   if not callback then return 0 end
   local replyID = __lastReplyID + 1
@@ -445,11 +453,8 @@ function __script.forgetCallback(replyID)
   end
 end
 
-function __util.updateInner(dt)
-  if __callbackListenersAny then
-    __callbackListenersAny = false
-    __callbackListeners = {}
-  end
+function __util.awaitingCallback()
+  return __util.timersLeft() > 0 or next(__replyListeners) ~= nil
 end
 
 local __toDispose, __toDisposeN = {}, 0

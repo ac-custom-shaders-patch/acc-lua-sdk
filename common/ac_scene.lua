@@ -101,6 +101,9 @@ ac.IncludeType = __enum({ cpp = 'include_type' }, {
 ffi.cdef [[ typedef struct { int __size; } noderef; ]]
 ffi.metatype('noderef', {
   __len = function(s) return s:size() end,
+  __tostring = function(s)
+    return string.format('ac.SceneReference<%d>', s:size())
+  end,
   __ipairs = function(s)
     local i, n = 0, #s
     return function()
@@ -110,9 +113,19 @@ ffi.metatype('noderef', {
   end,
   __index = {
 
-    ---Dispose any resources associated with this ac.SceneReference and empty it out. Use it if you need to remove a previously
+    ---Dispose any resources associated with this `ac.SceneReference` and empty it out. Use it if you need to remove a previously
     ---created node or a loaded KN5.
     dispose = function (s) return ffi.C.lj_noderef_dispose__scene(s) end,
+
+    ---Set outline for meshes in the reference. Outline remains active until explicitly disabled or until reference is released.
+    ---Note: each outlined group adds a render target switch and additional draw calls, so avoid adding it to more than, let’s say,
+    ---ten groups at once (each group can have multiple meshes in it). 
+    ---@param color rgbm? @Outline color. Use `nil` or transparent color to disable outline.
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    setOutline = function (s, color)
+      ffi.C.lj_noderef_setoutline__scene(s, __util.ensure_rgbm_nil(color) or rgbm.colors.transparent)
+      return s
+    end,
 
     ---Set material property. Be careful to match the type (you need the same amount of numeric values). If you’re using boolean,-
     ---resulting value will be either 1 or 0.
@@ -541,6 +554,15 @@ ffi.metatype('noderef', {
     ---@return ac.SceneReference @Returns self for easy chaining.
     append = function (s, sceneRef) ffi.C.lj_noderef_append__scene(s, sceneRef) return s end,
 
+    ---Removes nodes and meshes from another scene reference from current scene reference.
+    ---@param sceneRef ac.SceneReference @Scene reference to remove.
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    subtract = function (s, sceneRef) ffi.C.lj_noderef_subtract__scene(s, sceneRef) return s end,
+
+    ---Clears current scene reference.
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    clear = function (s) ffi.C.lj_noderef_clear__scene(s) return s end,
+
     ---Casts a ray prepared by something like `render.createRay(pos, dir, length)` or `render.createMouseRay()`.
     ---
     ---If you need to access a mesh that was hit, set second argument to true:
@@ -688,6 +710,13 @@ ffi.metatype('noderef', {
     ---@return integer @Number of materials.
     getMaterialsCount = function (s)
       return ffi.C.lj_noderef_materialscount__scene(s)
+    end,
+    
+    ---Creates a copy of a scene reference (not copies of nodes or meshes).
+    ---@return ac.SceneReference
+    clone = function (s)
+      if s == nil then return _emptyNodeRef() end
+      return cr(ffi.C.lj_noderef_clone__scene(s))
     end,
     
     ---Get bounding sphere of an element. Works only with meshes or skinned meshes, nodes will return nil.
@@ -893,7 +922,7 @@ ffi.metatype('noderef', {
         ffi.C.lj_noderef_projecttexture__scene(s,
           __util.str(params.filename), __util.ensure_vec3(params.pos), __util.ensure_vec3(params.look), __util.ensure_vec3_nil(params.up), 
           __util.ensure_rgbm_nil(params.color), __util.ensure_rgbm_nil(params.colorOffset), __util.ensure_vec2_nil(params.size), tonumber(params.depth) or 1e9, 
-          __util.ensure_vec2_nil(params.skew), __util.ensure_vec2_nil(params.tiling), params.doubleSided == true, __util.ensure_vec2_nil(params.uvOffset), tonumber(params.blendMode) or 15,
+          __util.ensure_vec2_nil(params.skew), __util.ensure_vec2_nil(params.tiling), params.doubleSided == true, __util.ensure_vec2_nil(params.uvOffset), tonumber(params.blendMode) or 13,
           params.mask1 and tostring(params.mask1) or nil, __util.ensure_vec2_nil(params.mask1UV1), __util.ensure_vec2_nil(params.mask1UV2), tonumber(params.mask1Flags) or 6,
           params.mask2 and tostring(params.mask2) or nil, __util.ensure_vec2_nil(params.mask2UV1), __util.ensure_vec2_nil(params.mask2UV2), tonumber(params.mask2Flags) or 6)
       end
@@ -1040,20 +1069,35 @@ typedef struct {
 } carshot;
 ]]
 
----@param sceneReference ac.SceneReference @Reference to nodes or meshes to draw.
+---@param sceneReference ac.SceneReference|{reference: ac.SceneReference?, opaque: fun()?, transparent: fun()?} @Reference to nodes or meshes to draw, or a table with reference and callbacks for custom drawing.
 ---@param resolution vec2 @Resolution in pixels. Usually textures with sizes of power of two work the best.
 ---@param mips integer? @Number of MIPs for a texture. MIPs are downsized versions of main texture used to avoid aliasing. Default value: 1 (no MIPs).
 ---@param withDepth boolean? @If set to `true`, depth buffer will be available to show as well.
 ---@param antialiasingMode render.AntialiasingMode? @Antialiasing mode. Default value: `render.AntialiasingMode.None` (disabled).
+---@param textureFormat render.TextureFormat? @Texture format. Default value: `render.TextureFormat.R8G8B8A8.UNorm`. Note: antialiasing expects the default format.
 ---@return ac.GeometryShot
-function ac.GeometryShot(sceneReference, resolution, mips, withDepth, antialiasingMode)
+---@overload fun(sceneReference: ac.SceneReference, resolution: vec2|integer, mips: integer, withDepth: boolean, textureFormat: render.TextureFormat)
+function ac.GeometryShot(sceneReference, resolution, mips, withDepth, antialiasingMode, textureFormat)
+  local callbackOpaque, callbackTransparent = 0, 0
+  if type(sceneReference) == 'table' then
+    callbackOpaque = type(sceneReference.opaque) == 'function' and __util.setCallback(sceneReference.opaque) or 0
+    callbackTransparent = type(sceneReference.transparent) == 'function' and __util.setCallback(sceneReference.transparent) or 0
+    sceneReference = sceneReference.reference or ac.emptySceneReference()
+  end
   if not ffi.istype('noderef*', sceneReference) then error('Scene reference is required', 2) end
   if type(resolution) == 'number' then resolution = vec2(resolution, resolution) end
   if not vec2.isvec2(resolution) then error('Resolution is required', 2) end
   resolution.x = math.clamp(resolution.x, 1, 8192)
   resolution.y = math.clamp(resolution.y, 1, 8192)
-  return ffi.gc(ffi.C.lj_carshot_new__scene(sceneReference, resolution.x, resolution.y, tonumber(mips) or 1, withDepth == true, 
-    tonumber(antialiasingMode) or 0), ffi.C.lj_carshot_gc__scene)
+
+  if antialiasingMode and antialiasingMode > 0 and antialiasingMode < 100 then
+    antialiasingMode, textureFormat = textureFormat, antialiasingMode
+  end
+
+  local c = __util.native('carshot_new',
+    sceneReference, resolution.x, resolution.y, tonumber(mips) or 1, withDepth == true,
+    tonumber(antialiasingMode) or 0, tonumber(textureFormat) or 28, callbackOpaque, callbackTransparent)
+  return ffi.gc(c, ffi.C.lj_carshot_gc__scene)
 end
 
 ---This thing allows to draw 3D objects in UI functions (or use them as textures in `ac.SceneReference:setMaterialTexture()`, 
@@ -1084,7 +1128,8 @@ ffi.metatype('carshot', {
     ---@param fov number? @FOV in degrees. Default value: 90.
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     update = function (s, pos, look, up, fov)
-      ffi.C.lj_carshot_update__scene(s, __util.ensure_vec3(pos), __util.ensure_vec3(look), __util.ensure_vec3_nil(up), tonumber(fov) or 90)
+      ffi.C.lj_carshot_update_prep__scene(s, __util.ensure_vec3(pos), __util.ensure_vec3(look), __util.ensure_vec3_nil(up), tonumber(fov) or 90)
+      __util.native('carshot_update')
       return s
     end,
 
@@ -1163,10 +1208,18 @@ ffi.metatype('carshot', {
       return s
     end,
 
+    ---Changes maximum layer of which meshes to render. 0 is for lowest world detail, 5 for highest.
+    ---@param value integer @Layer value (aka world detail level).
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setMaxLayer = function(s, value)
+      ffi.C.lj_carshot_setmaxlayer__scene(s, tonumber(value) or 0)
+      return s
+    end,
+
     ---Sets clipping planes. If clipping planes are too far apart, Z-fighting might occur. Note: to avoid Z-fighting, increasing
     ---nearby clipping plane distance helps much more.
-    ---@param near boolean? @Nearby clipping plane in meters. Default value: 0.05.
-    ---@param far boolean? @Far clipping plane in meters. Default value: 1000.
+    ---@param near number? @Nearby clipping plane in meters. Default value: 0.05.
+    ---@param far number? @Far clipping plane in meters. Default value: 1000.
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     setClippingPlanes = function(s, near, far)
       ffi.C.lj_carshot_setclippingplanes__scene(s, tonumber(near) or 0.05, tonumber(far) or 1000)

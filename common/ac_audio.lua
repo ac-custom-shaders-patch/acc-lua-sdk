@@ -97,6 +97,13 @@ ffi.metatype('audioevent', { __index = {
   ---@return ac.AudioEvent @Returns self for easy chaining.
   setDistanceMax = function (s, value) ffi.C.lj_audioevent_set_distance_max(s, tonumber(value) or 10) return s end,
 
+  ---Set 3D cone settings.
+  ---@param inside number? @Default value: 360.
+  ---@param outside number? @Default value: 360.
+  ---@param outsideVolume number? @Default value: 1.
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  setConeSettings = function (s, inside, outside, outsideVolume) ffi.C.lj_audioevent_set_cone_settings(s, tonumber(inside) or 360, tonumber(outside) or 360, tonumber(outsideVolume) or 1) return s end,
+
   ---Set DSP parameter.
   ---@param dsp integer @0-based index of DSP.
   ---@param key integer @0-based index of DSP parameter.

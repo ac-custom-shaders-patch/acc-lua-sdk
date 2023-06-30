@@ -5,6 +5,7 @@ require './common/class'
 
 -- all sorts of modules:
 require 'ffi'
+require './common/debug'
 require './common/common'
 require './common/const'
 require './common/ac_primitive'

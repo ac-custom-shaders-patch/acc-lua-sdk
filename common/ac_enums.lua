@@ -43,18 +43,17 @@ ac.DrivableCamera = __enum({ cpp = 'DrivableCamera' }, {
   Dash = 4,
 })
 
+---Wheel index (from 0 to 3) or a special value for wheel mask.
 ac.Wheel = __enum({ cpp = 'ac_wheel' }, { 
-  FrontLeft = 1,
-  FrontRight = 2,
-  RearLeft = 4,
-  RearRight = 8,
-
-  Front = 3,
-  Rear = 12,
-  Left = 5,
-  Right = 10,
-  
-  All = 15
+  FrontLeft = 0,
+  FrontRight = 1,
+  RearLeft = 2,
+  RearRight = 3,
+  Front = 12,
+  Rear = 48,
+  Left = 20,
+  Right = 40,
+  All = 60
 })
 
 ac.MirrorPieceRole = __enum({ cpp = 'ac_mirrorpiece_role' }, { 
@@ -120,7 +119,15 @@ ac.TonemapFunction = __enum({ cpp = 'tonemap_function' }, {
   Reinhard = 3,       -- Reinhard
   ReinhardLum = 4,    -- saturation retention type Reinhard tone map function
   Log = 5,            -- tone map function for the logarithmic space
-  LogLum = 6          -- saturation retention type logarithmic space tone map function
+  LogLum = 6,         -- saturation retention type logarithmic space tone map function
+  ACES = 7,           -- ACES
+  Uchimura = 8,       -- GT-like by Uchimura
+  RomBinDaHouse = 9,  -- tonemapping by RomBinDaHouse
+  Lottes = 10,        -- tonemapping by Lottes
+  Uncharted = 11,     -- tonemapping used in Uncharted
+  Unreal = 12,        -- tonemapping commonly used in UE
+  Filmic = 13,        -- filmic tonemapping
+  ReinhardWp = 14,    -- White-preserving Reinhard
 })
 
 ac.FolderID = __enum({ cpp = 'known_dir' }, {   

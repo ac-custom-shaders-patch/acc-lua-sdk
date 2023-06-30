@@ -21,8 +21,8 @@ function buildMetaTable(T, INDEX_TABLE){
   const O = s => `function(v, u) return type(v) == 'number' and ${C(`v${s}u.$`)} or ${I('u')} and ${C(`v.$${s}u.$`)} or ${C(`v.$${s}u`)} end`;
 
   return `{
-  __call = function(_, ${F}) return ffi.new(ct${T}, ${M('$ or 0')}) end,
-  __tostring = function(v) return string.format('(${M('%f')})', ${M('v.$')}) end,
+  __call = function(_, ${F}) return ct${T}(${M('$ or 0')}) end,
+  __tostring = function(v) return string.format('(${M('%s')})', ${M('v.$')}) end,
   __add = ${O('+')},
   __sub = ${O('-')},
   __mul = ${O('*')},

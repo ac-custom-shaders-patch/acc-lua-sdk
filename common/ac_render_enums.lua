@@ -16,10 +16,10 @@ render.BlendMode = __enum({ cpp = 'AC::BlendMode', max = 25 }, {
   AlphaTest = 2,
   BlendAdd = 4,
   BlendMultiply = 5,
-  BlendSummingAlpha = 8,
-  BlendSubtract = 13,
-  BlendAccurate = 15,
-  BlendPremultiplied = 16,
+  BlendSummingAlpha = 1, --@hidden
+  BlendSubtract = 12,
+  BlendAccurate = 13,
+  BlendPremultiplied = 14,
 })
 
 render.CullMode = __enum({ cpp = 'AC::CullMode', max = 11 }, {
@@ -54,14 +54,15 @@ render.FontAlign = __enum({ cpp = 'AC::FontAlign', max = 2 }, {
 })
 
 render.ShadersType = __enum({ cpp = 'shaders_type' }, {
-  Main = 0,  -- not recommended to use here
-  Simplified = 13,
-  SimplifiedWithLights = 14,
-  Simplest = 15,
-  SampleColor = 17,
-  SampleNormal = 18,
-  SampleEmissive = 19,
-  Shadows = 25,
+  Main = 0,                   -- With lights and advanced version of shaders (when possible, consider using SimplifiedWithLights instead)
+  Simplified = 13,            -- Used by reflections and mirrors, without lights
+  SimplifiedWithLights = 14,  -- Used by reflections and mirrors, with lights
+  Simplest = 16,              -- The most basic option, without lights
+  SampleColor = 18,           -- Get diffuse color as accurate as possible
+  SampleNormal = 19,          -- Get surface normal in world space
+  SampleEmissive = 20,        -- Get emissive color
+  Shadows = 0,                -- @deprecated Use Main instead, this was originally meant to draw shadow maps, but due to some general issues isn’t working as intended
+  SampleDepth = 27,           -- Efficient option for generating depth map without wasting time on drawing the image, doesn’t update the main color texture (only meshes casting shadows are included)
 })
 
 ---These flags can be combined together with `bit.bor()`.

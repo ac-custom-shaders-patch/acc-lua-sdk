@@ -18,6 +18,7 @@ require './wfx_impl/ac_particlematerials'
 require './wfx_impl/ac_lightpollution'
 require './wfx_impl/ac_obsolete'
 require './wfx_impl/ac_lists'
+require './wfx_impl/ac_customtonemapping'
 
 -- automatically generated entries go here:
 __definitions()

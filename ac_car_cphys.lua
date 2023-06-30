@@ -4,6 +4,66 @@ __allow 'cphys'
 
 require './common/internal_import'
 
+ffi.cdef [[ 
+typedef struct {
+  float reboundSlow;
+  float reboundFast;
+  float bumpSlow;
+  float bumpFast;
+  float fastThresholdBump;
+  float fastThresholdRebound;
+} state_cphys_damper;
+
+typedef struct {
+  const wchar_t _0[62];
+  const uint _1;
+  const float _2;
+  const void* _3;
+  const float grip;
+  const int sectorID;
+  const float dirt;
+  const uint collisionCategory;
+  const bool isValidTrack;
+  const float blackFlagTime;
+  const float sinHeight;
+  const float sinLength;
+  const bool isPitlane;
+  const float damping;
+  const float granularity;
+  const float vibrationGain;
+  const float vibrationLength;
+} state_cphys_surface;
+]]
+
+---Holds state of an AC damper available for both reading and writing.
+---@class ac.StateCphysDamper
+---@field reboundSlow number
+---@field reboundFast number
+---@field bumpSlow number
+---@field bumpFast number
+---@field fastThresholdBump number
+---@field fastThresholdRebound number
+ffi.metatype('state_cphys_damper', { __index = {
+} })
+
+---Holds state of an AC track surface available for reading only.
+---@class ac.StateCphysSurface
+---@field grip number
+---@field sectorID integer
+---@field dirt number
+---@field collisionCategory integer
+---@field isValidTrack boolean
+---@field blackFlagTime number
+---@field sinHeight number
+---@field sinLength number
+---@field isPitlane boolean
+---@field damping number
+---@field granularity number
+---@field vibrationGain number
+---@field vibrationLength number
+ffi.metatype('state_cphys_surface', { __index = {
+} })
+
 --[[ ac.TractionType = __enum({ cpp = 'TractionType' }, {
   RWD = 0,
   FWD = 1,
