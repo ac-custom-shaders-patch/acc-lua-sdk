@@ -9,3 +9,12 @@ expectError(function () return 1 + nil end, 'attempt to perform arithmetic on a 
 expectError(function () return nil + nil end, 'attempt to perform arithmetic on a nil value')
 expectError(function () return vec2() + nil end, '.+ attempt to perform arithmetic on local')
 expectError(function () return nil + vec2() end, '.+ attempt to index local')
+
+expect(vec2 == ffi.typeof(vec2()), true)
+
+expect(getmetatable(vec2).__stringify, nil)
+
+local t = {}
+t[tostring(vec2)] = true
+expect(tostring(vec2), tostring(ffi.typeof(vec2(10, 12))))
+expect(t[tostring(ffi.typeof(vec2(10, 12)))], true)

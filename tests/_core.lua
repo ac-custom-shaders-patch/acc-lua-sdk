@@ -3,6 +3,7 @@ __util = {}
 ffi = require('ffi')
 io = require('io')
 __script = {}
+__source = function () end
 package.path = package.path .. ';' .. './common/?.lua'
 
 --[[?
@@ -10,12 +11,14 @@ out(inc('common/class.lua'))
 out(inc('common/table.lua'))
 out(inc('common/function.lua'))
 out(inc('common/ac_primitive.lua'))
+out(inc('common/ac_matrices.lua'))
 out(inc('common/internal.lua'))
 out(inc('common/string.lua'))
 out(inc('common/table.lua'))
 out(inc('common/stringify.lua'))
 out(inc('common/json.lua'))
 out(inc('common/const.lua'))
+out(inc('common/ac_render_shader.lua'))
 ?]]  -- we need macros working
 
 function print(v)
@@ -23,6 +26,9 @@ function print(v)
   io.stderr:write('\n')
   io.stderr:flush()
 end
+
+refbool = { isrefbool = function () return false end }
+refnumber = { isrefnumber = function () return false end }
 
 local successfulTests = 0
 shutdownproxy = newproxy(true)
@@ -44,6 +50,10 @@ end
 
 function string.trim(s)
   return s:match"^%s*(.*)":match"(.-)%s*$"
+end
+
+function string.replace(s, n, r)
+  return s:gsub(n, r)
 end
 
 function string.codePointToUTF8(n)

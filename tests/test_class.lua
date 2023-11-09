@@ -353,3 +353,21 @@ end
 local slider = PureUI_Slider('test')
 expect(slider.section, 'test')
 
+
+
+local cT1 = class('cT1')
+function cT1:test()
+  self.key = (self.key or 1) + 1 
+  return self.key
+end
+
+local t1 = cT1()
+expect(t1:test(), 2)
+expect(t1:test(), 3)
+t1.test = function (self)
+  self.key = (self.key or 1) + 10
+  return self.key
+end
+expect(t1:test(), 13)
+t1.test = nil
+expect(t1:test(), 14)
