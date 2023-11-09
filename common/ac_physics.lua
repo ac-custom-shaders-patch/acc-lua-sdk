@@ -4,25 +4,6 @@ __namespace 'physics'
 
 require './ac_ray'
 
----Physics namespace. Note: functions here are accessible only if track has expicitly allowed it with its
----extended CSP physics.
----
----To allow scriptable physics, add to surfaces.ini:
----```ini
----[_SCRIPTING_PHYSICS]
----ALLOW_TRACK_SCRIPTS=1    ; choose ones that you need
----ALLOW_DISPLAY_SCRIPTS=1
----ALLOW_NEW_MODE_SCRIPTS=1
----ALLOW_TOOLS=1
----```
----
----And to activate extended physics, use:
----```ini
----[SURFACE_0]
----WAV_PITCH=extended-0
----```
-physics = {}
-
 ffi.cdef [[ typedef struct { int __id; bool __listens_for_collisions; mat4x4 __transform; } lua_rigidbody; ]]
 ffi.cdef [[ typedef struct __declspec(align(4)) { 
   const bool gearUp; 
@@ -220,6 +201,7 @@ end
 ---@param startsInWorld boolean? @Add to world from the start. Default value: `true`.
 ---@return physics.RigidBody
 function physics.RigidBody(collider, mass, cog, semiDynamic, startsInWorld)
+  if __util.__ex == nil then error('Not allowed', 2) end
   local created = __util.__ex.rigidbody_new(type(collider) == 'string', type(collider) == 'string' and collider or __util.json(table.isArray(collider) and collider or {collider}), __util.ensure_vec3(cog))
   if created == nil then error('Not allowed', 2) end
   local ret = ffi.gc(created, __util.__ex.rigidbody_gc)

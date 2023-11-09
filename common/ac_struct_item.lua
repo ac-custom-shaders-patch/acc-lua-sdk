@@ -1,3 +1,5 @@
+do
+
 local _mmax = math.max
 local _mmin = math.min
 
@@ -97,12 +99,59 @@ function ac.StructItem.quat() return quat.tmp() end
 ---@return T[]
 function ac.StructItem.array(elementType, size)
   if type(elementType) == 'string' then error('Can’t have an array of strings', 2) end
-  if type(elementType) == 'table' then error('Can’t have an array of arrays or special types', 2) end
+  -- if type(elementType) == 'table' then error('Can’t have an array of arrays or special types', 2) end
   return { array = size, elementType }
 end
 
+---@generic T
+---@param fields T
+---@return T
+function ac.StructItem.struct(fields)
+  if next(fields) == nil then error('Empty sub-structs are not allowed', 2) end
+  if table.isArray(fields) then error('Use `ac.StructItem.array()` for arrays', 2) end
+  return { struct = fields }
+end
+
+---@param capacity integer? @Maximum string capacity. Default value: 32.
 ---@return string
 function ac.StructItem.string(capacity) return tostring(capacity or 32) end
+
+---@return mat3x3
+function ac.StructItem.mat3x3() return { 'mat3x3 %s;', 36, false, false, false, 901 } end
+
+---@return mat4x4
+function ac.StructItem.mat4x4() return { 'mat4x4 %s;', 64, false, false, false, 1601 } end
+
+---Matrix packed to 6, 9 or 12 bytes (depending on settings).
+---
+---Note: to update value you need to use assignment operator (`.field = newValue`), altering matrix of this property with methods like
+---`:mulSelf()` only changes unpacked value on your side, but not the actual structure value.
+---@param compactPosition boolean? @If `true`, position is packed into 3 bytes, otherwise it will take 6 bytes. Default value: `false`.
+---@param compactRotation boolean? @If `true`, rotation is packed into 3 bytes, otherwise it will take 6 bytes. Default value: `false`.
+---@param rangeFrom number|vec3? @Minimal expected position. Pass it together with `rangeTo` to encode position data more efficiently.
+---@param rangeTo number|vec3? @Maximum expected position. Pass it together with `rangeFrom` to encode position data more efficiently.
+---@return mat4x4
+function ac.StructItem.transform(compactPosition, compactRotation, rangeFrom, rangeTo) 
+  compactPosition = compactPosition == true
+  compactRotation = compactRotation == true
+  if not rangeFrom then rangeFrom = nil elseif not vec3.isvec3(rangeFrom) then rangeFrom = vec3.new(rangeFrom) end
+  if not rangeTo then rangeTo = nil elseif not vec3.isvec3(rangeTo) then rangeTo = vec3.new(rangeTo) end
+  local size = (compactPosition and 3 or 6) + (compactRotation and 3 or 6)
+  return { 
+    string.format('char %%s[%d];', size),
+    size,
+    function()
+      local t = mat4x4()
+      return function(v) ffi.C.lj_mat_unpack(v, t, compactPosition, rangeFrom, rangeTo, compactRotation) return t end
+    end,
+    function ()
+      return function(v, dst) ffi.C.lj_mat_pack(dst, v, compactPosition, rangeFrom, rangeTo, compactRotation) end
+    end,
+    function()
+      return function(v) return __util.ffistrhash(v, size) end
+    end 
+  }
+end
 
 local __slTypes = {
   [-0.08] = { 'int8_t %s;', 1, function (v) return v / 127 end, function (v) return _mmax(_mmin(v, 1), -1) * 127 end, false, 3 },
@@ -142,81 +191,205 @@ local __slTypes = {
       local n = tonumber(def) or error('Incorrect type: '..def, 2)
       return function(v) return __util.ffistrhash(v, n) end
     end,
-  }
+  },
 }
 
 local function __slGet(value, col)
   local t = __slTypes[value]
   if t then return t[col] end
-  t = __slTypes[type(value)]
-  if t then return t[col] and t[col](value) end
+  if type(value) == 'table' then t = value else t = __slTypes[type(value)] end
+  local c = t and t[col]
+  if type(c) == 'function' then return c(value) end
+  return c
 end
 
-local function __slType(value)
-  return __slGet(value, 1) or error('Unknown type: '..value, 2)
-end
-
-local function __slSize(value)
-  return __slGet(value, 2) or error('Unknown type: '..value, 2)
-end
-
-function __slProxy(value)
-  return __slGet(value, 3) or false, __slGet(value, 4) or false, __slGet(value, 5) or false
-end
-
-function ac.StructItem.__build(items, callback)
-  if type(items) == 'string' then return items end
-  if type(items) ~= 'table' or table.isArray(items) then
-    error('Associative table is required', 2)
-  end
-  local key = nil
-  local ordered = table.map(items, function (item, index)
-    if type(item) == 'table' then
-      if item.key then
-        key = tostring(item.key)
-      elseif item.array then
-        return { name = index, type = __slType(item[1]), replayType = __slGet(item[1], 6), array = item.array, size = __slSize(item[1]) }
-      end
-    else
-      return { name = index, type = __slType(item), replayType = __slGet(item, 6), size = __slSize(item) }
-    end
-  end)
+local function __slBuild(types, callback)
+  local ordered = types
   table.sort(ordered, function (a, b)
-    if a.size ~= b.size then return a.size > b.size end
+    if a.packingSize ~= b.packingSize then return a.packingSize > b.packingSize end
     return a.name < b.name
   end)
   local reordered, i, c, pos = {}, 1, #ordered, 0
   while i <= c do
     if ordered[i] ~= nil then
       local v, l = ordered[i], 8 - pos % 8
-      if v.size > 1 and v.size <= 8 and l < v.size then
+      if v.realSize > 1 and v.realSize <= 8 and l < v.realSize then
         for j = i + 1, c do
-          if ordered[j] ~= nil and ordered[j].size > 0 and ordered[j].size <= l then
+          if ordered[j] ~= nil and ordered[j].realSize > 0 and ordered[j].realSize <= l then
             v, i, ordered[j] = ordered[j], i - 1, nil
             break
           end
         end
       end
       table.insert(reordered, v)
-      pos = pos + v.size
+      pos = pos + v.realSize
     end
     i = i + 1
   end
   if callback then
     callback(reordered)
   end
-  local prepared = table.map(reordered, function(item) 
-    if item.array then return string.format(item.type, item.name..'['..item.array..']') end
-    return string.format(item.type, item.name) 
+  local prepared = table.map(reordered, function(item)
+    if item.array then 
+      return string.format(item.type, item.name..'['..table.concat(item.array, '][')..']')
+    end
+    return string.format(item.type, item.name)
   end)
-  if key then table.insert(prepared, '//'..tostring(key)) end
+  return prepared, reordered
+end
+
+local function __slMapOrdered(items, callback, data)
+  local ordered, n = {}, 1
+  for k, v in pairs(items) do
+    ordered[n], n = {k, v}, n + 1
+  end
+  table.sort(ordered, function (a, b)
+    return tostring(a[1]) < tostring(b[1])
+  end)
+  local ret = {}
+  for i = 1, n - 1 do
+    local j = callback(ordered[i][2], ordered[i][1], data)
+    if j then
+      table.insert(ret, j)
+    end
+  end
+  return ret
+end
+
+local function __slTypeInfo(item, index, namespace, noStrings)
+  if noStrings and type(item) == 'string' then
+    error('Strings are not allowed', 4)
+  end
+  if type(item) == 'table' then
+    if item.key then
+      namespace.key = item.key
+      return nil
+    end
+    if item.array then
+      local ret = __slTypeInfo(item[1], index, namespace, true)
+      if ret then
+        if not ret.array then ret.array = {} end
+        table.insert(ret.array, 1, item.array)
+        ret.realSize = ret.realSize * item.array
+      end
+      return ret
+    end
+    if item.struct then
+      local totalSize = 0
+      local fields = __slMapOrdered(item.struct, function (sub, key)
+        local r = __slTypeInfo(sub, key, namespace, true)
+        if r then totalSize = totalSize + r.realSize end
+        return r
+      end)
+      local built, reordered = __slBuild(fields)
+      local prepared = table.concat(built)
+      local existing = table.indexOf(namespace.structs, prepared)
+      if not existing then
+        existing = #namespace.structs + 1
+        namespace.structs[existing] = prepared
+      end
+      return {
+        name = index,
+        type = '__<STRUCTNAME>_'..existing..' %s;',
+        packingSize = totalSize,
+        realSize = totalSize,
+        struct = reordered
+      }
+    end
+  end
+
+  local s = __slGet(item, 2) or error('Unknown type: '..item, 2)
+  return {
+    name = index,
+    type = __slGet(item, 1) or error('Unknown type: '..item, 2),
+    replayType = __slGet(item, 6),
+    packingSize = s,
+    realSize = s
+  }
+end
+
+local function __slProxy(value)
+  return __slGet(value, 3) or false, __slGet(value, 4) or false, __slGet(value, 5) or false
+end
+
+function ac.StructItem.__build(items, callback)
+  if type(items) == 'string' then
+    return items
+  end
+  if type(items) ~= 'table' or table.isArray(items) then
+    error('Associative table is required', 2)
+  end
+  local namespace = {key = nil, structs = {}}
+  local prepared, reordered = __slBuild(__slMapOrdered(items, __slTypeInfo, namespace), callback)
+  if namespace.key then table.insert(prepared, '//'..tostring(namespace.key)) end
+  if #namespace.structs > 0 then
+    table.insert(prepared, '\n__<STRUCTINNER>_')
+    for i = 1, #namespace.structs do
+      table.insert(prepared, string.format('typedef struct __declspec(align(1)){%s}__<STRUCTNAME>_%d;', namespace.structs[i], i))
+    end
+  end
   return table.concat(prepared), reordered
 end
 
 function ac.StructItem.__cdef(name, layout, compact)
+  local f = string.find(layout, '\n__<STRUCTINNER>_', 1, true)
+  local u
+  if f then
+    u = string.replace(string.sub(layout, f + 17), '<STRUCTNAME>', name)
+    layout = string.replace(string.sub(layout, 1, f), '<STRUCTNAME>', name)
+  end
+  if u then
+    return string.format(compact 
+      and '#pragma pack(push, 1)\n%s\ntypedef struct __declspec(align(1)){\n%s\n} %s;\n#pragma pack(pop)' 
+      or '#pragma pack(push, 1)\n%s\n#pragma pack(pop)\ntypedef struct {\n%s\n} %s;', u, layout, name)
+  end
   return string.format(compact 
-    and '#pragma pack(push, 1)\ntypedef struct {\n%s\n} %s;\n#pragma pack(pop)' 
-    or 'typedef struct {\n%s\n} %s;', ac.StructItem.__build(layout), name)
+    and '#pragma pack(push, 1)\ntypedef struct __declspec(align(1)){\n%s\n} %s;\n#pragma pack(pop)' 
+    or 'typedef struct {\n%s\n} %s;', layout, name)
+end
+
+function ac.StructItem.__replayMixing(reordered)
+  local mixing = {}
+  if reordered then
+    local offset = 0
+
+    local function procItem(v)
+      local u = 1
+      if v.array then
+        for i = 1, #v.array do
+          u = u * v.array[i]
+        end
+      end
+      if v.struct then
+        for _ = 1, u do
+          for _, c in ipairs(v.struct) do
+            procItem(c)
+          end
+        end
+        return
+      elseif v.replayType then
+        for _ = 1, u do
+          if v.replayType > 99 then
+            local c = math.floor(v.replayType / 100)
+            for _ = 1, c do
+              mixing[#mixing + 1] = string.format('%d:%d', offset, v.replayType % 100)
+              offset = offset + v.packingSize / c
+            end
+          else
+            mixing[#mixing + 1] = string.format('%d:%d', offset, v.replayType)
+            offset = offset + v.packingSize
+          end
+        end
+      else
+        offset = offset + v.realSize
+      end
+    end
+
+    for _, v in ipairs(reordered) do
+      procItem(v)
+    end
+  end
+  return table.concat(mixing, '\n')
 end
 
 local __slProxyMt = { 
@@ -230,7 +403,12 @@ local __slProxyMt = {
   __newindex = function (s, k, v)
     s = s.__data
     local w = s.p.w
-    s.i[k] = w[k] and w[k](v) or v
+    if w[k] then
+      local i = w[k](v, s.i[k])
+      if i ~= nil then s.i[k] = i end
+    else
+      s.i[k] = v
+    end
   end,
 }
 
@@ -253,7 +431,13 @@ local __slProxyCachingMt = {
   __newindex = function (s, k, v)
     s = s.__data
     local w = s.p.w
-    s.i[k], s.h[k] = w[k] and w[k](v) or v, nil
+    if w[k] then
+      local i = w[k](v, s.i[k])
+      if i ~= nil then s.i[k] = i end
+    else
+      s.i[k] = v
+    end
+    s.h[k] = nil
   end,
 }
 
@@ -277,4 +461,6 @@ function ac.StructItem.__proxy(layout, item)
   if not p then return item end
   local d = p.c and { l = layout, i = item, p = p, c = {}, h = {} } or { l = layout, i = item, p = p }
   return setmetatable({ __data = d }, p.c and __slProxyCachingMt or __slProxyMt)
+end
+
 end

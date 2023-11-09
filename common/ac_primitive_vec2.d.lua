@@ -45,7 +45,7 @@ function vec2.intersect(p1, p2, p3, p4) end
 ---@operator div(number|vec2): vec2
 ---@operator pow(number|vec2): vec2
 ---@operator len: number
----@operation unm: vec2
+---@operator unm: vec2
 ---@constructor fun(x: number?, y: number?): vec2
 
 ---Makes a copy of a vector.

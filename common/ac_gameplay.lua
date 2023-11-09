@@ -1,4 +1,5 @@
 __source 'lua/api_gameplay.cpp'
+__source 'lua/api_replay_extension.cpp'
 __allow 'gp'
 __namespace 'ui'
 
@@ -88,3 +89,51 @@ ffi.metatype('grabbedcamera', { __index = {
       yAlign ~= false, tonumber(yOffset) or 0, yOffsetRelative ~= false)
   end,
 } })
+
+---Sets a callback which will be called when drawing driver tooltip card. Within, `ui.` functions can be used to add additional information.
+---@param overrideOriginal boolean? @Set to `true` to hide original UI. Use carefully, might create some compatibility issues. Default value: `false`.
+---@param callback fun(carIndex: integer) @Callback which will be called each time tooltip is drawn, getting 0-based car index.
+---@return ac.Disposable
+function ui.onDriverTooltip(overrideOriginal, callback)
+  if type(overrideOriginal) == 'function' then
+    overrideOriginal, callback = false, overrideOriginal
+  end
+	callback = __util.setCallback(callback)
+	return __util.disposable(ffi.C.lj_onDriverTooltip_inner__ui(not not overrideOriginal, callback))
+end
+
+local _rpsActive = {}
+ffi.cdef [[ 
+typedef struct {
+  void* _frame;
+} replayextension;
+]]
+
+---Create a new stream for recording data to replays. Write data in returned structure if not in replay mode, read data if in replay mode (use `sim.isReplayActive` to check if you need to write or read the data).
+---Few important points:
+--- - Each frame should not exceed 256 bytes to keep replay size appropriate.
+--- - While data will be interpolated between frames during reading, directional vectors won’t be re-normalized. 
+--- - If two different apps would open a stream with the same layout, they’ll share a replay entry.
+--- - Each opened replay stream will persist through the entire AC session to be saved at the end. Currently, the limit is 128 streams per session.
+--- - Default values for unitialized frames are zeroes.
+---@generic T
+---@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Unlike other similar functions, here you shouldn’t use string, otherwise data blending won’t work.
+---@param callback fun()? @Callback that will be called when replay stops. Use this callback to re-apply data from structure: at the moment of the call it will contain stuff from last recorded frame allowing you to restore the state of a simulation to when replay mode was activated.
+---@return T? @Might return `nil` if there is game is launched in replay mode and there is no such data stored in the replay.
+function ac.ReplayStream(layout, callback)
+  local layoutStr, reordered = ac.StructItem.__build(layout)
+  if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
+
+  local name = '__rps_'..tostring(ac.checksumXXH(layoutStr))
+  local ret = _rpsActive[name]
+  if ret == nil then
+    ffi.cdef(ac.StructItem.__cdef(name, layoutStr, true))
+    local size = ffi.sizeof(name)
+    ret = ffi.gc(ffi.C.lj_replayextension_new(name, size, ac.StructItem.__replayMixing(reordered), __util.setCallback(callback)), ffi.C.lj_replayextension_gc)
+    _rpsActive[name] = ret
+  end
+  if ret._frame == nil then
+    return nil
+  end
+  return ffi.cast(name..'*', ret._frame)
+end

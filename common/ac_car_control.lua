@@ -2,13 +2,6 @@ __source 'lua/api_car_control.cpp'
 __source 'extensions/smart_mirror/ac_ext_smart_mirror.cpp'
 __allow 'carc'
 
-ac.TurningLights = __enum({ cpp = 'lua_turning_lights' }, {
-  None = 0,
-  Left = 1,
-  Right = 2,
-  Hazards = 3,
-})
-
 ffi.cdef [[ 
 typedef struct {
   vec2 rotation;
@@ -21,6 +14,7 @@ typedef struct {
   vec2 monitorShaderScale;
   float monitorShaderSkew;
   float monitorShaderType;
+  float monitorBrightness;
 } realmirrorparams;
 ]]
 
@@ -36,6 +30,7 @@ typedef struct {
 ---@field monitorShaderScale vec2 @Scale of pixels grid for monitor shader. Automatically guessed value: `vec2(600, 150)`. Think of it as display resolution.
 ---@field monitorShaderSkew number @Skew of pixels grid to align pixels with tilted monitors.
 ---@field monitorShaderType ac.MirrorMonitorType @Type of monitor shader. By default guessed based on manufacturing year.
+---@field monitorBrightness number @Monitor brightness, 1 for regular brightness.
 ac.RealMirrorParams = ffi.metatype('realmirrorparams', { __index = {
   ---@return ac.RealMirrorParams
   clone = function(s)
@@ -51,26 +46,6 @@ function ac.getRealMirrorParams(mirrorIndex)
   if r.fov == -1 then return nil end
   return r
 end
-
-ac.CarAudioEventID = __enum({ cpp = 'lua_car_audio_event_id' }, {
-  EngineExt = 0,
-  EngineInt = 1,
-  GearExt = 2,
-  GearInt = 3,
-  Bodywork = 4,
-  Wind = 5,
-  Dirt = 6,
-  Downshift = 7,
-  Horn = 8,
-  GearGrind = 9,
-  BackfireExt = 10,
-  BackfireInt = 11,
-  TractionControlExt = 12,
-  TractionControlInt = 13,
-  Transmission = 14,
-  Limiter = 15,
-  Turbo = 16,
-})
 
 ---Tweak car audio events live: alter volume, pitch, fading distance, position, transform parameters (same as with `[AUDIO_…]` sections
 ---in car config file). Additionally, it allows to control extra FMOD event parameters in case you need to add further fidelity. Most functions,
@@ -168,4 +143,58 @@ end
 ---@return number @Returns `math.NaN` if there is no such event or parameter.
 function ac.CarAudioTweak.getParameter(eventID, key)
   return ffi.C.lj_getCarAudioTweak_p__carc(tonumber(eventID) or 0, 6, tostring(key))
+end
+
+ffi.cdef [[ 
+typedef struct {
+  mat4x4 transform;
+  float fov;
+  float exposure;
+  bool externalSound;
+} carcameradef;
+]]
+
+---Stores parameters for a car camera (enabled with F6).
+---@class ac.CarCameraParams
+---@field transform mat4x4 @Transformation relative to car model. Note: due to some techical reasons direction `.look` is facing backwards.
+---@field fov number @Field of view angle in degrees, automatically guessed value: 10.
+---@field exposure number @Exposure.
+---@field externalSound boolean @Should internal or external audio be used.
+ffi.metatype('carcameradef', { __index = {} })
+
+---@param cameraIndex integer @0-based camera index (use `car.carCamerasCount` to get the number of cameras).
+---@return ac.CarCameraParams? @Returns `nil` if there is no camera with such index.
+function ac.accessCarCamera(cameraIndex)
+  local r = ffi.C.lj_accessCarCamera_inner__carc(tonumber(cameraIndex) or 0)
+	return r ~= nil and r or nil
+end
+
+
+
+
+ffi.cdef [[ 
+typedef struct {
+  bool unavailable;
+  bool holdMode;
+  bool stationaryOnly;
+  bool neutralGearOnly;
+  bool requiresBrake;
+} extra_switch_params;
+]]
+
+---A helper structure to simulate some inputs for controlling the car.
+---@class ac.CarExtraSwitchParams
+---@field unavailable boolean @Set to `true` to make a switch inaccessible by user with hotkeys. Car controlling scripts would still be able to alter its state.
+---@field holdMode boolean @Set to `true` to get switch to work only if a button is currently held down.
+---@field stationaryOnly boolean @Set to `true` to only allow user to change the flag if car is stationary.
+---@field neutralGearOnly boolean @Set to `true` to only allow user to change the flag if car is in neutral gear.
+---@field requiresBrake boolean @Set to `true` to only allow user to change the flag if brake pedal is fully pressed.
+---@cpptype extra_switch_params
+ffi.metatype('extra_switch_params', { __index = {} })
+
+---@param index integer @0-based switch index.
+---@return ac.CarExtraSwitchParams? @Returns `nil` if there is no switch with such index.
+function ac.accessExtraSwitchParams(index)
+  local r = ffi.C.lj_accessExtraSwitchParams_inner__carc(tonumber(index) or 0)
+	return r ~= nil and r or nil
 end

@@ -61,7 +61,7 @@ render.ShadersType = __enum({ cpp = 'shaders_type' }, {
   SampleColor = 18,           -- Get diffuse color as accurate as possible
   SampleNormal = 19,          -- Get surface normal in world space
   SampleEmissive = 20,        -- Get emissive color
-  Shadows = 0,                -- @deprecated Use Main instead, this was originally meant to draw shadow maps, but due to some general issues isn’t working as intended
+  Shadows = 0,                -- @deprecated If you want cool looks, use `Main` instead, this was originally meant to draw shadow maps, but due to some general issues isn’t working as intended, and for actual shadows use `SampleDepth`
   SampleDepth = 27,           -- Efficient option for generating depth map without wasting time on drawing the image, doesn’t update the main color texture (only meshes casting shadows are included)
 })
 
@@ -86,7 +86,8 @@ render.AntialiasingMode = __enum({ cpp = 'aa_mode' }, {
   None = 0,  -- No antialiasing
   FXAA = 101,  -- Blurry and slower than CMAA
   CMAA = 102,  -- Faster and sharper option comparing to FXAA
-  ExtraSharpCMAA = 103 -- Like CMAA, but even sharper
+  ExtraSharpCMAA = 103, -- Like CMAA, but even sharper
+  YEBIS = 104, -- Applies YEBIS antialiasing together with the whole filtering HDR→LDR conversion using main PP settings. Note: first run for each resolution can take a lot of time. Each resolution creates its own YEBIS post-processing step, with many different resolutions things might get too expensive.
 })
 
 render.TextureFormat = __enum({ cpp = 'uirt_format' }, {
@@ -103,4 +104,9 @@ render.TextureFormat = __enum({ cpp = 'uirt_format' }, {
   R8G8 = { UNorm = 49, UInt = 50, SNorm = 51, SInt = 52 },
   R8 = { UNorm = 61, UInt = 62, SNorm = 63, SInt = 64 },
   R1 = { UNorm = 66 },
+})
+
+render.TextureFlags = __enum({}, {
+  None = 0,
+  Shared = 1,  -- Shared texture (D3D11_RESOURCE_MISC_SHARED)
 })

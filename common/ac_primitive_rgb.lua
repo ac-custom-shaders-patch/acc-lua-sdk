@@ -39,7 +39,7 @@ local ctrgb = ffi.typeof('rgb')
   end,
 
   __tostring = function(v)
-    return string.format('(%f, %f, %f)', v.r, v.g, v.b)
+    return string.format('(%s, %s, %s)', v.r, v.g, v.b)
   end,
 
   __add = function(v, u) if type(v) == 'number' then return rgb(v, v, v):add(u, rgb()) end return v:add(u, rgb()) end,
@@ -263,6 +263,10 @@ local ctrgb = ffi.typeof('rgb')
     toRgbm = function(v, m) return rgbm(v.r, v.g, v.b, __util.num_or(m, 1)) end,
     vec3 = function(v) return vec3(v.r, v.g, v.b) end,
     toVec3 = function(v) return vec3(v.r, v.g, v.b) end,
+
+    hex = function (v)
+      return string.format('#%02x%02x%02x', math.saturateN(v.r) * 255, math.saturateN(v.g) * 255, math.saturateN(v.b) * 255)
+    end,
   }
 }
 

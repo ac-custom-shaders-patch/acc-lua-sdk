@@ -68,6 +68,7 @@ end
 ---Rounds number, leaves certain number of decimals.
 ---@param number number
 ---@param decimals number? @Default value: 0 (rounding to a whole number).
+---@return integer
 function math.round(number, decimals)
   local c = 2^52 + 2^51
   if decimals then
@@ -177,10 +178,11 @@ function math.saturate(x) return math.clamp(x, 0, 1) end
 function math.sign(x) if x > 0 then return 1 elseif x < 0 then return -1 else return 0 end end
 
 ---Linear interpolation between `x` and `y` using `mix` (x * (1 - mix) + y * mix).
----@param x number
----@param y number
+---@generic T
+---@param x T
+---@param y T
 ---@param mix number
----@return number
+---@return T
 function math.lerp(x, y, mix) return x * (1 - mix) + y * mix end
 
 ---Returns 0 if value is less than v0, returns 1 if it’s more than v1, linear interpolation in-between.

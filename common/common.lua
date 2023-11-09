@@ -1,50 +1,6 @@
-__script = {}
+-- API available to all scripts (but not available within `const()` preprocessing).
 
----Disposable thing is something set which you can then un-set. Just call `ac.Disposable` returned
----from a function to cancel out whatever happened there. For example, unsubscribe from an event.
----@alias ac.Disposable fun()
-
----For better compatibility, acts like `ac.log()`.
-function print(...) ac.log(...) end
-
----Not doing anything anymore, kept for compatibility.
----@deprecated
-function ac.skipSaneChecks() end
-
----Calls a function in a safe way, catching errors. If any errors were to occur, `catch` would be
----called with an error message as an argument. In either case (with and without error), if provided,
----`finally` will be called.
----@generic T
----@param fn fun(): T
----@param catch fun(err: string)
----@param finally fun()|nil
----@return T|nil
-function try(fn, catch, finally)
-  if not fn then 
-    return finally ~= nil and finally()
-  end
-  local ranFine, result = pcall(fn)
-  if ranFine then
-    if finally ~= nil then finally() end
-    return result
-  else
-    if catch ~= nil then catch(result) end
-    if finally ~= nil then return finally() end
-  end
-end
-
----Calls a function and then calls `dispose` function. Note: `dispose` function will be called even if
----there would be an error in `fn` function. But error would not be contained and will propagate.
----@generic T
----@param fn fun(): T?
----@param dispose fun()
----@return T|nil
-function using(fn, dispose)
-  __util.pushEnsureToCall(dispose)
-  local r1,r2,r3 = fn()
-  __util.popEnsureToCall()
-  return r1,r2,r3
-end
+ac.skipSaneChecks = function() end
 
 ---Stores value in session shared Lua/Python storage. This is not a long-term storage, more of a way for
 ---different scripts to exchange data. Note: if you need to exchange a lot of data between Lua scripts,
@@ -76,20 +32,53 @@ function ac.load(key)
   end
 end
 
-local releaseCallbacks = {}
+do
+
+local releaseCallbacks = nil
+
+local function preventReleaseCallback(callback)
+  table.removeItem(releaseCallbacks, callback)
+end
 
 ---Adds a callback which might be called when script is unloading. Use it for some state reversion, but
 ---don’t rely on it too much. For example, if Assetto Corsa would crash or just close rapidly, it would not
 ---be called. It should be called when scripts reload though.
----@param callback fun()
-function ac.onRelease(callback)
+---@generic T
+---@param callback fun(item: T)
+---@param item T? @Optional parameter. If provided, will be passed to callback on release, but stored with a weak reference, so it could still be GCed before that (in that case, callback won’t be called at all).
+---@return fun() @Call to disable callback.
+function ac.onRelease(callback, item)
+  if item then
+    local callbackBak, store = callback, setmetatable({item}, {__mode = 'v'})
+    callback = function ()
+      if store[1] then callbackBak(store[1]) end
+    end
+  end
+  if not releaseCallbacks then releaseCallbacks = {} end
   table.insert(releaseCallbacks, callback)
+  return function ()
+    preventReleaseCallback(callback)
+  end
 end
 
 function __script.release()
-  for i = 1, #releaseCallbacks do
-    releaseCallbacks[i]()
+  if releaseCallbacks then
+    local p = {}
+    preventReleaseCallback = function (callback)
+      table.insert(p, callback)
+    end
+    for i = 1, #releaseCallbacks do
+      if not table.contains(p, releaseCallbacks[i]) then
+        local s, err = pcall(releaseCallbacks[i])
+        if not s then
+          ac.warn('onRelease exception: '..tostring(err))
+          ffi.C.lj_critical_assert()
+        end
+      end
+    end
   end
+end
+
 end
 
 ---For easy import of scripts from subdirectories. Provide it a name of a directory relative
@@ -100,56 +89,6 @@ function package.add(dir)
   package.cpath = package.cpath .. ';' .. __dirname .. '/' .. dir .. '/?.dll'
 end
 
-local _dbg = debug.getinfo
-
----Resolves relative path to a Lua module (relative to Lua file you’re running this function from)
----so it would be ready to be passed to `require()` function.
----
----Note: performance might be a problem if you are calling it too much, consider caching the result.
----@param path string
----@return string
-function package.relative(path)
-  return '.'.._dbg(2).source:sub(#__dirname + 2):match('.*[/\\\\]')..path
-end
-
----Resolves relative path to a file (relative to Lua file you’re running this function from)
----so it would be ready to be passed to `io` functions (returns full path).
----
----Note: performance might be a problem if you are calling it too much, consider caching the result.
----@param path string
----@return string
-function io.relative(path)
-  return _dbg(2).source:sub(2):match('.*[/\\\\]')..path
-end
-
----Given an FFI struct, returns bytes with its content. Resulting string may contain zeroes.
----@param data any @FFI struct (type should be “cdata”).
----@return binary|nil @If data is `nil`, returns `nil`.
-function ac.structBytes(data)
-  if type(data) ~= 'cdata' then error('Can get bytes from cdata only', 2) end
-  return __util.strrefp(ffi.C.lj_structBytes_inner(data, ffi.sizeof(data)))
-end
-
----Given an FFI struct and a string of data, fills struct with that data. Works only if size of struct matches size of data. Data string can contain zeroes.
----@generic T
----@param destination T @FFI struct (type should be “cdata”).
----@param data binary @String with binary data.
----@return T
-function ac.fillStructWithBytes(destination, data)
-  if type(destination) ~= 'cdata' then error('Can get bytes from cdata only', 2) end
-  if type(data) ~= 'string' then error('Data should be a string', 2) end
-  ffi.C.lj_fillStructWithBytes_inner(destination, ffi.sizeof(destination), __util.blob(data))
-  return destination
-end
-
----Fills a string of an FFI struct with data up to a certain size. Make sure to not overfill the data.
----@param src string @String to copy.
----@param dst string @A `const char[N]` field of a struct.
----@param size integer @Size of `const char[N]` field (N). 
-function ac.stringToFFIStruct(src, dst, size)
-  ffi.C.lj_stringToFFIStruct_inner(src, dst, size)
-end
-
 ---Sets a callback which will be called when server welcome message and extended config arrive.
 ---@param callback fun(message: string, config: ac.INIConfig) @Callback function.
 ---@return ac.Disposable
@@ -158,4 +97,14 @@ function ac.onOnlineWelcome(callback)
 	return __util.disposable(ffi.C.lj_onOnlineWelcome_inner(__util.setCallback(function (message, config)
     callback(message, ac.INIConfig(ac.INIFormat.Extended, config))
   end)))
+end
+
+---Returns full path to one of known folders. Some folders might not exist, make sure to create them before writing.
+---@param folderID ac.FolderID|string @Could also be a system GUID in “{XX…}” form.
+---@return string
+function ac.getFolder(folderID)
+  if type(folderID) == 'string' and string.byte(folderID, 1) == 123 then
+    return __util.strrefr(ffi.C.lj_getFolder_g(folderID))
+  end	
+  return __util.strrefr(ffi.C.lj_getFolder_n(__util.cast_enum(folderID, 0, 1025, 0)))
 end

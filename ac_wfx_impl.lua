@@ -19,6 +19,7 @@ require './wfx_impl/ac_lightpollution'
 require './wfx_impl/ac_obsolete'
 require './wfx_impl/ac_lists'
 require './wfx_impl/ac_customtonemapping'
+require './wfx_impl/ac_postprocessing'
 
 -- automatically generated entries go here:
 __definitions()
@@ -61,6 +62,12 @@ function script.renderSky(passID, frameIndex, uniqueKey) end
 ---@param frameIndex integer
 ---@param uniqueKey integer
 function script.renderClouds(passID, frameIndex, uniqueKey) end
+
+---Called right after all transparent surfaces of a track are rendered (but before transparent car surfaces). Use `ac.enableRenderCallback()` to activate.
+function script.renderTrack(passID, frameIndex, uniqueKey) end
+
+---Called right after everything is rendered (but before optional helmet of NeckFX). Use `ac.enableRenderCallback()` to activate.
+function script.renderSceneEnd(passID, frameIndex, uniqueKey) end
 
 ---Called right after the cloud shadows are rendered. Use `ac.enableRenderCallback()` to activate.
 function script.renderCloudShadows(passID, frameIndex, uniqueKey) end

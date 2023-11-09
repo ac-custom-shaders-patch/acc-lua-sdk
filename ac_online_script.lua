@@ -20,12 +20,6 @@ require './common/ac_physics_ai'
 require './common/secure'
 require './wfx_common/ac_weatherconditions'
 
-ui.OnlineExtraFlags = __enum({ cpp = 'online_extra_flags' }, {
-  None = 0,
-  Admin = 1,  -- Feature will be available only to people signed up as admins with access to admin menu in that new chat app.
-  Tool = 2    -- Instead of creating a modal popup blocking rest of UI, a tool would create a small window staying on screen continuously and be able to use rest of UI API there.
-})
-
 local function __getServerConfig(section, key, def)
   if type(def) == 'boolean' then return ffi.C.lj_cfg_server_bool(__util.str(section), __util.str(key), def) end
   if type(def) == 'number' then return ffi.C.lj_cfg_server_decimal(__util.str(section), __util.str(key), def) end

@@ -2,13 +2,6 @@
 
 __source 'lua/api_extras_ini.cpp'
 
-ac.INIFormat = __enum({}, {
-  Default = 0, -- AC format: no quotes, “[” in value begins a new section, etc.
-  DefaultAcd = 1, -- AC format, but also with support for reading files from `data.acd` (makes difference only for `ac.INIConfig.load()`).
-  Extended = 10, -- Quotes are allowed, comma-separated value turns into multiple values (for vectors and lists), repeated keys replace previous values.
-  ExtendedIncludes = 11, -- Same as CSP, but also with support for INIpp expressions and includes.
-})
-
 ac.INIConfig = class('ac.INIConfig', function (format, sections, filename)
   return { format = format or 0, sections = sections or {}, filename = filename }
 end)
@@ -76,7 +69,30 @@ function ac.INIConfig.trackData(fileName)
   return ac.INIConfig(1, ret, nil)
 end
 
+---Returns CSP config for a car. Might be slow: some of those configs are huge. Make sure to cache the resulting value if you need to reuse it.
+---
+---Returned file can’t be saved.
+---@param carIndex number @0-based car index.
+---@return ac.INIConfig
+function ac.INIConfig.carConfig(carIndex)
+  ffi.C.lj_loadcspcarconfig_ini(carIndex)
+  local ret = __util.result()
+  return ac.INIConfig(10, ret, nil)
+end
+
+---Returns CSP config for a track. Might be slow: some of those configs are huge. Make sure to cache the resulting value if you need to reuse it.
+---
+---Returned file can’t be saved.
+---@return ac.INIConfig
+function ac.INIConfig.trackConfig()
+  ffi.C.lj_loadcsptrackconfig_ini()
+  local ret = __util.result()
+  return ac.INIConfig(10, ret, nil)
+end
+
 ---Returns config with extra online options, the ones that can be set with Content Manager.
+---
+---Returned file can’t be saved.
 ---@return ac.INIConfig|nil @If not an online session, returns `nil`.
 function ac.INIConfig.onlineExtras()
   ffi.C.lj_loadonlineextras_ini()
@@ -86,6 +102,8 @@ function ac.INIConfig.onlineExtras()
 end
 
 ---Returns race config (`cfg/race.ini`). Password and online GUID won’t be included.
+---
+---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.raceConfig()
   ffi.C.lj_load_race_ini()
@@ -93,6 +111,8 @@ function ac.INIConfig.raceConfig()
 end
 
 ---Returns video config (`cfg/video.ini`).
+---
+---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.videoConfig()
   ffi.C.lj_load_video_ini()
@@ -100,6 +120,8 @@ function ac.INIConfig.videoConfig()
 end
 
 ---Returns controls config (`cfg/controls.ini`).
+---
+---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.controlsConfig()
   ffi.C.lj_load_controls_ini()
@@ -110,7 +132,7 @@ end
 ---@param cspModuleID ac.CSPModuleID @Name of a CSP module.
 ---@return ac.INIConfig
 function ac.INIConfig.cspModule(cspModuleID)
-  if cspModuleID == nil then error('Module ID is required', 2) end
+  if cspModuleID == nil then return ac.INIConfig(ac.INIFormat.Default, {}) end
   ffi.C.lj_loadconfig_ini(tostring(cspModuleID)..'.ini')
   local ret = __util.result()
   if ret == nil then error('Failed to parse data', 2) end

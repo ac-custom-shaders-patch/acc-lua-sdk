@@ -1,11 +1,5 @@
 __source 'lua/api_common_debug.cpp'
 
-ac.DebugCollectMode = __enum({ underlying = 'int' }, { 
-  Average = 0,
-  Minimum = 1,
-  Maximum = 2,
-})
-
 local function _logstring(v)
   local t = type(v)
   if t == 'table' and not getmetatable(v) then

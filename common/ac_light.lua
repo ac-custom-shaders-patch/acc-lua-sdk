@@ -2,11 +2,6 @@ __source 'lua/api_light.cpp'
 
 require './ac_render'
 
-ac.LightType = __enum({ cpp = 'light_type' }, {
-  Regular = 1,
-  Line = 2
-})
-
 ffi.cdef [[ 
 typedef struct {
   void* host_;
@@ -57,12 +52,10 @@ local __lightSourceKeepAlive = {}
 
 ---Light source on the scene. Starts working immediately after creation. Use `:dispose()` to remove it.
 ---@param lightType ac.LightType?
----@param position vec3?
 ---@return ac.LightSource
-function ac.LightSource(lightType, position)
+function ac.LightSource(lightType)
   local created = ffi.C.lj_lightsource_new()
   created.lightType = lightType or ac.LightType.Regular
-  if position ~= nil then created.position:set(lightType) end
   __lightSourceKeepAlive[#__lightSourceKeepAlive + 1] = created
   return ffi.gc(created, ffi.C.lj_lightsource_gc)
 end

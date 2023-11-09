@@ -114,6 +114,11 @@ function ffi.metatype(ct, metatable) end
 ---@return ffi.cdata*
 function ffi.gc(cdata, finalizer) end
 
+---@param destination any
+---@param data any|string
+---@param size integer?
+function ffi.copy(destination, data, size) end
+
 ---Namespace only available for background workers. Use `ac.startBackgroundWorker()` to start a background worker.
 worker = {}
 

@@ -45,6 +45,13 @@ ffi.metatype('lua_lut', {
     return s.__size
   end,
   __index = {
+    __stringify = function (s, o, i)
+      o[i] = 'ac.DataLUT11.parse("'
+      o[i + 1] = s:serialize()
+      o[i + 2] = '")'
+      return i + 3
+    end,
+
     ---Add a new value to LUT.
     ---@param input number
     ---@param output number
@@ -84,6 +91,13 @@ ffi.metatype('lua_lut', {
     ---@return number
     getPointOutput = function (s, index)
       return ffi.C.lj_lut_atvalue(s, index)
+    end,
+
+    ---Convert LUT into a string, either in a short (inlined, for an INI config) or long (for a separate file) format.
+    ---@param longFormat boolean? @Set to `true` to use long format. Default value: `false`.
+    ---@return string
+    serialize = function (s, longFormat)
+      return __util.strrefr(ffi.C.lj_lut_serialize(s, longFormat == true))
     end,
   }
 })

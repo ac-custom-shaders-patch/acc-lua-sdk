@@ -111,3 +111,9 @@ function mat4x4:mul(other) end
 ---@param other mat4x4
 ---@return mat4x4 @Returns self for easy chaining.
 function mat4x4:mulSelf(other) end
+
+---Writes result into a separate matrix.
+---@param destination mat4x4
+---@param other mat4x4
+---@return mat4x4 @Returns destination matrix.
+function mat4x4:mulTo(destination, other) end

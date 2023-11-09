@@ -29,7 +29,6 @@ local _fficdef = ffi.cdef
 function ac.connect(layout, keepLive, namespace)
   local layoutStr = ac.StructItem.__build(layout)
   if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
-  if layoutStr:match('%(') then error('Invalid layout', 2) end
   if not __allowIO__ and namespace == ac.SharedNamespace.Global then error('Script of this type can’t use global namespace', 2) end
   local name = '__con_'..__util.strrefr(ffi.C.lj_connect_key(layoutStr, type(namespace) == 'string' and namespace or nil))
   local size = _sizes[name]
@@ -39,4 +38,20 @@ function ac.connect(layout, keepLive, namespace)
     _sizes[name] = size
   end
   return ac.StructItem.__proxy(layout, ffi.gc(ffi.cast(name..'*', ffi.C.lj_connect_new(layoutStr, type(namespace) == 'string' and namespace or nil, size, keepLive ~= false)), ffi.C.lj_connect_gc))
+end
+
+---Create a new struct from a given layout. Could be used in calls like `ac.structBytes()` and `ac.fillStructWithBytes()`. Each call defines and creates a new struct, so don’t
+---call them each frame, I believe LuaJIT doesn’t do garbage collection on struct definitions.
+---@generic T
+---@param layout T
+---@param compact boolean?
+---@return T
+---@return integer @Structure size.
+---@return string @Structure name.
+function ac.StructItem.combine(layout, compact)
+  local layoutStr = ac.StructItem.__build(layout)
+  if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
+  local name = '__cst_'..math.randomKey()
+  _fficdef(ac.StructItem.__cdef(name, layoutStr, compact))
+  return ffi.new(name), ffi.sizeof(name), name
 end

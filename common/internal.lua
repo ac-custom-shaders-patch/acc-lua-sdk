@@ -33,8 +33,8 @@ typedef struct {
   };
 } lua_snb_value;
 
-typedef const lua_snb_value* lua_snb_data;
 ]]
+--typedef const lua_snb_value* lua_snb_data;
 
 do
 
@@ -92,6 +92,10 @@ function __util.snb(data)
     return nil
   end
   return r
+end
+
+function __util.disposable_impl(key)
+  ffi.C.lj_unlink_inner(key)
 end
 
 function __util.disposable(key)
@@ -175,6 +179,13 @@ function __util.cast_enum(value, min, max, def)
   -- if i < min or i > max then return def end
   if i < min then return def end
   return i
+end
+
+function __util.cast_enum_bc(value, min, max, def)
+  if value == nil then return def
+  elseif value == true then return 1
+  elseif value == false then return 0
+  else return __util.cast_enum(value, min, max, def) end
 end
 
 function __util.cast_vec2(ret, arg, def)
@@ -413,7 +424,6 @@ function __script.processReply(replyID, ...)
   end
 end
 
-local _timeoutsN = 0
 local __callbackListeners = {}
 function __util.expectImmediateReply(callback)
   if not callback then return 0 end
@@ -451,6 +461,22 @@ function __script.forgetCallback(replyID)
     end
     __setCallbacks[replyID] = false
   end
+end
+
+function __script.emptyFunction()
+end
+
+function __util.lvi(v, i)
+  i = i + 1
+  if i < v._end - v._begin then return i, v._begin[i] end
+end
+
+function __util.opti(x)
+  return x < 1e9 and x or nil
+end
+
+function __util.tunw_nn(x)
+  return x.x, x.y
 end
 
 function __util.awaitingCallback()

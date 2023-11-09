@@ -70,7 +70,7 @@ end
 ---@param callbackData TCallbackData? @Callback data that will be passed to callback as third argument, to avoid creating a capture.
 ---@return TReturn @First non-nil value returned by callback.
 ---@overload fun(directory: string, callback: fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: any), callbackData: any): any
----@overload fun(directory: string, mask: string|nil): string[]
+---@overload fun(directory: string, mask: string|nil): string[] @This overload just returns the list
 function io.scanDir(directory, mask, callback, callbackData)
   if type(directory) ~= 'string' then error('First argument has to be a string with path to a directory', 2) end
   if type(mask) == 'function' then mask, callback, callbackData = nil, mask, callback end

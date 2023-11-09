@@ -13,18 +13,22 @@ local _tremove = table.remove
 ---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
 ---@return integer
 function setTimeout(callback, delay, uniqueKey)
+  if not _sim then
+    _sim = ac.getSim()
+  end
   if uniqueKey ~= nil then
     for i = 1, _timeoutsN do
-      if _timeouts[i].key == uniqueKey then return nil end
+      if _timeouts[i].key == uniqueKey then return _timeouts[i].id end
     end
   end
 
-  if delay == nil then delay = 0 end
+  local nextTime = _sim.gameTime + (delay or 0)
   local id = _lastId
   _lastId = _lastId + 1
   local n = _timeoutsN + 1
   _timeoutsN = n
-  _timeouts[n] = { id = id, callback = callback, delay = delay, period = -1, key = uniqueKey }
+  _timeouts[n] = { id = id, callback = callback, nextTime = nextTime, key = uniqueKey }
+  ffi.C.lj_set_timer_next(nextTime, false)
   return id
 end
 
@@ -38,35 +42,60 @@ end
 ---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
 ---@return integer
 function setInterval(callback, period, uniqueKey)
+  if not _sim then
+    _sim = ac.getSim()
+  end
   if uniqueKey ~= nil then
     for i = 1, _timeoutsN do
-      if _timeouts[i].key == uniqueKey then return nil end
+      if _timeouts[i].key == uniqueKey then return _timeouts[i].id end
     end
   end
 
-  if period == nil then period = 0 end
+  if not period then period = 0 end
+  local nextTime = _sim.gameTime + period
   local id = _lastId
   _lastId = _lastId + 1
   local n = _timeoutsN + 1
   _timeoutsN = n
-  _timeouts[n] = { id = id, callback = callback, delay = period, period = period, key = uniqueKey }
+  _timeouts[n] = { id = id, callback = callback, nextTime = nextTime, period = period, key = uniqueKey }
+  ffi.C.lj_set_timer_next(nextTime, false)
   return id
 end
+
+local _clearPostponed, _clearStorage = nil, nil
 
 ---Stops timeout.
 ---@param cancellationID integer @Value earlier retuned by `setTimeout()`. If a non-numerical value is passed (like a `nil`), call is ignored and returns `false`.
 ---@return boolean @True if timeout with such ID has been found and stopped.
 function clearTimeout(cancellationID)
   if type(cancellationID) ~= 'number' then return false end
-  local n = _timeoutsN
-  for i = 1, n do
-    if _timeouts[i].id == cancellationID then
-      _tremove(_timeouts, i)
-      _timeoutsN = n - 1
-      return true
+  if _clearPostponed then
+    local n = _timeoutsN
+    for i = 1, n do
+      local t = _timeouts[i]
+      if t.id == cancellationID then
+        table.insert(_clearPostponed, cancellationID)
+        return true
+      end
     end
+    return false
+  else
+    local n = _timeoutsN
+    local m = math.huge
+    local r = false
+    for i = 1, n do
+      local t = _timeouts[i]
+      if t.id == cancellationID then
+        _tremove(_timeouts, i)
+        _timeoutsN = n - 1
+        r = true
+      elseif t.nextTime < m then
+        m = t.nextTime
+      end
+    end
+    ffi.C.lj_set_timer_next(m, true)
+    return r
   end
-  return false
 end
 
 ---Stops interval.
@@ -80,37 +109,53 @@ function __util.timersLeft()
   return _timeoutsN
 end
 
-function __script.updateInner(dt)
-  for i = _timeoutsN, 1, -1 do
+function __script.updateInner()
+  if not _sim then
+    return math.huge
+  end
+  local nextDelay = math.huge
+  local now = tonumber(_sim.gameTime)
+  local i = 1
+  if not _clearStorage then
+    _clearStorage = {}
+  end
+  _clearPostponed = _clearStorage
+  while i <= _timeoutsN do
     local t = _timeouts[i]
-    t.delay = t.delay - dt
-    if t.delay < 0 then
-      if t.period >= 0 then
-        t.delay = t.period
-      else
+    local n = t.nextTime
+    if n < now then
+      if not t.period then
         _tremove(_timeouts, i)
         _timeoutsN = _timeoutsN - 1
+        t.callback()
+        goto next
       end
-      local s, err = pcall(t.callback)
-      if not s then
-        ac.error('Error in timer callback: '..tostring(err))
-        if worker then
-          worker.__error = tostring(err)
-        end
-      end
-    end
-  end
-end
 
-function __script.updateCombined(dt, a1, a2)
-  __script.updateInner(dt)
-  local u = script.update
-  if type(u) == 'function' then
-    u(dt, a1, a2) 
-  else
-    u = update
-    if type(u) == 'function' then
-      u(dt, a1, a2)
+      t.callback()
+      n = n + t.period
+      t.nextTime = n
     end
+    if n < nextDelay then
+      nextDelay = n
+    end
+    i = i + 1
+    ::next::
   end
+  _clearPostponed = nil
+
+  if #_clearStorage > 0 then
+    nextDelay = math.huge
+    for j = _timeoutsN, 1, -1 do
+      local t = _timeouts[j]
+      if table.contains(_clearStorage, t.id) then
+        _tremove(_timeouts, j)
+        _timeoutsN = _timeoutsN - 1
+      elseif t.nextTime < nextDelay then
+        nextDelay = t.nextTime
+      end
+    end
+    table.clear(_clearStorage)
+  end
+
+  return nextDelay
 end

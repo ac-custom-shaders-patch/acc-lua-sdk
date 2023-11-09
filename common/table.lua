@@ -348,7 +348,7 @@ end
 ---@generic TReturnKey
 ---@generic TReturnValue
 ---@param t table<TKey, T>
----@param callback fun(item: T, index: TKey, callbackData: TCallbackData): TReturnValue, TReturnKey|nil @Mapping callback.
+---@param callback (fun(item: T, index: TKey, callbackData: TCallbackData): TReturnValue, TReturnKey)|nil @Mapping callback.
 ---@param callbackData TCallbackData?
 ---@return table<TReturnKey, TReturnValue>
 function table.map(t, callback, callbackData)
@@ -504,20 +504,20 @@ end
 ---@generic TKey
 ---@generic TCallbackData
 ---@param t table<TKey, T>
----@param callback fun(item: T, index: TKey, callbackData: TCallbackData): boolean
+---@param callback nil|fun(item: T, index: TKey, callbackData: TCallbackData): boolean @If not set, all elements will be counted.
 ---@param callbackData TCallbackData?
 ---@return integer
 function table.count(t, callback, callbackData)
   local n, r = #t, 0
   if __isArray(t, n) then
     for i = next(t) or 1, n do
-      if callback(t[i], i, callbackData) then
+      if not callback or callback(t[i], i, callbackData) then
         r = r + 1
       end
     end
   else
     for key, value in pairs(t) do
-      if callback(value, key, callbackData) then
+      if not callback or callback(value, key, callbackData) then
         r = r + 1
       end
     end
@@ -798,16 +798,18 @@ function table.assign(target, ...)
   local I = #target + 1
   for i = 1, select('#', ...) do
     local t = select(i, ...)
-    local N = #t
-    if __isArray(t, N) then
-      __requireArray(t, N)
-      for j = next(t) or 1, N do
-        target[I] = t[j]
-        I = I + 1
-      end
-    else
-      for key, value in pairs(t) do
-        target[key] = value
+    if t then
+      local N = #t
+      if __isArray(t, N) then
+        __requireArray(t, N)
+        for j = next(t) or 1, N do
+          target[I] = t[j]
+          I = I + 1
+        end
+      else
+        for key, value in pairs(t) do
+          target[key] = value
+        end
       end
     end
   end

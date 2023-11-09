@@ -1,4 +1,5 @@
 __source 'lua/api_common.cpp'
+__source 'lua/api_common_adv.cpp'
 
 -- a simple wrapper for creating new classes, similar to middleclass (check that file for more info)
 require './common/class'
@@ -6,6 +7,7 @@ require './common/class'
 -- all sorts of modules:
 require 'ffi'
 require './common/debug'
+require './common/common_base'
 require './common/common'
 require './common/const'
 require './common/ac_primitive'
@@ -29,6 +31,7 @@ require './common/ac_extras_hashspace'
 require './common/ac_extras_numlut'
 require './common/ac_extras_onlineevent'
 require './common/ac_extras_connectmmf'
+require './common/ac_extras_binaryinput'
 require './common/ac_general_utils'
 require './common/ac_social'
 require './common/ac_music'
@@ -39,7 +42,7 @@ require './common/ac_reftypes'
 require './common/ac_dualsense'
 require './common/ac_dualshock'
 require './common/ac_web'
-require './common/ac_cdef_definitions'
+require './common/ac_physics_unrestricted'
 require './common/stringify'
 require './common/json'
 
@@ -52,4 +55,4 @@ require './common/ac_primitive_rgbm.d'
 require './common/ac_primitive_quat.d'
 
 -- automatically generated entries go here:
-__definitions()
+__definitions('core')

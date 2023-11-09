@@ -100,6 +100,11 @@ do
         ffi.C.lj_mat_mulself(s, v)
         return s
       end,
+      mulTo = function(s, r, v)
+        if s == nil then return nil end
+        ffi.C.lj_mat_multo(r, s, v)
+        return r
+      end,
       transformVectorTo = function(s, r, vec)
         r.x = s.row1.x * vec.x +  s.row2.x * vec.y + s.row3.x * vec.z
         r.y = s.row1.y * vec.x +  s.row2.y * vec.y + s.row3.y * vec.z
@@ -132,6 +137,17 @@ do
       end,
       scaling = function (vec)
         return ffi.C.lj_mat_scaling(__util.ensure_vec3(vec))
+      end,
+      packer = function (cp, cr, rf, rt)
+        cp = cp == true
+        cr = cr == true
+        if not vec3.isvec3(rf) then rf = nil end
+        if not vec3.isvec3(rt) then rt = nil end
+        return {
+          pack = function (d, m) ffi.C.lj_mat_pack(d, m, cp, rf, rt, cr) end,
+          unpack = function (s) local r = mat4x4() ffi.C.lj_mat_unpack(s, r, cp, rf, rt, cr) return r end,
+          unpackTo = function (d, s) ffi.C.lj_mat_unpack(s, d, cp, rf, rt, cr) end,
+        }
       end,
       tmp = function ()
         if _tm4 == nil then _tm4 = mat4x4() end

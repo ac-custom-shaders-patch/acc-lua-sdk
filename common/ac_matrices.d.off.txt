@@ -1,0 +1,10 @@
+
+
+---Creates a helper for packing and unpacking matrices into compact binary structures. Parameters `destination` and `source` of `any` type should
+---receive reference to a binary array in an FFI structure.
+---@param compactPosition boolean? @If `true`, position is packed into 3 bytes, otherwise it will take 6 bytes. Default value: `false`.
+---@param compactRotation boolean? @If `true`, rotation is packed into 3 bytes, otherwise it will take 6 bytes. Default value: `false`.
+---@param rangeFrom vec3? @Minimal expected position. Pass it together with `rangeTo` to encode position data more efficiently.
+---@param rangeTo vec3? @Maximum expected position. Pass it together with `rangeFrom` to encode position data more efficiently.
+---@return {pack: fun(destination: any, matrix: mat4x4), unpack: (fun(source: any): mat4x4), unpackTo: fun(source: any, destination: mat4x4)}
+function mat4x4.packer(compactPosition, compactRotation, rangeFrom, rangeTo) end

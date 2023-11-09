@@ -3,6 +3,7 @@ __states 'custom_physics/cphys_script.cpp'
 __allow 'cphys'
 
 require './common/internal_import'
+require './common/secure'
 
 ffi.cdef [[ 
 typedef struct {
@@ -101,5 +102,8 @@ script = {}
 ---Called each physics frame.
 ---@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
 function script.update(dt) end
+
+---Called when car resets or teleports, for example teleporting to pits, or when a new session starts.
+function script.reset() end
 
 --[[) ?]]

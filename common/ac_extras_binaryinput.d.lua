@@ -1,0 +1,4 @@
+---@param id string @Name of a section in “controls.ini”. If you are adding a new input, use something like “yourNamespace:Nice Name” (without square brackets) to ensure there won’t be collisions and it would integrate nicely.
+---@param defaults {keyboard: nil|{key: ui.KeyIndex?, ctrl: boolean?, shift: boolean?, alt: boolean?}, gamepad: nil|ac.GamepadButton, repeat: nil|number}? @Default settings if user has not configured input yet. Parameter `repeat` can be used to create buttons which would keep reporting as pressed (or call `:onDown()`) while held, can be configured in “controls.ini” as “REPEAT_PERIOD”; by default repeating is disable. Note: if `ac.ControlButton()` is called multiple times within a race session, only defaults from the first run will be taken into account.
+---@return ac.ControlButton
+function ac.ControlButton(id, defaults) end

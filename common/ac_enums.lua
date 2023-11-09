@@ -1,3 +1,27 @@
+ac.DebugCollectMode = __enum({ underlying = 'int' }, { 
+  Average = 0,
+  Minimum = 1,
+  Maximum = 2,
+})
+
+ac.INIFormat = __enum({}, {
+  Default = 0, -- AC format: no quotes, “[” in value begins a new section, etc.
+  DefaultAcd = 1, -- AC format, but also with support for reading files from `data.acd` (makes difference only for `ac.INIConfig.load()`).
+  Extended = 10, -- Quotes are allowed, comma-separated value turns into multiple values (for vectors and lists), repeated keys replace previous values.
+  ExtendedIncludes = 11, -- Same as CSP, but also with support for INIpp expressions and includes.
+})
+
+ac.LightType = __enum({ cpp = 'light_type' }, {
+  Regular = 1,
+  Line = 2
+})
+
+ac.IncludeType = __enum({ cpp = 'include_type' }, {
+  None = 0,
+  Car = 1,
+  Track = 2
+})
+
 ac.FogAlgorithm = __enum({ cpp = 'fog_algorithm' }, { 
   Original = 0,
   New = 1
@@ -128,6 +152,8 @@ ac.TonemapFunction = __enum({ cpp = 'tonemap_function' }, {
   Unreal = 12,        -- tonemapping commonly used in UE
   Filmic = 13,        -- filmic tonemapping
   ReinhardWp = 14,    -- White-preserving Reinhard
+  Juicy = 15,         -- experimental, better preserving saturation
+  AgX = 16,           -- might be the best one, based on https://iolite-engine.com/blog_posts/minimal_agx_implementation
 })
 
 ac.FolderID = __enum({ cpp = 'known_dir' }, {   
@@ -161,6 +187,9 @@ ac.FolderID = __enum({ cpp = 'known_dir' }, {
   ExtCache = 33,        -- …/SteamApps/common/assettocorsa/cache
   AppDataTemp = 34,     -- …/AppData/Local/Temp
   ExtInternal = 35,     -- …/SteamApps/common/assettocorsa/extension/internal
+
+  ScriptOrigin = 1024,  -- main script directory
+  ScriptConfig = 1025,  -- …/Documents/Assetto Corsa/cfg/extension/state/lua/<mode>/<script ID>
 })
 
 ac.FolderId = ac.FolderID
@@ -208,6 +237,9 @@ ac.UserInputMode = __enum({ cpp = 'user_input_mode' }, {
 ac.AudioChannel = __enum({ override = 'ac.*/audioChannelKey:*', underlying = 'string' }, {
   Main = 'main',
   Rain = 'rain',
+  Weather = 'weather',
+  Wipers = 'wipers',
+  CarComponents = 'carComponents',
   Wind = 'wind',
   Tyres = 'tyres',
   Surfaces = 'surfaces',
@@ -485,7 +517,8 @@ ac.CSPModuleID = __enum({ override = '*.*/cspModuleID:string', underlying = 'str
       const n = /FULLNAME\s*=\s*(.+)/.test($.readText(`${process.env['AC_ROOT']}/extension/config/${x}`)) ? RegExp.$1 : i;
       return `${d} = "${i}", -- ${n}`
     }).join('\n')) ?]]
-  JoypadAssist = 'gamepad_fx' -- @hidden
+  Yebisest = 'yebisest',
+  JoypadAssist = 'gamepad_fx', -- @hidden
 })
 
 ac.ObjectClass = __enum({ }, {
@@ -555,4 +588,258 @@ ac.GamepadDualShockType = __enum({ cpp = 'dualshock_device_type' }, {
   SwitchPro = 3, -- Switch Pro Controller
   DualShock = 4, -- DualShock 4
   DualSense = 5, -- DualSense (can appear here if controller is configured to launch in DualShock mode in CM controls settings)
+})
+
+os.DialogFlags = __enum({}, {
+  None = 0x0,
+  OverwritePrompt	= 0x2, -- When saving a file, prompt before overwriting an existing file of the same name. This is a default value for the Save dialog.
+  StrictFileTypes	= 0x4, -- In the Save dialog, only allow the user to choose a file that has one of the file name extensions specified through IFileDialog::SetFileTypes.
+  NoChangeDir	= 0x8, -- Don't change the current working directory.
+  PickFolders	= 0x20, -- Present an Open dialog that offers a choice of folders rather than files.
+  ForceFileSystem	= 0x40, -- Ensures that returned items are file system items (SFGAO_FILESYSTEM). Note that this does not apply to items returned by IFileDialog::GetCurrentSelection.
+  AllNonStorageItems	= 0x80, -- Enables the user to choose any item in the Shell namespace, not just those with SFGAO_STREAM or SFAGO_FILESYSTEM attributes. This flag cannot be combined with FOS_FORCEFILESYSTEM.
+  NoValidate	= 0x100, -- Do not check for situations that would prevent an application from opening the selected file, such as sharing violations or access denied errors.
+  AllowMultiselect	= 0x200, -- Enables the user to select multiple items in the open dialog. Note that when this flag is set, the IFileOpenDialog interface must be used to retrieve those items.
+  PathMustExist	= 0x800, -- The item returned must be in an existing folder. This is a default value.
+  FileMustExist	= 0x1000, -- The item returned must exist. This is a default value for the Open dialog.
+  CreatePrompt	= 0x2000, -- Prompt for creation if the item returned in the save dialog does not exist. Note that this does not actually create the item.
+  ShareAware	= 0x4000, -- In the case of a sharing violation when an application is opening a file, call the application back through OnShareViolation for guidance. This flag is overridden by FOS_NOVALIDATE.
+  NoReadonlyReturn	= 0x8000, -- Do not return read-only items. This is a default value for the Save dialog.
+  NoTestFileCreate	= 0x10000, -- Do not test whether creation of the item as specified in the Save dialog will be successful. If this flag is not set, the calling application must handle errors, such as denial of access, discovered when the item is created.
+  HideMRUPlaces	= 0x20000, -- Hide the list of places from which the user has recently opened or saved items. This value is not supported as of Windows 7.
+  HidePinnedPlaces	= 0x40000, -- Hide items shown by default in the view's navigation pane. This flag is often used in conjunction with the IFileDialog::AddPlace method, to hide standard locations and replace them with custom locations.\n\nWindows 7 and later. Hide all of the standard namespace locations (such as Favorites, Libraries, Computer, and Network) shown in the navigation pane.\n\nWindows Vista. Hide the contents of the Favorite Links tree in the navigation pane. Note that the category itself is still displayed, but shown as empty.
+  NoDereferenceLinks	= 0x100000, -- Shortcuts should not be treated as their target items. This allows an application to open a .lnk file rather than what that file is a shortcut to.
+  OkButtonNeedsInteraction	= 0x200000, -- The OK button will be disabled until the user navigates the view or edits the filename (if applicable). Note: Disabling of the OK button does not prevent the dialog from being submitted by the Enter key.
+  DontAddToRecent	= 0x2000000, -- Do not add the item being opened or saved to the recent documents list (SHAddToRecentDocs).
+  ForceShowHidden	= 0x10000000, -- Include hidden and system items.
+  DefaultNoMiniMode	= 0x20000000, -- Indicates to the Save As dialog box that it should open in expanded mode. Expanded mode is the mode that is set and unset by clicking the button in the lower-left corner of the Save As dialog box that switches between Browse Folders and Hide Folders when clicked. This value is not supported as of Windows 7.
+  ForcePreviewPaneOn	= 0x40000000, -- Indicates to the Open dialog box that the preview pane should always be displayed.
+  SupportStreamableItems	= 0x80000000 -- Indicates that the caller is opening a file as a stream (BHID_Stream), so there is no need to download that file.
+})
+
+ac.TurningLights = __enum({ cpp = 'lua_turning_lights' }, {
+  None = 0,
+  Left = 1,
+  Right = 2,
+  Hazards = 3,
+})
+
+ac.CarAudioEventID = __enum({ cpp = 'lua_car_audio_event_id' }, {
+  EngineExt = 0,
+  EngineInt = 1,
+  GearExt = 2,
+  GearInt = 3,
+  Bodywork = 4,
+  Wind = 5,
+  Dirt = 6,
+  Downshift = 7,
+  Horn = 8,
+  GearGrind = 9,
+  BackfireExt = 10,
+  BackfireInt = 11,
+  TractionControlExt = 12,
+  TractionControlInt = 13,
+  Transmission = 14,
+  Limiter = 15,
+  Turbo = 16,
+  WheelLF = 20, -- Add 0-based index to this value for Nth wheel
+  WheelRF = 21,
+  WheelLR = 22,
+  WheelRR = 23,
+  SkidIntLF = 30, -- Add 0-based index to this value for Nth wheel
+  SkidIntRF = 31,
+  SkidIntLR = 32,
+  SkidIntRR = 33,
+  SkidExtLF = 40, -- Add 0-based index to this value for Nth wheel
+  SkidExtRF = 41,
+  SkidExtLR = 42,
+  SkidExtRR = 43,
+})
+
+---Flags specifying when to start calling the `update()` next time. Different conditions be combined with `bit.bor()`.
+---If your script only needs to, for example, reset a certain thing when car resets, don’t forget to call 
+---`ac.pauseScriptUntil()` again once you’re done.
+---
+---Other functions (such as `script.reset()` for car physics script), callbacks, timers or event listeners will still be 
+---called. You can cancel out pause by calling `ac.pauseScriptUntil(ac.ScriptResumeCondition.NoPause)` from there.
+---
+---Currently only available to car scripts, both display/extension and physics (since the major performance issue with Lua
+---is mostly when there are dozens or hundreds of cars all running even some lightweight Lua scripts, which is admittedly
+---a rare case).
+ac.ScriptResumeCondition = __enum({ cpp = 'resume_condition', passThrough = true }, {
+  NoPause = -1,          -- @hidden
+  Resume = -1,           -- Disable pause, keep calling `update()` as usual
+  Forever = 0,           -- @hidden
+  None = 0,              -- Do not resume script ever
+  Pitlane = 1,           -- Resume script once car arrives in pitlane
+  Pits = 2,              -- Resume script when car gets in pits
+  Reset = 4,             -- Pause until car resets
+  Extra = 8,             -- Pause until extra switch is used
+  MeshInteraction = 16,  -- Pause until there is a change mesh could have been touched
+})
+
+---Key indices, pretty much mirrors all those “VK_…” key tables.
+ui.KeyIndex = __enum({ cpp = 'vk_key', override = 'ui.*/keyIndex:integer' }, { 
+  LeftButton = 0x01,
+  RightButton = 0x02,
+  Cancel = 0x03, -- @opt
+  MiddleButton = 0x04, -- not contiguous with LeftButton and RightButton
+  XButton1 = 0x05, -- not contiguous with LeftButton and RightButton
+  XButton2 = 0x06, -- not contiguous with LeftButton and RightButton
+  Back = 0x08, -- @opt
+  Tab = 0x09,
+  Clear = 0x0C, -- @opt
+  Return = 0x0D,
+  Shift = 0x10,
+  Control = 0x11,
+  Menu = 0x12, -- aka Alt button
+  Pause = 0x13, -- @opt
+  Capital = 0x14, -- @opt
+  Kana = 0x15, -- @opt
+  Hangeul = 0x15, -- old name - should be here for compatibility @opt
+  Hangul = 0x15, -- @opt
+  Junja = 0x17, -- @opt
+  Final = 0x18, -- @opt
+  Hanja = 0x19, -- @opt
+  Kanji = 0x19, -- @opt
+  Escape = 0x1B,
+  Convert = 0x1C, -- @opt
+  NonConvert = 0x1D, -- @opt
+  Accept = 0x1E,
+  ModeChange = 0x1F, -- @opt
+  Space = 0x20,
+  Prior = 0x21, -- @opt
+  Next = 0x22, -- @opt
+  End = 0x23,
+  Home = 0x24,
+  Left = 0x25, -- arrow ←
+  Up = 0x26, -- arrow ↑
+  Right = 0x27, -- arrow →
+  Down = 0x28, -- arrow ↓
+  Select = 0x29, -- @opt
+  Print = 0x2A, -- @opt
+  Execute = 0x2B, -- @opt
+  Snapshot = 0x2C, -- @opt
+  Insert = 0x2D,
+  Delete = 0x2E,
+  Help = 0x2F, -- @opt
+  LeftWin = 0x5B,
+  RightWin = 0x5C,
+  Apps = 0x5D, -- @opt
+  Sleep = 0x5F, -- @opt
+  NumPad0 = 0x60,
+  NumPad1 = 0x61,
+  NumPad2 = 0x62,
+  NumPad3 = 0x63,
+  NumPad4 = 0x64,
+  NumPad5 = 0x65,
+  NumPad6 = 0x66,
+  NumPad7 = 0x67,
+  NumPad8 = 0x68,
+  NumPad9 = 0x69,
+  Multiply = 0x6A,
+  Add = 0x6B,
+  Separator = 0x6C,
+  Subtract = 0x6D,
+  Decimal = 0x6E,
+  Divide = 0x6F,
+  F1 = 0x70,
+  F2 = 0x71,
+  F3 = 0x72,
+  F4 = 0x73,
+  F5 = 0x74,
+  F6 = 0x75,
+  F7 = 0x76,
+  F8 = 0x77,
+  F9 = 0x78,
+  F10 = 0x79,
+  F11 = 0x7A,
+  F12 = 0x7B,
+  F13 = 0x7C, -- @opt
+  F14 = 0x7D, -- @opt
+  F15 = 0x7E, -- @opt
+  F16 = 0x7F, -- @opt
+  F17 = 0x80, -- @opt
+  F18 = 0x81, -- @opt
+  F19 = 0x82, -- @opt
+  F20 = 0x83, -- @opt
+  F21 = 0x84, -- @opt
+  F22 = 0x85, -- @opt
+  F23 = 0x86, -- @opt
+  F24 = 0x87, -- @opt
+  NavigationView = 0x88, -- reserved @opt
+  NavigationMenu = 0x89, -- reserved @opt
+  NavigationUp = 0x8A, -- reserved @opt
+  NavigationDown = 0x8B, -- reserved @opt
+  NavigationLeft = 0x8C, -- reserved @opt
+  NavigationRight = 0x8D, -- reserved @opt
+  NavigationAccept = 0x8E, -- reserved @opt
+  NavigationCancel = 0x8F, -- reserved @opt
+  NumLock = 0x90,
+  Scroll = 0x91,
+  OemNecEqual = 0x92, -- “=” key on numpad @opt
+  OemFjJisho = 0x92, -- “Dictionary” key @opt
+  OemFjMasshou = 0x93, -- “Unregister word” key @opt
+  OemFjTouroku = 0x94, -- “Register word” key @opt
+  OemFjLoya = 0x95, -- “Left OYAYUBI” key @opt
+  OemFjRoya = 0x96, -- “Right OYAYUBI” key @opt
+  LeftShift = 0xA0,
+  RightShift = 0xA1,
+  LeftControl = 0xA2,
+  RightControl = 0xA3,
+  LeftMenu = 0xA4, -- aka left Alt button
+  RightMenu = 0xA5, -- aka right Alt button
+  BrowserBack = 0xA6, -- @opt
+  BrowserForward = 0xA7, -- @opt
+  BrowserRefresh = 0xA8, -- @opt
+  BrowserStop = 0xA9, -- @opt
+  BrowserSearch = 0xAA, -- @opt
+  BrowserFavorites = 0xAB, -- @opt
+  BrowserHome = 0xAC, -- @opt
+  VolumeMute = 0xAD, -- @opt
+  VolumeDown = 0xAE, -- @opt
+  VolumeUp = 0xAF, -- @opt
+  MediaNextTrack = 0xB0, -- @opt
+  MediaPrevTrack = 0xB1, -- @opt
+  MediaStop = 0xB2, -- @opt
+  MediaPlayPause = 0xB3, -- @opt
+  LaunchMail = 0xB4, -- @opt
+  LaunchMediaSelect = 0xB5, -- @opt
+  LaunchApp1 = 0xB6, -- @opt
+  LaunchApp2 = 0xB7, -- @opt
+  Oem1 = 0xBA, -- “;:” for US
+  OemPlus = 0xBB, -- “+” any country @opt
+  OemComma = 0xBC, -- “,” any country @opt
+  OemMinus = 0xBD, -- “-” any country @opt
+  OemPeriod = 0xBE, -- “.” any country @opt
+  Oem2 = 0xBF, -- “/?” for US @opt
+  Oem3 = 0xC0, -- “`~” for US @opt
+  GamepadA = 0xC3, -- reserved @opt
+  GamepadB = 0xC4, -- reserved @opt
+  GamepadX = 0xC5, -- reserved @opt
+  GamepadY = 0xC6, -- reserved @opt
+  GamepadRightShoulder = 0xC7, -- reserved @opt
+  GamepadLeftShoulder = 0xC8, -- reserved @opt
+  GamepadLeftTrigger = 0xC9, -- reserved @opt
+  GamepadRightTrigger = 0xCA, -- reserved @opt
+  GamepadDpadUp = 0xCB, -- reserved @opt
+  GamepadDpadDown = 0xCC, -- reserved @opt
+  GamepadDpadLeft = 0xCD, -- reserved @opt
+  GamepadDpadRight = 0xCE, -- reserved @opt
+  GamepadMenu = 0xCF, -- reserved @opt
+  GamepadView = 0xD0, -- reserved @opt
+  GamepadLeftThumbstickButton = 0xD1, -- reserved @opt
+  GamepadRightThumbstickButton = 0xD2, -- reserved @opt
+  GamepadLeftThumbstickUp = 0xD3, -- reserved @opt
+  GamepadLeftThumbstickDown = 0xD4, -- reserved @opt
+  GamepadLeftThumbstickRight = 0xD5, -- reserved @opt
+  GamepadLeftThumbstickLeft = 0xD6, -- reserved @opt
+  GamepadRightThumbstickUp = 0xD7, -- reserved @opt
+  GamepadRightThumbstickDown = 0xD8, -- reserved @opt
+  GamepadRightThumbstickRight = 0xD9, -- reserved @opt
+  GamepadRightThumbstickLeft = 0xDA, -- reserved @opt
+  SquareOpenBracket = 0xDB,
+  SquareCloseBracket = 0xDD,
+  --[[? for (let i = 0; i < 10; ++i) out(`D${i} = 0x${(''+i).charCodeAt(0).toString(16)}, -- Digit ${i}\n`) ?]]
+  --[[? for (let i = 'A'.charCodeAt(0); i <= 'Z'.charCodeAt(0); ++i) out(`${String.fromCharCode(i)} = 0x${i.toString(16)}, -- Letter ${String.fromCharCode(i)}\n`) ?]]
 })

@@ -51,6 +51,7 @@ rgbm.colors = { transparent = rgbm(0, 0, 0, 0), black = rgbm(0, 0, 0, 1), silver
 ---@operator div(number|rgbm): rgbm
 ---@operator pow(number|rgbm): rgbm
 ---@operator len: number
+---@operator unm: rgbm
 ---@constructor fun(r: number?, g: number?, b: number?, mult: number?): rgbm
 
 ---Makes a copy of a vector.
@@ -162,3 +163,7 @@ function rgbm:vec3() end
 ---Returns vec4, where X, Y and Z are RGB values and W is mult.
 ---@return vec4
 function rgbm:vec4() end
+
+---Returns string with hex representation and leading “#”.
+---@return string
+function rgbm:hex() end

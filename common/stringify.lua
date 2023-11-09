@@ -34,6 +34,10 @@ local function _stringifyKey(out, ptr, obj, fnFullStringfy, lineBreak, depthLimi
   return ptr + 1
 end
 
+local function _stringifyFFI(out, ptr, obj)
+  return obj:__stringify(out, ptr)
+end
+
 local _svst, _svsp = nil, {}
 
 local function _stringify(out, ptr, obj, lineBreak, depthLimit)
@@ -146,10 +150,19 @@ local function _stringify(out, ptr, obj, lineBreak, depthLimit)
 ${fields.map((x, i) => `      out[ptr + ${i * 2 + 1}] = tostring(obj.${x})\n      out[ptr + ${i * 2 + 2}] = ${i == fields.length - 1 ? `')'` : 'comma'}`).join('\n')}
       return ptr + ${fields.length * 2 + 1}
     end
-`) ?]]    out[ptr] = lineBreak and '{ type = "cdata", tostring = ' or '{type="cdata",tostring='
-    out[ptr + 1] = string.format('%q', tostring(obj))
-    out[ptr + 2] = lineBreak and ' }' or '}'
-    return ptr + 2
+`) ?]]
+
+    _svst[obj] = true
+    local s, v = pcall(_stringifyFFI, out, ptr, obj)
+    _svst[obj] = nil
+    if s then
+      return v
+    else
+      out[ptr] = lineBreak and '{ type = "cdata", tostring = ' or '{type="cdata",tostring='
+      out[ptr + 1] = string.format('%q', tostring(obj))
+      out[ptr + 2] = lineBreak and ' }' or '}'
+      return ptr + 3
+    end
   end
 
   if objType == 'nil' then
@@ -194,6 +207,29 @@ local function _stringifyParse(v, env)
   local r = f()
   s = _penn + 1
   _penp[s], _penn = o, s
+  return r
+end
+
+__util.strCns = function(v)
+  -- For const() preprocessing, do not use anywhere else
+  local t = type(v)
+  if t == 'function' then return '' end
+  if t == 'number' or t == 'boolean' or t == 'string' or t == 'table' or t == 'nil' then return stringify(v, true, 40) end
+  local o = {'('}
+  local q = _svst == nil
+  if q then
+    _svst = _svsp
+  end
+  local e = _stringify(o, 2, v, nil, 40)
+  if q then
+    _svst = nil
+    table.clear(_svsp)
+  end
+  o[e] = ')'
+  local r = table.concat(o)
+  if string.find(r, '",tostring="', 1, true) then
+    error('Unserializable item: '..table.concat(o), 2)
+  end
   return r
 end
 
@@ -243,7 +279,7 @@ stringify = setmetatable({
     if q then
       _svst = _svsp
     end
-    local s = _strn
+    local s = _strn -- pool to reuse memory
     local o = s > 0 and _strp[s] or {}
     if s > 0 then _strn = s - 1 end
     _stringify(o, 1, v, not compact and '\n' or nil, depthLimit or 20)

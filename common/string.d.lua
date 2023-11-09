@@ -20,6 +20,40 @@ function string.split(self, separator, limit, trimResult, skipEmpty, splitByAnyC
 ---@return ... @Numbers
 function string.numbers(self, limit) end
 
+---Works like string.find with plain mode, but ignores case.
+---@param self string @String to find `needle` in.
+---@param needle string @String to find.
+---@param index integer? @Starting search index. Default value: `1`.
+---@return integer? @1-based index of a first match, or `nil` if nothing has been found.
+function string.findIgnoreCase(self, needle, index) end
+
+---Searches and replaces all the substrings.
+---@param self string @String to find `replacee` and replace with `replacer` in.
+---@param replacee string @String to find.
+---@param replacer string? @String to replace. Default value: ``.
+---@param limit integer? @Maximum number of found strings to replace. Default value: `math.huge`.
+---@param ignoreCase boolean? @Option for case-incensitive search. Default value: `false`.
+---@return string, integer @Second value returned is for the number of replacements.
+function string.replace(self, replacee, replacer, limit, ignoreCase) end
+
+---Returns UTF8 string for a corresponding code point.
+---@param codePoint integer
+---@return string
+function string.codePointToUTF8(codePoint) end
+
+---Looks for a next emoji in the string. If next emoji is complex, all the symbols will be processed and returned as a single byte sequence. Uses 15th version
+---with data from Emoji Keyboard/Display Test Data for UTS #51.
+---@param self string @String to search emojis in.
+---@param offset integer? @Optional offset for the matching beginning. Default value: `0`.
+---@return integer? @Returns 1-based starting index of an emojis, or `nil` if no emojis have been found.
+---@return integer? @Returns 1-based ending index, or `nil` if no emojis have been found.
+function string.nextEmoji(self, offset) end
+
+---Encodes URL argument.
+---@param self string
+---@return string
+function string.urlEncode(self) end
+
 ---Checks if the beginning of a string matches another string. If string to match is longer than the first one, always returns `false`.
 ---@param self string @String to check the beginning of.
 ---@param another string @String to match.
@@ -39,6 +73,12 @@ function string.endsWith(self, another, offset) end
 ---@param another string @Second string.
 ---@return integer @Returns positive number if first string is larger than second one, or 0 if strings are equal.
 function string.alphanumCompare(self, another) end
+
+---Compares string as versions (splits by dots and uses alphanumerical comparator for each piece).
+---@param self string @First version.
+---@param another string @Second version.
+---@return integer @Returns positive number if first version is newer than second one, or 0 if versions are equal.
+function string.versionCompare(self, another) end
 
 ---Trims string at beginning and end.
 ---@param self string @String to trim.
@@ -69,7 +109,7 @@ function string.pad(self, targetLength, pad, direction) end
 ---@param init integer? @1-based offset to start searching from. Default value: `1`.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return integer? @1-based index of where the match occured, or `nil` if no match has been found.
----@return integer @1-based index of the ending of found pattern, or `nil` if no match has been found.
+---@return integer? @1-based index of the ending of found pattern, or `nil` if no match has been found.
 ---@return ... @Captured elements, if there are any capture groups in the pattern.
 ---@nodiscard
 function string.regfind(self, pattern, init, ignoreCase) end

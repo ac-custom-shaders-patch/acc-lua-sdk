@@ -6,6 +6,8 @@ require './ac_display'
 require './ac_render_enums'
 require './ac_render_shader'
 
+local _sp_scenep = {template = 'project.fx', defaultBlendMode = render.BlendMode.BlendAccurate, delayed = true}
+
 -- Mesh vertex related stuff:
 
 ffi.cdef [[ typedef struct { vec3 pos; vec3 normal; vec2 uv; vec3 __extras; } lua_mesh_vertex; ]]
@@ -86,11 +88,10 @@ local _texBgSkip = rgbm(0,0,0,-1)
 local _texBgOriginal = rgbm(-1,0,0,0)
 local _vecUp = vec3(0, 1, 0)
 
-ac.IncludeType = __enum({ cpp = 'include_type' }, {
-  None = 0,
-  Car = 1,
-  Track = 2
-})
+local function __sip(s, i)
+  i = i + 1
+  if i <= s.__size then return i, s:at(i) end
+end
 
 ---Reference to one or several objects in scene. Works similar to those jQuery things which would refer to one or
 ---several of webpage elements. Use methods like `ac.findNodes()` to get one. Once you have a reference to some nodes,
@@ -100,16 +101,12 @@ ac.IncludeType = __enum({ cpp = 'include_type' }, {
 ---@class ac.SceneReference
 ffi.cdef [[ typedef struct { int __size; } noderef; ]]
 ffi.metatype('noderef', {
-  __len = function(s) return s:size() end,
+  __len = function(s) return s.__size end,
   __tostring = function(s)
-    return string.format('ac.SceneReference<%d>', s:size())
+    return string.format('ac.SceneReference<%d>', s.__size)
   end,
   __ipairs = function(s)
-    local i, n = 0, #s
-    return function()
-      i = i + 1
-      if i <= n then return i, s:at(i) end
-    end
+    return __sip, s, 0
   end,
   __index = {
 
@@ -117,7 +114,7 @@ ffi.metatype('noderef', {
     ---created node or a loaded KN5.
     dispose = function (s) return ffi.C.lj_noderef_dispose__scene(s) end,
 
-    ---Set outline for meshes in the reference. Outline remains active until explicitly disabled or until reference is released.
+    ---Set debug outline for meshes in the reference. Outline remains active until explicitly disabled or until reference is released.
     ---Note: each outlined group adds a render target switch and additional draw calls, so avoid adding it to more than, let’s say,
     ---ten groups at once (each group can have multiple meshes in it). 
     ---@param color rgbm? @Outline color. Use `nil` or transparent color to disable outline.
@@ -388,6 +385,14 @@ ffi.metatype('noderef', {
     ---@return ac.SceneReference @Returns self for easy chaining.
     setShadows = function (s, shadows) ffi.C.lj_noderef_setshadows__scene(s, shadows == true) return s end,
 
+    ---@param exclude boolean
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    excludeFromCubemap = function (s, exclude) ffi.C.lj_noderef_setexcludecubemap__scene(s, exclude == true) return s end,
+
+    ---@param exclude boolean
+    ---@return ac.SceneReference @Returns self for easy chaining.
+    excludeFromSecondary = function (s, exclude) ffi.C.lj_noderef_setexcludesecondary__scene(s, exclude == true) return s end,
+
     ---@param transparent boolean
     ---@return ac.SceneReference @Returns self for easy chaining.
     setTransparent = function (s, transparent) ffi.C.lj_noderef_settransparent__scene(s, transparent == true) return s end,
@@ -540,7 +545,6 @@ ffi.metatype('noderef', {
     getChild = function (s, index) return cr(ffi.C.lj_noderef_child__scene(s, (tonumber(index) or 1) - 1)) end,
 
     ---Returns a new scene reference with first-class children (not children of children) of all nodes in current reference.
-    ---@param index integer? @1-based index of a child. Default value: 1.
     ---@return ac.SceneReference
     getChildren = function (s) return cr(ffi.C.lj_noderef_child__scene(s, -1)) end,
 
@@ -558,6 +562,11 @@ ffi.metatype('noderef', {
     ---@param sceneRef ac.SceneReference @Scene reference to remove.
     ---@return ac.SceneReference @Returns self for easy chaining.
     subtract = function (s, sceneRef) ffi.C.lj_noderef_subtract__scene(s, sceneRef) return s end,
+
+    ---Returns `true` if there is a node from `childSceneRef` somewhere in this node.
+    ---@param childSceneRef ac.SceneReference @Scene reference to remove.
+    ---@return boolean
+    contains = function (s, childSceneRef) return ffi.C.lj_noderef_contains__scene(s, childSceneRef) end,
 
     ---Clears current scene reference.
     ---@return ac.SceneReference @Returns self for easy chaining.
@@ -686,6 +695,12 @@ ffi.metatype('noderef', {
       slot = type(slot) == 'string' and ffi.C.lj_noderef_textureslotindex__scene(s, index, slot) or (tonumber(slot) or 1) - 1
       return __util.strrefp(ffi.C.lj_noderef_textureslotfilename__scene(s, index, slot))
     end,
+
+    ---Dump shader replacements configs for materials in current selection. Resulting string might be pretty huge. Not all properties are dumped, but more properties might be added later. Some textures are stored as temporary IDs only valid within a session.
+    ---@return string
+    dumpShaderReplacements = function (s)
+      return __util.strrefr(ffi.C.lj_noderef_dumpmaterials__scene(s))
+    end,
     
     ---Get value of a certain material property of an element.
     ---@param index integer|nil @1-based index of an element to get a material property of. Default value: 1.
@@ -784,7 +799,6 @@ ffi.metatype('noderef', {
     end,
 
     ---Returns number of nodes and meshes matching between this and another scene reference. Could be used to quickly find out if a certain element is in a set.
-    ---@param s ac.SceneReference
     ---@param other nil|ac.SceneReference|ac.SceneReference[] @Can be a single scene reference or a table with several of them. 
     ---@return integer
     countMatches = function (s, other)
@@ -794,7 +808,6 @@ ffi.metatype('noderef', {
     end,
 
     ---Creates a new scene reference containing unique elements from both sets.
-    ---@param s ac.SceneReference
     ---@param other nil|ac.SceneReference|ac.SceneReference[] @Can be a single scene reference or a table with several of them.
     ---@return ac.SceneReference
     makeUnionWith = function (s, other)
@@ -804,7 +817,6 @@ ffi.metatype('noderef', {
     end,
 
     ---Creates a new scene reference containing only the elements found in both of original sets.
-    ---@param s ac.SceneReference
     ---@param other nil|ac.SceneReference|ac.SceneReference[] @Can be a single scene reference or a table with several of them. 
     ---@return ac.SceneReference
     makeIntersectionWith = function (s, other)
@@ -814,7 +826,6 @@ ffi.metatype('noderef', {
     end,
 
     ---Creates a new scene reference containing only the elements found in first set, but not in second set.
-    ---@param s ac.SceneReference
     ---@param other nil|ac.SceneReference|ac.SceneReference[] @Can be a single scene reference or a table with several of them. 
     ---@return ac.SceneReference
     makeSubtractionWith = function (s, other)
@@ -991,10 +1002,11 @@ ffi.metatype('noderef', {
       defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
       values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+      directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/project.fx” (look into it to see what fields are available)."
     }]]
     projectShader = function(s, params)
-      local dc = __util.setShaderParams(params, 'project.fx', render.BlendMode.BlendAccurate)
+      local dc = __util.setShaderParams2(params, _sp_scenep)
       if not dc then return false end
       ffi.C.lj_noderefcshader_enqueue__scene(dc, s, __util.ensure_vec3(params.pos), __util.ensure_vec3(params.look), __util.ensure_vec3_nil(params.up), 
         __util.ensure_vec2_nil(params.size), params.withDepth ~= false, params.expanded ~= false, __util.ensure_vec2_nil(params.uvOffset))
@@ -1075,9 +1087,10 @@ typedef struct {
 ---@param withDepth boolean? @If set to `true`, depth buffer will be available to show as well.
 ---@param antialiasingMode render.AntialiasingMode? @Antialiasing mode. Default value: `render.AntialiasingMode.None` (disabled).
 ---@param textureFormat render.TextureFormat? @Texture format. Default value: `render.TextureFormat.R8G8B8A8.UNorm`. Note: antialiasing expects the default format.
+---@param flags render.TextureFlags? @Extra flags. Default value: `0`.
 ---@return ac.GeometryShot
 ---@overload fun(sceneReference: ac.SceneReference, resolution: vec2|integer, mips: integer, withDepth: boolean, textureFormat: render.TextureFormat)
-function ac.GeometryShot(sceneReference, resolution, mips, withDepth, antialiasingMode, textureFormat)
+function ac.GeometryShot(sceneReference, resolution, mips, withDepth, antialiasingMode, textureFormat, flags)
   local callbackOpaque, callbackTransparent = 0, 0
   if type(sceneReference) == 'table' then
     callbackOpaque = type(sceneReference.opaque) == 'function' and __util.setCallback(sceneReference.opaque) or 0
@@ -1096,7 +1109,8 @@ function ac.GeometryShot(sceneReference, resolution, mips, withDepth, antialiasi
 
   local c = __util.native('carshot_new',
     sceneReference, resolution.x, resolution.y, tonumber(mips) or 1, withDepth == true,
-    tonumber(antialiasingMode) or 0, tonumber(textureFormat) or 28, callbackOpaque, callbackTransparent)
+    tonumber(antialiasingMode) or 0, tonumber(textureFormat) or 28, tonumber(flags) or 0, 
+    callbackOpaque, callbackTransparent)
   return ffi.gc(c, ffi.C.lj_carshot_gc__scene)
 end
 
@@ -1119,6 +1133,14 @@ ffi.metatype('carshot', {
       return ffi.C.lj_carshot_dispose__scene(s)
     end,
 
+    ---Sets geometry shot name for debugging. Shots with set name appear in Lua Debug App, allowing to monitor their state.
+    ---@param name string? @Name to display texture as. If set to `nil` or `false`, name will be reset and texture will be hidden.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setName = function (s, name)
+      ffi.C.lj_carshot_setname__scene(s, name and tostring(name) or nil)
+      return s
+    end,
+
     ---Updates texture making a shot of referenced geometry with given camera parameters. Camera coordinates are set in world space.
     ---
     ---To make orthogonal shot, pass 0 as `fov`.
@@ -1129,6 +1151,15 @@ ffi.metatype('carshot', {
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     update = function (s, pos, look, up, fov)
       ffi.C.lj_carshot_update_prep__scene(s, __util.ensure_vec3(pos), __util.ensure_vec3(look), __util.ensure_vec3_nil(up), tonumber(fov) or 90)
+      __util.native('carshot_update')
+      return s
+    end,
+
+    ---Updates texture making a shot from a position of a track camera. Pass the index of a car to focus on.
+    ---@param carIndex integer? @0-based car index. Default value: `0`.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    updateWithTrackCamera = function (s, carIndex)
+      ffi.C.lj_carshot_update_prep_tc__scene(s, tonumber(carIndex) or 0)
       __util.native('carshot_update')
       return s
     end,
@@ -1168,9 +1199,6 @@ ffi.metatype('carshot', {
 
     ---Enables original lighting (stops from switching to neutral lighting active by default). With original lighting,
     ---methods like `shot:setAmbientColor()` and `shot:setReflectionColor()` would no longer have an effect.
-    ---
-    ---Note: this is not working well currently with post-processing active, drawing HDR colors into LDR texture. 
-    ---Better support for such things is coming a bit later.
     ---@param value boolean? @Set to `true` to enable original lighting. Default value: `true`.
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     setOriginalLighting = function(s, value)
@@ -1179,9 +1207,6 @@ ffi.metatype('carshot', {
     end,
 
     ---Enables sky in the shot. By default, sky is not drawn.
-    ---
-    ---Note: this is not working well currently with post-processing active, drawing HDR colors into LDR texture. 
-    ---Better support for such things is coming a bit later.
     ---@param value boolean? @Set to `true` to enable sky. Default value: `true`.
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     setSky = function(s, value)
@@ -1205,6 +1230,14 @@ ffi.metatype('carshot', {
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     setShadersType = function(s, type)
       ffi.C.lj_carshot_setshaderset__scene(s, tonumber(type) or 13)
+      return s
+    end,
+
+    ---Replaces shadow set with an alternative one. Pretty expensive, use carefully.
+    ---@param type 'area' @Type of shadow set to use.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setAlternativeShadowsSet = function(s, type)
+      ffi.C.lj_carshot_setshadowsset__scene(s, tostring(type))
       return s
     end,
 
@@ -1260,6 +1293,32 @@ ffi.metatype('carshot', {
       return s
     end,
 
+    ---Configures geometry shot for the best possible quality for a scene shot, such as including all the geometry (maximum
+    ---world detail), enabling particles, transparent pass, main shaders, etc. If you need something like making a nice shot
+    ---of a scene from a certain point of view, this might be a good shortcut: if more visually improving features will be 
+    ---added in the future, they’ll be included here as well.
+    ---
+    ---Please avoid using it for something like rear view camera or a track display though, they could definitely benefit from
+    ---using simpler shaders or lower level of detail.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setBestSceneShotQuality = function(s)
+      s:setShadersType(render.ShadersType.Main)
+      s:setParticles(true)
+      s:setTransparentPass(true)
+      s:setSky(true)
+      s:setMaxLayer(5)
+      s:setOriginalLighting(true)
+      return s
+    end,
+
+    ---Overrides exposure used if antialiasing mode is set to YEBIS value. By default scene exposure is used.
+    ---@param value number? @Exposure used by YEBIS post-processing. Pass `nil` to reset to default behavior.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setExposure = function(s, value)
+      ffi.C.lj_carshot_setexposure__scene(s, tonumber(value) or math.huge)
+      return s
+    end,
+
     ---Returns texture resolution (or zeroes if element has been disposed).
     ---@return vec2
     size = function(s)
@@ -1270,6 +1329,14 @@ ffi.metatype('carshot', {
     ---@return integer
     mips = function(s)
       return ffi.C.lj_carshot_mipscount__scene(s)
+    end,
+
+    ---Returns shared handle to the texture. Shared handle can be used in other scripts with `ui.SharedTexture()`, or, if `crossProcess` flag
+    ---is set to `true`, also accessed by other processes.
+    ---@param crossProcess boolean? @Set to `true` to be able to pass a handle to other processes. Requires `render.TextureFlags.Shared` flag to be set during creation. Default value: `false`.
+    ---@return integer
+    sharedHandle = function(s, crossProcess)
+      return ffi.C.lj_carshot_sharedhandle__scene(s, crossProcess == true)
     end,
 
     ---Manually applies antialiasing to the texture (works only if it was created with a specific antialiasing mode).
@@ -1297,5 +1364,33 @@ ffi.metatype('carshot', {
       ffi.C.lj_carshot_save__scene(s, filename, format)
       return s
     end,
+
+    ---Returns image encoded in DDS format. Might be useful if you would need to store an image
+    ---in some custom form (if so, consider compressing it with `ac.compress()`).
+    ---
+    ---Note: you can later use `ui.decodeImage()` to get a string which you can then pass as a texture name
+    ---to any of texture receiving functions. This way, you can load image into a new canvas later: just
+    ---create a new canvas (possibly using `ui.imageSize()` first to get image size) and update it drawing
+    ---imported image to the full size of the canvas.
+    ---@return string|nil @Binary data, or `nil` if binary data export has failed.
+    encode = function(s)
+      return __util.strrefp(ffi.C.lj_carshot_tobytes__scene(s))
+    end,
+
+    ---Downloads data from GPU to CPU asyncronously (usually takes about 0.15 ms to get the data). Resulting data can be
+    ---used to access colors of individual pixels or upload it back to CPU restoring original state.
+    ---@param callback fun(err: string, data: ui.ExtraCanvasData)
+    accessData = function (s, callback)
+      if not callback then return end
+      if type(callback) ~= 'function' then error('Function is required for callback', 2) end
+      ffi.C.lj_carshot_tocpu__scene(s, __util.expectReply(function (err, key)
+        if err then callback(err)
+        else
+          local r = ffi.C.lj_uirtcpu_get__ui(key)
+          if r == nil then callback('Unexpectedly missing data') 
+          else callback(nil, ffi.gc(r, ffi.C.lj_uirtcpu_gc__ui)) end
+        end
+      end))
+    end
   }
 })

@@ -8,7 +8,7 @@ __namespace = function(name) end
 ---@param cb function
 __post_cdef = function(cb) end
 
-__definitions = function() end
+__definitions = function(arg) end
 __enum = function(params, values) end
 __carindex__ = 0
 __cfgSection__ = 0

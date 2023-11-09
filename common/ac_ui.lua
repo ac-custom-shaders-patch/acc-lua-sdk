@@ -1,373 +1,15 @@
 __source 'lua/api_ui.cpp'
 __source 'lua/api_ui_ac.cpp'
 __source 'lua/api_ui_gif.cpp'
+__source 'lua/api_ui_shared.cpp'
 __namespace 'ui'
 
 require './ac_render_shader'
+require './ac_ui_enums'
 
----UI namespace for creating custom widgets or drawing dynamic textures using IMGUI.
-ui = {}
-
-ui.CornerFlags = __enum({ cpp = 'ImDrawCornerFlags' }, {
-  None = 0,
-  TopLeft = 1,
-  TopRight = 2,
-  BottomLeft = 4,
-  BottomRight = 8,
-  Top = 3,
-  Bottom = 12,
-  Left = 5,
-  Right = 10,
-  All = 15
-})
-
-ui.Direction = __enum({ cpp = 'ImGuiDir' }, {
-  None = -1,
-  Left = 0,
-  Right = 1,
-  Up = 2,
-  Down = 3,
-})
-
-ui.HoveredFlags = __enum({ cpp = 'ImGuiHoveredFlags' }, {
-  None                          = 0,    -- Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
-  ChildWindows                  = 1,    -- `ac.windowHovered()` only: Return true if any children of the window is hovered
-  RootWindow                    = 2,    -- `ac.windowHovered()` only: Test from root window (top most parent of the current hierarchy)
-  AnyWindow                     = 4,    -- `ac.windowHovered()` only: Return true if any window is hovered
-  AllowWhenBlockedByPopup       = 8,    -- Return true even if a popup window is normally blocking access to this item/window
-  AllowWhenBlockedByActiveItem  = 32,   -- Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
-  AllowWhenOverlapped           = 64,   -- Return true even if the position is obstructed or overlapped by another window
-  AllowWhenDisabled             = 128,  -- Return true even if the item is disabled
-  RectOnly                      = 104,  -- AllowWhenBlockedByPopup | AllowWhenBlockedByActiveItem | AllowWhenOverlapped,
-  RootAndChildWindows           = 3     -- RootWindow | ChildWindows
-})
-
-ui.FocusedFlags = __enum({ cpp = 'ImGuiFocusedFlags' }, {
-  None                          = 0,    -- Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
-  ChildWindows                  = 1,    -- `ac.windowFocused()` only: Return true if any children of the window is hovered
-  RootWindow                    = 2,    -- `ac.windowFocused()` only: Test from root window (top most parent of the current hierarchy)
-  AnyWindow                     = 4,    -- `ac.windowFocused()` only: Return true if any window is hovered
-  RootAndChildWindows           = 3     -- RootWindow | ChildWindows
-})
-
-ui.MouseCursor = __enum({ cpp = 'ImGuiMouseCursor' }, {
-  None = -1,             -- No cursor
-  Arrow = 0,             -- Default arrow
-  TextInput = 1,         -- When hovering over `ui.inputText()`, etc.
-  ResizeAll = 2,         -- Unused by default controls
-  ResizeNS = 3,          -- When hovering over an horizontal border
-  ResizeEW = 4,          -- When hovering over a vertical border or a column
-  ResizeNESW = 5,        -- When hovering over the bottom-left corner of a window
-  ResizeNWSE = 6,        -- When hovering over the bottom-right corner of a window
-  Hand = 7,              -- Unused by default controls. Use for e.g. hyperlinks
-})
-
-ui.MouseButton = __enum({ override = 'ui.*/mouseButton:integer' }, {
-  Left = 0,
-  Right = 1,
-  Middle = 2,
-  Extra1 = 3,
-  Extra2 = 4
-})
-
-ui.Font = __enum({ override = 'ui.*/fontType:integer' }, {
-  Small = 1,
-  Tiny = 2,
-  Monospace = 3,
-  Main = 4,
-  Italic = 5,
-  Title = 6,
-  Huge = 7
-})
-
-ui.Alignment = __enum({ cpp = 'alignment' }, {
-  Start = -1,
-  Center = 0,
-  End = 1
-})
-
----Special codes for keys with certain UI roles.
-ui.Key = __enum({ cpp = 'ImGuiKey', override = 'ui.*/keyCode:integer' }, { 
-  Tab = 0,
-  Left = 1,
-  Right = 2,
-  Up = 3,
-  Down = 4,
-  PageUp = 5,
-  PageDown = 6,
-  Home = 7,
-  End = 8,
-  Insert = 9,
-  Delete = 10,
-  Backspace = 11,
-  Space = 12,
-  Enter = 13,
-  Escape = 14,
-  KeyPadEnter = 15,
-  A = 16,
-  C = 17,
-  D = 18,
-  S = 19,
-  V = 20,
-  W = 21,
-  X = 22,
-  Y = 23,
-  Z = 24,
-})
-
----Key indices, pretty much mirrors all those “VK_…” key tables.
-ui.KeyIndex = __enum({ cpp = 'vk_key', override = 'ui.*/keyIndex:integer' }, { 
-  LeftButton = 0x01,
-  RightButton = 0x02,
-  Cancel = 0x03, -- @opt
-  MiddleButton = 0x04, -- not contiguous with LeftButton and RightButton
-  XButton1 = 0x05, -- not contiguous with LeftButton and RightButton
-  XButton2 = 0x06, -- not contiguous with LeftButton and RightButton
-  Back = 0x08, -- @opt
-  Tab = 0x09,
-  Clear = 0x0C, -- @opt
-  Return = 0x0D,
-  Shift = 0x10,
-  Control = 0x11,
-  Menu = 0x12, -- aka Alt button
-  Pause = 0x13, -- @opt
-  Capital = 0x14, -- @opt
-  Kana = 0x15, -- @opt
-  Hangeul = 0x15, -- old name - should be here for compatibility @opt
-  Hangul = 0x15, -- @opt
-  Junja = 0x17, -- @opt
-  Final = 0x18, -- @opt
-  Hanja = 0x19, -- @opt
-  Kanji = 0x19, -- @opt
-  Escape = 0x1B,
-  Convert = 0x1C, -- @opt
-  NonConvert = 0x1D, -- @opt
-  Accept = 0x1E,
-  ModeChange = 0x1F, -- @opt
-  Space = 0x20,
-  Prior = 0x21, -- @opt
-  Next = 0x22, -- @opt
-  End = 0x23,
-  Home = 0x24,
-  Left = 0x25, -- arrow ←
-  Up = 0x26, -- arrow ↑
-  Right = 0x27, -- arrow →
-  Down = 0x28, -- arrow ↓
-  Select = 0x29, -- @opt
-  Print = 0x2A, -- @opt
-  Execute = 0x2B, -- @opt
-  Snapshot = 0x2C, -- @opt
-  Insert = 0x2D,
-  Delete = 0x2E,
-  Help = 0x2F, -- @opt
-  LeftWin = 0x5B,
-  RightWin = 0x5C,
-  Apps = 0x5D, -- @opt
-  Sleep = 0x5F, -- @opt
-  NumPad0 = 0x60,
-  NumPad1 = 0x61,
-  NumPad2 = 0x62,
-  NumPad3 = 0x63,
-  NumPad4 = 0x64,
-  NumPad5 = 0x65,
-  NumPad6 = 0x66,
-  NumPad7 = 0x67,
-  NumPad8 = 0x68,
-  NumPad9 = 0x69,
-  Multiply = 0x6A,
-  Add = 0x6B,
-  Separator = 0x6C,
-  Subtract = 0x6D,
-  Decimal = 0x6E,
-  Divide = 0x6F,
-  F1 = 0x70,
-  F2 = 0x71,
-  F3 = 0x72,
-  F4 = 0x73,
-  F5 = 0x74,
-  F6 = 0x75,
-  F7 = 0x76,
-  F8 = 0x77,
-  F9 = 0x78,
-  F10 = 0x79,
-  F11 = 0x7A,
-  F12 = 0x7B,
-  F13 = 0x7C, -- @opt
-  F14 = 0x7D, -- @opt
-  F15 = 0x7E, -- @opt
-  F16 = 0x7F, -- @opt
-  F17 = 0x80, -- @opt
-  F18 = 0x81, -- @opt
-  F19 = 0x82, -- @opt
-  F20 = 0x83, -- @opt
-  F21 = 0x84, -- @opt
-  F22 = 0x85, -- @opt
-  F23 = 0x86, -- @opt
-  F24 = 0x87, -- @opt
-  NavigationView = 0x88, -- reserved @opt
-  NavigationMenu = 0x89, -- reserved @opt
-  NavigationUp = 0x8A, -- reserved @opt
-  NavigationDown = 0x8B, -- reserved @opt
-  NavigationLeft = 0x8C, -- reserved @opt
-  NavigationRight = 0x8D, -- reserved @opt
-  NavigationAccept = 0x8E, -- reserved @opt
-  NavigationCancel = 0x8F, -- reserved @opt
-  NumLock = 0x90,
-  Scroll = 0x91,
-  OemNecEqual = 0x92, -- “=” key on numpad @opt
-  OemFjJisho = 0x92, -- “Dictionary” key @opt
-  OemFjMasshou = 0x93, -- “Unregister word” key @opt
-  OemFjTouroku = 0x94, -- “Register word” key @opt
-  OemFjLoya = 0x95, -- “Left OYAYUBI” key @opt
-  OemFjRoya = 0x96, -- “Right OYAYUBI” key @opt
-  LeftShift = 0xA0,
-  RightShift = 0xA1,
-  LeftControl = 0xA2,
-  RightControl = 0xA3,
-  LeftMenu = 0xA4, -- aka left Alt button
-  RightMenu = 0xA5, -- aka right Alt button
-  BrowserBack = 0xA6, -- @opt
-  BrowserForward = 0xA7, -- @opt
-  BrowserRefresh = 0xA8, -- @opt
-  BrowserStop = 0xA9, -- @opt
-  BrowserSearch = 0xAA, -- @opt
-  BrowserFavorites = 0xAB, -- @opt
-  BrowserHome = 0xAC, -- @opt
-  VolumeMute = 0xAD, -- @opt
-  VolumeDown = 0xAE, -- @opt
-  VolumeUp = 0xAF, -- @opt
-  MediaNextTrack = 0xB0, -- @opt
-  MediaPrevTrack = 0xB1, -- @opt
-  MediaStop = 0xB2, -- @opt
-  MediaPlayPause = 0xB3, -- @opt
-  LaunchMail = 0xB4, -- @opt
-  LaunchMediaSelect = 0xB5, -- @opt
-  LaunchApp1 = 0xB6, -- @opt
-  LaunchApp2 = 0xB7, -- @opt
-  Oem1 = 0xBA, -- “;:” for US
-  OemPlus = 0xBB, -- “+” any country @opt
-  OemComma = 0xBC, -- “,” any country @opt
-  OemMinus = 0xBD, -- “-” any country @opt
-  OemPeriod = 0xBE, -- “.” any country @opt
-  Oem2 = 0xBF, -- “/?” for US @opt
-  Oem3 = 0xC0, -- “`~” for US @opt
-  GamepadA = 0xC3, -- reserved @opt
-  GamepadB = 0xC4, -- reserved @opt
-  GamepadX = 0xC5, -- reserved @opt
-  GamepadY = 0xC6, -- reserved @opt
-  GamepadRightShoulder = 0xC7, -- reserved @opt
-  GamepadLeftShoulder = 0xC8, -- reserved @opt
-  GamepadLeftTrigger = 0xC9, -- reserved @opt
-  GamepadRightTrigger = 0xCA, -- reserved @opt
-  GamepadDpadUp = 0xCB, -- reserved @opt
-  GamepadDpadDown = 0xCC, -- reserved @opt
-  GamepadDpadLeft = 0xCD, -- reserved @opt
-  GamepadDpadRight = 0xCE, -- reserved @opt
-  GamepadMenu = 0xCF, -- reserved @opt
-  GamepadView = 0xD0, -- reserved @opt
-  GamepadLeftThumbstickButton = 0xD1, -- reserved @opt
-  GamepadRightThumbstickButton = 0xD2, -- reserved @opt
-  GamepadLeftThumbstickUp = 0xD3, -- reserved @opt
-  GamepadLeftThumbstickDown = 0xD4, -- reserved @opt
-  GamepadLeftThumbstickRight = 0xD5, -- reserved @opt
-  GamepadLeftThumbstickLeft = 0xD6, -- reserved @opt
-  GamepadRightThumbstickUp = 0xD7, -- reserved @opt
-  GamepadRightThumbstickDown = 0xD8, -- reserved @opt
-  GamepadRightThumbstickRight = 0xD9, -- reserved @opt
-  GamepadRightThumbstickLeft = 0xDA, -- reserved @opt
-  SquareOpenBracket = 0xDB,
-  SquareCloseBracket = 0xDD,
-  --[[? for (let i = 0; i < 10; ++i) out(`D${i} = 0x${(''+i).charCodeAt(0).toString(16)}, -- Digit ${i}\n`) ?]]
-  --[[? for (let i = 'A'.charCodeAt(0); i <= 'Z'.charCodeAt(0); ++i) out(`${String.fromCharCode(i)} = 0x${i.toString(16)}, -- Letter ${String.fromCharCode(i)}\n`) ?]]
-})
-
-ui.StyleVar = __enum({ cpp = 'ImGuiStyleVar' }, {
-  Alpha = 0,  -- Expects a number.
-  WindowRounding = 1,  -- Expects a number.
-  WindowBorderSize = 2,  -- Expects a number.
-  ChildRounding = 3,  -- Expects a number.
-  ChildBorderSize = 4,  -- Expects a number.
-  PopupRounding = 5,  -- Expects a number.
-  PopupBorderSize = 6,  -- Expects a number.
-  FrameRounding = 7,  -- Expects a number.
-  FrameBorderSize = 8,  -- Expects a number.
-  IndentSpacing = 9,  -- Expects a number.
-  ScrollbarSize = 10,  -- Expects a number.
-  ScrollbarRounding = 11,  -- Expects a number.
-  GrabMinSize = 12,  -- Expects a number.
-  GrabRounding = 13,  -- Expects a number.
-  TabRounding = 14,  -- Expects a number.
-
-  WindowPadding = 15, -- Expects a `vec2` value.
-  WindowMinSize = 16, -- Expects a `vec2` value.
-  WindowTitleAlign = 17, -- Expects a `vec2` value.
-  FramePadding = 18, -- Expects a `vec2` value.
-  ItemSpacing = 19, -- Expects a `vec2` value.
-  ItemInnerSpacing = 20, -- Expects a `vec2` value.
-  ButtonTextAlign = 21, -- Expects a `vec2` value.
-  SelectableTextAlign = 22, -- Expects a `vec2` value.
-  SelectablePadding = 23, -- Expects a `vec2` value.
-})
-
-ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
-  Text = 0,
-  TextDisabled = 1,
-  WindowBg = 2,
-  ChildBg = 3,
-  PopupBg = 4,
-  Border = 5,
-  BorderShadow = 6,
-  FrameBg = 7,
-  FrameBgHovered = 8,
-  FrameBgActive = 9,
-  TitleBg = 10,
-  TitleBgActive = 11,
-  TitleBgCollapsed = 12,
-  MenuBarBg = 13,
-  ScrollbarBg = 14,
-  ScrollbarGrab = 15,
-  ScrollbarGrabHovered = 16,
-  ScrollbarGrabActive = 17,
-  CheckMark = 18,
-  SliderGrab = 19,
-  SliderGrabActive = 20,
-  Button = 21,
-  ButtonHovered = 22,
-  ButtonActive = 23,
-  Header = 24,
-  HeaderHovered = 25,
-  HeaderActive = 26,
-  Separator = 27,
-  SeparatorHovered = 28,
-  SeparatorActive = 29,
-  ResizeGrip = 30,
-  ResizeGripHovered = 31,
-  ResizeGripActive = 32,
-  Tab = 33,
-  TabHovered = 34,
-  TabActive = 35,
-  TabUnfocused = 36,
-  TabUnfocusedActive = 37,
-  PlotLines = 38,
-  PlotLinesHovered = 39,
-  PlotHistogram = 40,
-  PlotHistogramHovered = 41,
-  TextSelectedBg = 42,
-  DragDropTarget = 43,
-  NavHighlight = 44,
-  NavWindowingHighlight = 45,
-  NavWindowingDimBg = 46,
-  ModalWindowDimBg = 47,
-  TextHovered = 48,
-  TextActive = 49
-})
-
-ui.Icons = __enum({ override = 'ui.*/*conID:string', underlying = 'string' }, {
-  LoadingSpinner = 'fx:loading',
-  --[[? out($.readText(`${process.env['CSP_ROOT']}/source/imgui/icons.h`).split('\n')
-    .map(x => /ICON_24_(\w+)/.test(x) && RegExp.$1).filter(x => x)
-    .map(x => `${x.toLowerCase().replace(/^(?:gps|fm|qr|vip)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.ru/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
-})
+local _sp_uiu = {template = 'ui.fx', defaultBlendMode = render.BlendMode.Opaque, delayed = true}
+local _sp_uif = {template = 'fullscreen.fx', defaultBlendMode = render.BlendMode.Opaque}
+local _sp_uid = {template = 'direct.fx', defaultBlendMode = render.BlendMode.Opaque}
 
 local weatherIcons = {
   [ac.WeatherType.LightThunderstorm] = ui.Icons.WeatherLightThunderstorm,
@@ -412,166 +54,6 @@ function ui.weatherIcon(weatherType)
   return weatherIcons[weatherType] or ui.Icons.WeatherClear
 end
 
-ui.ButtonFlags = __enum({ cpp = 'ImGuiButtonFlags' }, {
-  None                      = 0,
-  Repeat                    = 0x1,       -- Hold to repeat
-  PressedOnClickRelease     = 0x2,       -- Return true on click + release on same item
-  PressedOnClick            = 0x4,       -- Return true on click (default requires click+release)
-  PressedOnRelease          = 0x8,       -- Return true on release (default requires click+release)
-  PressedOnDoubleClick      = 0x10,      -- Return true on double-click (default requires click+release)
-  FlattenChildren           = 0x20,      -- Allow interactions even if a child window is overlapping
-  AllowItemOverlap          = 0x40,      -- Require previous frame HoveredId to either match id or be null before being usable, use along with SetItemAllowOverlap()
-  DontClosePopups           = 0x80,      -- Disable automatically closing parent popup on press
-  Disabled                  = 0x100,     -- Disable interactions
-  NoKeyModifiers            = 0x400,     -- Disable interaction if a key modifier is held
-  PressedOnDragDropHold     = 0x1000,    -- Press when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
-  NoNavFocus                = 0x2000,    -- Don’t override navigation focus when activated
-  NoHoveredOnNav            = 0x4000,    -- Don’t report as hovered when navigated on
-  Error                     = 0x8000,    -- For modern buttons
-  Confirm                   = 0x10000,   -- For modern buttons
-  Cancel                    = 0x20000,   -- For modern buttons
-  VerticalLayout            = 0x40000,   -- For modern buttons
-  TextAsIcon                = 0x80000,   -- For modern buttons
-  Active                    = 0x100000,  -- Button is correctly active (checked)
-  Activable                 = 0x200000,  -- If not set, _Active would make background brighter
-})
-
-ui.WindowFlags = __enum({ cpp = 'ImGuiWindowFlags' }, {
-  None                      = 0,
-  NoTitleBar                = 0x1,         -- Disable title-bar
-  NoResize                  = 0x2,         -- Disable user resizing with the lower-right grip
-  NoMove                    = 0x4,         -- Disable user moving the window
-  NoScrollbar               = 0x8,         -- Disable scrollbars (window can still scroll with mouse or programmatically)
-  NoScrollWithMouse         = 0x10,        -- Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
-  NoCollapse                = 0x20,        -- Disable user collapsing window by double-clicking on it
-  AlwaysAutoResize          = 0x40,        -- Resize every window to its content every frame
-  NoBackground              = 0x80,        -- Disable drawing background and outside border
-  NoSavedSettings           = 0x100,       -- Never load/save settings in .ini file
-  NoMouseInputs             = 0x200,       -- Disable catching mouse, hovering test with pass through
-  MenuBar                   = 0x400,       -- Has a menu-bar
-  HorizontalScrollbar       = 0x800,       -- Allow horizontal scrollbar to appear (off by default)
-  NoFocusOnAppearing        = 0x1000,      -- Disable taking focus when transitioning from hidden to visible state
-  NoBringToFrontOnFocus     = 0x2000,      -- Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
-  AlwaysVerticalScrollbar   = 0x4000,      -- Always show vertical scrollbar (even if ContentSize.y < Size.y)
-  AlwaysHorizontalScrollbar = 0x8000,      -- Always show horizontal scrollbar (even if ContentSize.x < Size.x)
-  AlwaysUseWindowPadding    = 0x10000,     -- Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
-  NoNavInputs               = 0x40000,     -- No gamepad/keyboard navigation within the window
-  NoNavFocus                = 0x80000,     -- No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
-  UnsavedDocument           = 0x100000,    -- Append “*” to title without affecting the ID, as a convenience to avoid using the “###” operator
-  NoNav                     = 0xc0000,     -- NoNavInputs | NoNavFocus
-  NoDecoration              = 0x2b,        -- NoTitleBar | NoResize | NoScrollbar | NoCollapse
-  NoInputs                  = 0xc0200,     -- NoMouseInputs | NoNavInputs | NoNavFocus
-  ToolTip                   = 0x2000000,   -- @hidden
-  Popup                     = 0x4000000,   -- @hidden
-  Modal                     = 0x8000000,   -- @hidden
-  Topmost                   = 0x20000000,  -- @hidden
-  ThinScrollbar             = 0x80000000   -- Thin scrollbar
-})
-
-ui.ComboFlags = __enum({ cpp = 'ImGuiComboFlags' }, {
-  None                       = 0,
-  PopupAlignLeft             = 0x1,    -- Align the popup toward the left by default
-  HeightSmall                = 0x2,    -- Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
-  HeightRegular              = 0x4,    -- Max ~8 items visible (default)
-  HeightLarge                = 0x8,    -- Max ~20 items visible
-  HeightLargest              = 0x10,   -- As many fitting items as possible
-  NoArrowButton              = 0x20,   -- Display on the preview box without the square arrow button
-  NoPreview                  = 0x40,   -- Display only a square arrow button
-  GoUp                       = 0x80,   -- Dropdown goes up
-  HeightChubby               = 0x100,  -- Height between regular and large
-})
-
-ui.InputTextFlags = __enum({ cpp = 'ImGuiInputTextFlags' }, {
-  None                   = 0,
-  CharsDecimal           = 0x1,       -- Allow “0123456789.+-*/”
-  CharsHexadecimal       = 0x2,       -- Allow “0123456789ABCDEFabcdef”
-  CharsUppercase         = 0x4,       -- Turn a…z into A…Z
-  CharsNoBlank           = 0x8,       -- Filter out spaces, tabs
-  AutoSelectAll          = 0x10,      -- Select entire text when first taking mouse focus
-  EnterReturnsTrue       = 0x20,      -- @hidden
-  AllowTabInput          = 0x400,     -- Pressing TAB input a '\t' character into the text field
-  CtrlEnterForNewLine    = 0x800,     -- In multi-line mode, unfocus with Enter, add new line with Ctrl+Enter (default is opposite: unfocus with Ctrl+Enter, add line with Enter)
-  NoHorizontalScroll     = 0x1000,    -- Disable following the cursor horizontally
-  AlwaysInsertMode       = 0x2000,    -- Insert mode
-  ReadOnly               = 0x4000,    -- Read-only mode
-  Password               = 0x8000,    -- Password mode, display all characters as “*”
-  NoUndoRedo             = 0x10000,   -- Disable undo/redo. Note that input text owns the text data while active, if you want to provide your own undo/redo stack you need e.g. to call ClearActiveID().
-  CharsScientific        = 0x20000,   -- Allow “0123456789.+-*/eE” (Scientific notation input)
-  Placeholder            = 0x400000,  -- Show label as a placeholder
-  ClearButton            = 0x800000   -- Add button erasing text
-})
-
-ui.SelectableFlags = __enum({ cpp = 'ImGuiSelectableFlags' }, {
-  None                  = 0,
-  DontClosePopups       = 0x1,  -- Clicking this don’t close parent popup window
-  SpanAllColumns        = 0x2,  -- Selectable frame can span all columns (text will still fit in current column)
-  AllowDoubleClick      = 0x4,  -- Generate press events on double clicks too
-  Disabled              = 0x8,  -- Cannot be selected, display grayed out text
-})
-
-ui.TabBarFlags = __enum({ cpp = 'ImGuiTabBarFlags' }, {
-  None                              = 0,
-  Reorderable                       = 0x1,   -- Allow manually dragging tabs to re-order them + New tabs are appended at the end of list
-  AutoSelectNewTabs                 = 0x2,   -- Automatically select new tabs when they appear
-  TabListPopupButton                = 0x4,   -- Disable buttons to open the tab list popup
-  NoCloseWithMiddleMouseButton      = 0x8,   -- Disable behavior of closing tabs with middle mouse button
-  NoTabListScrollingButtons         = 0x10,  -- Disable scrolling buttons (apply when fitting policy is FittingPolicyScroll)
-  NoTooltip                         = 0x20,  -- Disable tooltips when hovering a tab
-  FittingPolicyResizeDown           = 0x40,  -- Resize tabs when they don’t fit
-  FittingPolicyScroll               = 0x80,  -- Add scroll buttons when tabs don’t fit
-  IntegratedTabs                    = 0x8000, -- Integrates tab bar into a window title (call it first when drawing a window)
-  SaveSelected                      = 0x10000, -- Save selected tab based on tab ID (make sure tab ID is unique)
-})
-
-ui.TabItemFlags = __enum({ cpp = 'ImGuiTabItemFlags' }, {
-  None                             = 0,
-  UnsavedDocument                  = 0x1,   -- Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. Also: tab is selected on closure and closure is deferred by one frame to allow code to undo it without flicker.
-  SetSelected                      = 0x2,   -- Trigger flag to programmatically make the tab selected when calling BeginTabItem()
-  NoCloseWithMiddleMouseButton     = 0x4,   -- Disable behavior of closing tabs (that are submitted with p_open !   = NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open    = false.
-})
-
-ui.TreeNodeFlags = __enum({ cpp = 'ImGuiTreeNodeFlags' }, {
-  None                    = 0,
-  Selected                = 0x1,    -- Draw as selected
-  Framed                  = 0x2,    -- Full colored frame (e.g. for CollapsingHeader)
-  AllowItemOverlap        = 0x4,    -- Hit testing to allow subsequent widgets to overlap this one
-  NoTreePushOnOpen        = 0x8,    -- Don’t do a TreePush() when open (e.g. for CollapsingHeader)    = no extra indent nor pushing on ID stack
-  NoAutoOpenOnLog         = 0x10,   -- Don’t automatically and temporarily open node when Logging is active (by default logging will automatically open tree nodes)
-  DefaultOpen             = 0x20,   -- Default node to be open
-  OpenOnDoubleClick       = 0x40,   -- Need double-click to open node
-  OpenOnArrow             = 0x80,   -- Only open when clicking on the arrow part. If OpenOnDoubleClick is also set, single-click arrow or double-click all box to open.
-  Leaf                    = 0x100,  -- No collapsing, no arrow (use as a convenience for leaf nodes).
-  Bullet                  = 0x200,  -- Display a bullet instead of arrow
-  FramePadding            = 0x400,  -- Use FramePadding (even for an unframed text node) to vertically align text baseline to regular widget height. Equivalent to calling AlignTextToFramePadding().
-  CollapsingHeader        = 0x1a,   -- Framed | NoTreePushOnOpen | NoAutoOpenOnLog,
-  NoArrow                 = 0x4000,
-  Animated                = 0xf0000000,
-})
-
-ui.ColorPickerFlags = __enum({ cpp = 'ImGuiColorEditFlags' }, {
-  None             = 0,
-  NoAlpha          = 0x2,        -- Ignore Alpha component (will only read 3 components from the input pointer).
-  NoPicker         = 0x4,        -- Disable picker when clicking on colored square.
-  NoOptions        = 0x8,        -- Disable toggling options menu when right-clicking on inputs/small preview.
-  NoSmallPreview   = 0x10,       -- Disable colored square preview next to the inputs. (e.g. to show only the inputs)
-  NoInputs         = 0x20,       -- Disable inputs sliders/text widgets (e.g. to show only the small preview colored square).
-  NoTooltip        = 0x40,       -- Disable tooltip when hovering the preview.
-  NoLabel          = 0x80,       -- Disable display of inline text label (the label is still forwarded to the tooltip and picker).
-  NoSidePreview    = 0x100,      -- Disable bigger color preview on right side of the picker, use small colored square preview instead.
-  NoDragDrop       = 0x200,      -- Disable drag and drop target. ColorButton: disable drag and drop source.
-  AlphaBar         = 0x10000,    -- Show vertical alpha bar/gradient in picker.
-  AlphaPreview     = 0x20000,    -- Display preview as a transparent color over a checkerboard, instead of opaque.
-  AlphaPreviewHalf = 0x40000,    -- Display half opaque / half checkerboard, instead of opaque.
-  DisplayRGB       = 0x100000,   -- Override _display_ type among RGB/HSV/Hex. select any combination using one or more of RGB/HSV/Hex.
-  DisplayHSV       = 0x200000,
-  DisplayHex       = 0x400000,
-  UInt8            = 0x800000,   -- Display values formatted as 0..255.
-  Uint8            = 0x800000,   -- @hidden
-  Float            = 0x1000000,  -- Display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
-  PickerHueBar     = 0x2000000,  -- Bar for Hue, rectangle for Sat/Value.
-  PickerHueWheel   = 0x4000000,  -- Wheel for Hue, triangle for Sat/Value
-})
-
 ---Push style variable.
 ---@param varID ui.StyleVar
 ---@param value number|vec2
@@ -601,7 +83,7 @@ local __itep = refbool()
 ---myText = ui.inputText('Enter something:', myText)
 ---```
 ---
----Third argument is `true` if Enter was pressed while editing text.
+---Third value returned is `true` if Enter was pressed while editing text.
 ---@param label string
 ---@param str string
 ---@param flags ui.InputTextFlags?
@@ -670,12 +152,15 @@ end
 ---@param pos vec2 @Window position.
 ---@param size vec2 @Window size.
 ---@param noPadding boolean? @Disables window padding. Default value: `false`.
+---@param inputs boolean? @Enables inputs (buttons and such). Default value: `false`.
 ---@param content fun(): T @Window content callback.
 ---@return T
 ---@overload fun(id: string, pos: vec2, size: vec2, content: fun())
-function ui.transparentWindow(id, pos, size, noPadding, content)
-  if type(noPadding) == 'function' then content, noPadding = noPadding, nil end
-  ui.beginTransparentWindow(id, pos, size, noPadding == true)
+---@overload fun(id: string, pos: vec2, size: vec2, noPadding: boolean, content: fun())
+function ui.transparentWindow(id, pos, size, noPadding, inputs, content)
+  if type(noPadding) == 'function' then content, noPadding, inputs = noPadding, nil, nil end
+  if type(inputs) == 'function' then content, inputs = inputs, nil end
+  ui.beginTransparentWindow(id, pos, size, noPadding == true, inputs == true)
   return using(content, ui.endTransparentWindow)
 end
 
@@ -685,12 +170,15 @@ end
 ---@param pos vec2 @Window position.
 ---@param size vec2 @Window size.
 ---@param noPadding boolean? @Disables window padding. Default value: `false`.
+---@param inputs boolean? @Enables inputs (buttons and such). Default value: `false`.
 ---@param content fun(): T @Window content callback.
 ---@return T
 ---@overload fun(id: string, pos: vec2, size: vec2, content: fun())
-function ui.toolWindow(id, pos, size, noPadding, content)
-  if type(noPadding) == 'function' then content, noPadding = noPadding, nil end
-  ui.beginToolWindow(id, pos, size, noPadding == true)
+---@overload fun(id: string, pos: vec2, size: vec2, noPadding: boolean, content: fun())
+function ui.toolWindow(id, pos, size, noPadding, inputs, content)
+  if type(noPadding) == 'function' then content, noPadding, inputs = noPadding, nil, nil end
+  if type(inputs) == 'function' then content, inputs = inputs, nil end
+  ui.beginToolWindow(id, pos, size, noPadding == true, inputs == true)
   return using(content, ui.endToolWindow)
 end
 
@@ -704,6 +192,11 @@ function ui.tooltip(padding, content)
   if type(padding) == 'function' then padding, content = nil, padding end
   ui.beginTooltip(padding)
   return using(content, ui.endTooltip)
+end
+
+local function endThinScrollbarChild()
+  ui.thinScrollbarEnd()
+  ui.endChild()
 end
 
 ---Draw a child window: perfect for clipping content, for scrolling lists, etc. Think of it more like
@@ -731,10 +224,7 @@ function ui.childWindow(id, size, border, flags, content)
   if ui.beginChild(id, size, border, flags) then
     if thinScrollbar then
       ui.thinScrollbarBegin(true)
-      return using(content, function ()
-        ui.thinScrollbarEnd()
-        ui.endChild()
-      end)
+      return using(content, endThinScrollbarChild)
     else
       return using(content, ui.endChild)
     end
@@ -914,12 +404,16 @@ local _rn = refnumber()
 ---@param value refnumber|number @Current slider value.
 ---@param min number? @Default value: 0.
 ---@param max number? @Default value: 1.
----@param format string|'%.3f'|nil @C-style format string. Default value: '%.3f'.
----@param power number? @Power for non-linear slider. Default value: 1 (linear).
+---@param format string|'%.3f'|nil @C-style format string. Default value: `'%.3f'`.
+---@param power number|boolean|nil @Power for non-linear slider. Default value: `1` (linear). Pass `true` to enable integer mode instead.
 ---@return number @Possibly updated slider value.
 ---@return boolean @True if slider has moved.
 ---@overload fun(label: string, value: number, min: number, max: number, format: string, power: number): number, boolean
 function ui.slider(label, value, min, max, format, power)
+  if power == true then
+    power = -1
+  end
+
   if refnumber.isrefnumber(value) then
     return ffi.C.lj_slider_inner__ui(__util.str(label), value, tonumber(min) or 0, tonumber(max) or 100, __util.str_opt(format) or "%.3f", tonumber(power) or 1)
   end
@@ -967,6 +461,29 @@ function ui.FadingElement:__call(state)
       error(err_, 2)
     end
   end
+end
+
+ui.FileIcon = class('ui.FileIcon', function (filename, specialized)
+  specialized = specialized and string.sub(filename, #filename - 3, #filename):lower() == '.exe'
+  filename = specialized and filename or string.match(filename, '.[^.]*$')
+  return {
+    _filename = filename,
+    _style = 'L'
+  }
+end, class.NoInitialize)
+
+ui.FileIcon.Style = __enum({}, {
+  Small = 'S',
+  Large = 'L',
+})
+
+function ui.FileIcon:style(style)
+  self._style = style
+  return self
+end
+
+function ui.FileIcon:__tostring()
+  return '%fileIcon:'..self._style..self._filename
 end
 
 ui.DWriteFont = class('ui.DWriteFont', function (name, dir)
@@ -1027,8 +544,14 @@ function ui.DWriteFont:stretch(stretch)
   return self
 end
 
-function ui.DWriteFont:allowRealSizes()
-  self._allowRealSizes = true
+function ui.DWriteFont:allowRealSizes(allow)
+  self._allowRealSizes = allow ~= false
+  self._fullName = nil
+  return self
+end
+
+function ui.DWriteFont:allowEmoji(allow)
+  self._allowEmoji = allow ~= false
   self._fullName = nil
   return self
 end
@@ -1054,6 +577,7 @@ function ui.DWriteFont:__tostring()
     if stretch then t[n + 1], t[n + 2], n = ';Stretch=', stretch, n + 2 end
 
     if self._allowRealSizes then t[n + 1] = ';AnyFontSize' end
+    if self._allowEmoji == false then t[n + 1] = ';NoEmoji' end
 
     ret = table.concat(t, '')
     self._fullName = ret
@@ -1155,12 +679,23 @@ end
 
 ffi.cdef [[ 
 typedef struct {
+  mat4x4 transform;
+  float pitch;
+  float camera_interior_mult;
+  float camera_exterior_mult;
+  float camera_track_mult;
+  float within_range;
+} _mmfholder_extradata;
+
+typedef struct {
   int _id;
+  int _pad;
+  _mmfholder_extradata* _extra;
   void* _mmf;
 } mmfholder;
 ]]
 
---[[? if (ctx.ldoc) out(]]
+--[[? if (!ctx.flags.withoutAudio && ctx.ldoc) out(]]
 
 ---Checks if system supports these media players (Microsoft Media Foundation framework was added in Windows 8). If it’s not supported,
 ---you can still use API, but it would fail to load any video or audio.
@@ -1168,21 +703,35 @@ typedef struct {
 function ui.MediaPlayer.supported() end
 
 ---@param source string|nil @URL or a filename. Optional, can be set later with `player:setSource()`.
+--[[@tableparam audioParams nil|{
+  rawOutput: boolean = nil "Set to `true` to output audio directly, without FMOD (won’t respect AC audio device selection or stop when AC is paused)",
+  reverbResponse: boolean = false "Set to `true` to get audio to react to reverb",
+  use3D: boolean = false "Set to `true` to load audio without any 3D effects (if not set, car display scripts have it as `true` by default and update position based on screen position, but only them)",
+  insideConeAngle: number = nil "Angle in degrees at which audio is at 100% volume",
+  outsideConeAngle: number = nil "Angle in degrees at which audio is at `outsideVolume` volume",
+  outsideVolume: number = nil "Volume multiplier if listener is outside of the cone",
+  minDistance: number = nil "Distance at which audio would stop going louder as it approaches listener (default is 1)",
+  maxDistance: number = nil "Distance at which audio would attenuating as it gets further away from listener (default is 10 km)",
+  dopplerEffect: number = nil "Scale for doppler effect"
+} ]]
 ---@return ui.MediaPlayer
-function ui.MediaPlayer(source) end
+function ui.MediaPlayer(source, audioParams) end
 
 --[[) ?]]
+--[[? if (!ctx.flags.withoutAudio) out(]]
 
 ui.MediaPlayer = setmetatable({
   supported = ffi.C.lj_mmfholder_supported__ui,
   supportedAsync = function(callback) return ffi.C.lj_mmfholder_supportedasync__ui(__util.expectReply(callback)) end
 }, { 
-  __call = function (obj, source) 
-    local r = ffi.gc(ffi.C.lj_mmfholder_new__ui(), ffi.C.lj_mmfholder_gc__ui)
+  __call = function (_, source, audioParams) 
+    local r = ffi.gc(ffi.C.lj_mmfholder_new__ui(audioParams and __util.json(audioParams)), ffi.C.lj_mmfholder_gc__ui)
     if source ~= nil then r:setSource(source) end
     return r
   end 
 })
+
+local _mmfac
 
 ---Media player which can load a video and be used as a texture in calls like `ui.drawImage()`, `ui.beginTextureShade()` or `display.image()`. Also, it can load an audio
 ---file and play it offscreen.
@@ -1225,6 +774,87 @@ ffi.metatype('mmfholder', {
     ---@param callback fun(supported: boolean)
     supportedAsync = function(callback) return ffi.C.lj_mmfholder_supportedasync__ui(__util.expectReply(callback)) end,
 
+    ---Get an audio event corresponding with with media player. Disposing this one, as well as playback controls, won’t have any effect.
+    ---(Actually this isn’t real `ac.AudioEvent`, but it should be compatible. Can’t do a real one because underlying FMOD channel might
+    ---change when the source changes.)
+    ---
+    ---For backwards compatibility, these audio events have `cameraInteriorMultiplier` set to `1` by default.
+    ---@return ac.AudioEvent
+    audio = function (s)
+      if s._extra.within_range < 0 then error('FMOD integration is not available this player', 2) end
+      if not _mmfac then 
+        _mmfac = {
+          c = setmetatable({inAutoLoopMode = false}, {__mode = 'kv'}),
+          f = {
+            keepAlive = ac.skipSaneChecks,
+            setParam = ac.skipSaneChecks,
+            setDistanceMin = ac.skipSaneChecks,
+            setDistanceMax = ac.skipSaneChecks,
+            setConeSettings = ac.skipSaneChecks,
+            setDSPParameter = ac.skipSaneChecks,
+            dispose = ac.skipSaneChecks,
+            resume = ac.skipSaneChecks,
+            resumeIf = ac.skipSaneChecks,
+            stop = ac.skipSaneChecks,
+            start = ac.skipSaneChecks,
+            isValid = function (s)
+              return s._owner:hasAudio()
+            end,
+            isWithinRange = function (s)
+              return s._extra.within_range == 1
+            end,
+            isPlaying = function (s)
+              return s._owner:playing()
+            end,
+            isPaused = function (s)
+              return not s._owner:playing()
+            end,
+            setPosition = function (s, pos, dir, up, vel)
+              ffi.C.lj_mmfholder_setpos__ui(s._owner, __util.ensure_vec3(pos), __util.ensure_vec3_nil(dir), __util.ensure_vec3_nil(up), __util.ensure_vec3(vel))
+              return s
+            end,
+            getTransformationRaw = function (s) return s._owner._extra.transform end,
+          },
+          m = {
+            __index = function (s, key)
+              if key == 'volume' then 
+                return s._owner:volume()
+              elseif key == 'pitch' then 
+                return s._owner._extra.pitch
+              elseif key == 'cameraInteriorMultiplier' then 
+                return s._owner._extra.camera_interior_mult
+              elseif key == 'cameraExteriorMultiplier' then 
+                return s._owner._extra.camera_exterior_mult
+              elseif key == 'cameraTrackMultiplier' then 
+                return s._owner._extra.camera_track_mult
+              else
+                return _mmfac.f[key]
+              end
+            end,
+            __newindex = function (s, key, value)
+              if key == 'volume' then 
+                s._owner:setVolume(value)
+              elseif key == 'pitch' then 
+                s._owner._extra.pitch = value
+              elseif key == 'cameraInteriorMultiplier' then 
+                s._owner._extra.camera_interior_mult = value
+              elseif key == 'cameraExteriorMultiplier' then 
+                s._owner._extra.camera_exterior_mult = value
+              elseif key == 'cameraTrackMultiplier' then 
+                s._owner._extra.camera_track_mult = value
+              end
+            end,
+          }
+        }
+      end
+      local r = _mmfac.c[s]
+      if not r then
+        r = setmetatable({_owner = s}, _mmfac.m)
+        _mmfac.c[s] = r
+      end
+      return r
+    end,
+
     ---Sets file name or URL for video player to play. URL can lead to a remote resource.
     ---@param url string @URL or a filename.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
@@ -1248,6 +878,10 @@ ffi.metatype('mmfholder', {
     ---Get current video volume in range between 0 and 1. Can be changed with `player:setVolume()`.
     ---@return number
     volume = ffi.C.lj_mmfholder_getvolume__ui,
+
+    ---Get current video pitch. Can be changed with `player:setPitch()`.
+    ---@return number
+    pitch = ffi.C.lj_mmfholder_getpitch__ui,
 
     ---Get current video audio balance in range between -1 (left channel only) and 1 (right channel only). Can be changed with `player:setBalance()`.
     ---@return number
@@ -1294,10 +928,6 @@ ffi.metatype('mmfholder', {
     ---@return boolean
     hasAudio = ffi.C.lj_mmfholder_gethasaudio__ui,
 
-    --Checks if streaming video is currently loading more data.
-    --@ return boolean
-    -- waitingForData = ffi.C.lj_mmfholder_getwaitingfordata__ui,
-
     ---Sets video position.
     ---@param value number @New video position in seconds.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
@@ -1312,6 +942,11 @@ ffi.metatype('mmfholder', {
     ---@param value number? @New volume value from 0 to 1. Default value: 1.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
     setVolume = function (s, value) ffi.C.lj_mmfholder_setvolume__ui(s, tonumber(value) or 1) return s end,
+    
+    ---Sets pitch. Available only with FMOD audio.
+    ---@param value number? @New pitch value. Default value: 1.
+    ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
+    setPitch = function (s, value) ffi.C.lj_mmfholder_setpitch__ui(s, tonumber(value) or 1) return s end,
     
     ---Sets audio balance.
     ---@param value number? @New balance value from -1 (left channel only) to 1 (right channel only). Default value: 0.
@@ -1383,6 +1018,8 @@ ffi.metatype('mmfholder', {
   }
 })
 
+--[[) ?]]
+
 ffi.cdef [[ 
 typedef struct { int _id; } uirt;
 typedef struct { int _something; } uirtcpu;
@@ -1392,21 +1029,25 @@ typedef struct { int _something; } uirtcpu;
 ---@param mips integer? @Number of MIPs for a texture. MIPs are downsized versions of main texture used to avoid aliasing. Default value: 1 (no MIPs).
 ---@param antialiasingMode render.AntialiasingMode? @Antialiasing mode. Default value: `render.AntialiasingMode.None` (disabled).
 ---@param textureFormat render.TextureFormat? @Texture format. Default value: `render.TextureFormat.R8G8B8A8.UNorm`.
+---@param flags render.TextureFlags? @Extra flags. Default value: `0`.
 ---@return ui.ExtraCanvas
 ---@overload fun(resolution: vec2|integer, mips: integer, textureFormat: render.TextureFormat)
-function ui.ExtraCanvas(resolution, mips, antialiasingMode, textureFormat)
+function ui.ExtraCanvas(resolution, mips, antialiasingMode, textureFormat, flags)
   if type(resolution) == 'number' then resolution = vec2(resolution, resolution)
   elseif not vec2.isvec2(resolution) then error('Resolution is required', 2) 
   else resolution = resolution:clone() end
   resolution.x = math.clamp(math.ceil(resolution.x), 1, 8192)
   resolution.y = math.clamp(math.ceil(resolution.y), 1, 8192)
 
-  if antialiasingMode and antialiasingMode > 0 and antialiasingMode < 100 then
+  if flags == nil and antialiasingMode and antialiasingMode > 0 and antialiasingMode < 100 then
     antialiasingMode, textureFormat = textureFormat, antialiasingMode
   end
 
-  return ffi.gc(ffi.C.lj_uirt_new__ui(resolution.x, resolution.y, tonumber(mips) or 1, tonumber(antialiasingMode) or 0, tonumber(textureFormat) or 28), ffi.C.lj_uirt_gc__ui)
+  return ffi.gc(ffi.C.lj_uirt_new__ui(resolution.x, resolution.y, tonumber(mips) or 1, tonumber(antialiasingMode) or 0,
+    tonumber(textureFormat) or 28, tonumber(flags) or 0), ffi.C.lj_uirt_gc__ui)
 end
+
+---@alias ui.GaussianBlurKernelSize 7|15|23|35|63|127
 
 ---Extra canvases are textures you can use in UI calls instead of filenames or apply as material textures to scene geometry,
 ---and also edit them live by drawing things into them using “ui…” functions. A few possible use cases as an example:
@@ -1469,15 +1110,20 @@ ffi.metatype('uirt', {
       cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
       defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
-      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",      
+      directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
     }]]
     updateWithShader = function (s, params)
-      local dc = __util.setShaderParams(params, 'direct.fx', render.BlendMode.Opaque)
-      if not dc then return false end
-      ffi.C.lj_uicshader_runoncanvas__ui(s, dc, __util.ensure_vec2_nil(params.p1), __util.ensure_vec2_nil(params.p2), 
-        __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2))
-      return true
+      if not ffi.C.lj_uicshader_runoncanvas0__ui(s) then return false end
+      local dc = __util.setShaderParams2(params, _sp_uid)
+      if dc then 
+        ffi.C.lj_uicshader_runoncanvas1__ui(s, dc, __util.ensure_vec2_nil(params.p1), __util.ensure_vec2_nil(params.p2), 
+          __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2))
+      else
+        ffi.C.lj_uicshader_restorert__ui()
+      end
+      return dc ~= nil
     end,
 
     ---Updates texture using a shader with a fullscreen pass. Faster than using `:update()` with `ui.renderShader()`:
@@ -1503,14 +1149,19 @@ ffi.metatype('uirt', {
       cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
       defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
-      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",      
+      directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
     }]]
     updateSceneWithShader = function (s, params)
-      local dc = __util.setShaderParams(params, 'fullscreen.fx', render.BlendMode.Opaque)
-      if not dc then return false end
-      ffi.C.lj_uicshader_runoncanvas_fullscreen__ui(s, dc)
-      return true
+      if not ffi.C.lj_uicshader_runoncanvas_fullscreen0__ui(s) then return false end
+      local dc = __util.setShaderParams2(params, _sp_uif)
+      if dc then 
+        ffi.C.lj_uicshader_runoncanvas_fullscreen1__ui(s, dc)
+      else
+        ffi.C.lj_uicshader_restorert__ui()
+      end
+      return dc ~= nil
     end,
 
     ---Clears canvas.
@@ -1533,6 +1184,14 @@ ffi.metatype('uirt', {
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
     mipsUpdate = function(s)
       ffi.C.lj_uirt_mips__ui(s)
+      return s
+    end,
+
+    ---Overrides exposure used if antialiasing mode is set to YEBIS value. By default scene exposure is used.
+    ---@param value number? @Exposure used by YEBIS post-processing. Pass `nil` to reset to default behavior.
+    ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
+    setExposure = function(s, value)
+      ffi.C.lj_uirt_setyebisparams__ui(s, tonumber(value) or math.huge)
       return s
     end,
 
@@ -1578,6 +1237,14 @@ ffi.metatype('uirt', {
       return ffi.C.lj_uirt_mipscount__ui(s)
     end,
 
+    ---Returns shared handle to the texture. Shared handle can be used in other scripts with `ui.SharedTexture()`, or, if `crossProcess` flag
+    ---is set to `true`, also accessed by other processes.
+    ---@param crossProcess boolean? @Set to `true` to be able to pass a handle to other processes. Requires `render.TextureFlags.Shared` flag to be set during creation. Default value: `false`.
+    ---@return integer
+    sharedHandle = function(s, crossProcess)
+      return ffi.C.lj_uirt_sharedhandle__ui(s, crossProcess == true)
+    end,
+
     ---Clones current canvas.
     ---@return ui.ExtraCanvas @Returns new canvas.
     clone = function (s)
@@ -1621,9 +1288,19 @@ ffi.metatype('uirt', {
       return s;
     end,
 
+    ---Fills with canvas with blurred version of another texture, applying two optimized gaussian blur passes.
+    ---@param other ui.ImageSource @Canvas to copy content from.
+    ---@param kernelSize ui.GaussianBlurKernelSize? @Kernel size. Default value: 63.
+    ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
+    gaussianBlurFrom = function(s, other, kernelSize)
+      ffi.C.lj_uirt_blurgaussianfromtex__ui(s, tostring(other), tonumber(kernelSize) or 63)
+      return s;
+    end,
+
     ---Downloads data from GPU to CPU asyncronously (usually takes about 0.15 ms to get the data). Resulting data can be
     ---used to access colors of individual pixels or upload it back to CPU restoring original state.
     ---@param callback fun(err: string, data: ui.ExtraCanvasData)
+    ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
     accessData = function (s, callback)
       if not callback then return end
       if type(callback) ~= 'function' then error('Function is required for callback', 2) end
@@ -1635,6 +1312,7 @@ ffi.metatype('uirt', {
           else callback(nil, ffi.gc(r, ffi.C.lj_uirtcpu_gc__ui)) end
         end
       end))
+      return s;
     end
   }
 })
@@ -1853,10 +1531,11 @@ end
   defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+  directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
   shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
 }]]
 function ui.renderShader(params)
-  local dc = __util.setShaderParams(params, 'ui.fx', render.BlendMode.Opaque)
+  local dc = __util.setShaderParams2(params, _sp_uiu)
   if not dc then return false end
   ffi.C.lj_uicshader_enqueue__ui(dc, __util.ensure_vec2(params.p1), __util.ensure_vec2(params.p2), 
     __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2))
@@ -1930,19 +1609,291 @@ ffi.metatype('gifholder', {
   }
 })
 
+-- Shared textures
+
+ffi.cdef [[ 
+typedef struct {
+  uint64_t _handle;
+  int _id;
+  int __rc;
+  const vec2 _resolution;
+  bool _has_anything;
+} sharedtex;
+]]
+
+---@param handle integer @Shared texture handle. Can be either a `D3D11_RESOURCE_MISC_SHARED` handle or a handle from `:sharedHandle()` of an extra canvas.
+---@param ntMode nil|integer|boolean? @Set to `true` if the handle is NT handle. Alternatively, set to an integer with source process ID. Default value: `false`. Note: for NT handles it’s better to use the named textures and pass it as a string instead (with the overload).
+---@return ui.SharedTexture
+---@overload fun(name: string) @Overload using name of a shared NT texture, works a lot better.
+function ui.SharedTexture(handle, ntMode)
+  local s
+  if type(handle) == 'string' then
+    s = ffi.C.lj_sharedtex_newnamed__ui(handle)
+  elseif ntMode then
+    s = ffi.C.lj_sharedtex_new__ui(tonumber(handle) or 0, true, ntMode ~= true and tonumber(ntMode) or 0)
+  else
+    s = ffi.C.lj_sharedtex_new__ui(tonumber(handle) or 0, false, 0)
+  end
+  return ffi.gc(s, ffi.C.lj_sharedtex_gc__ui)
+end
+
+---A wrapper for accessing textures shared by other Lua scripts or even by other applications. For the latter, textures need to have `D3D11_RESOURCE_MISC_SHARED` flag and be on the same GPU.
+---@class ui.SharedTexture
+---@explicit-constructor ui.SharedTexture
+ffi.metatype('sharedtex', { 
+  __tostring = function (s)
+    return string.format('$ui.SharedTexture://?id=%d', s._id)
+  end,
+  __index = {
+    ---Dispose texture and release its view. Call this method if remote texture is being destroyed.
+    dispose = ffi.C.lj_sharedtex_dispose__ui,
+
+    ---Get texture handle used for creating a texture. If texture has failed to load, returns 0. If texture is loaded by name and loaded properly, returns 1.
+    ---@return integer
+    handle = function (s)
+      return s._handle
+    end,
+
+    ---Get texture resolution. If texture has failed to load, returns zeroes. 
+    ---@return vec2 @Width and height in pixels.
+    resolution = function (s)
+      return s._resolution
+    end,
+
+    ---Returns `false` if access to a shared texture has failed.
+    ---@return boolean
+    valid = function (s)
+      return s._has_anything
+    end
+  }
+})
+
+-- Thing for capturing input
+
+ffi.cdef [[ 
+typedef struct {
+  lua_string_ref __queue;
+  int pressedCount;
+  int releasedCount;
+  int pressed[256];
+  int released[256];
+  bool __down[256];
+  uint64_t __last_frame;
+  bool repeated[256];
+} uicapturedinput;
+]]
+
+---Stops rest of Assetto Corsa from responding to keyboard events (key bindings, etc.), also sets `getUI().wantCaptureKeyboard` flag. 
+---Note: if you writing a script reacting to general keyboard events, consider checking that flag to make sure IMGUI doesn’t have 
+---keyboard captured currently.
+---
+---Resulting structure is a good way to access keyboard input data, both the button events and characters being entered.
+---@param wantCaptureKeyboard boolean? @Default value: `true`.
+---@param wantCaptureText boolean? @Default value: `false`.
+---@return ui.CapturedKeyboard
+function ui.captureKeyboard(wantCaptureKeyboard, wantCaptureText)
+  return ffi.C.lj_captureKeyboard_inner__ui(wantCaptureKeyboard ~= false, wantCaptureText == true)
+end
+
+local iabr
+
+---Similar to `ui.invisibleButton()`, but this one can be activated similar to text input and if it is active, will monitor keyboard state.
+---@param id string? @Default value: `'nil'`.
+---@param size vec2? @Default value: `vec2(0, 0)`.
+---@return ui.CapturedKeyboard?
+---@return boolean @Set to `true` if area was just activated.
+function ui.interactiveArea(id, size)
+  if not iabr then
+    iabr = refbool()
+  end
+  local r = ffi.C.lj_interactiveArea_inner__ui(tostring(id), __util.ensure_vec2(size), iabr)
+  return r ~= nil and r or nil, iabr.value
+end
+
+local acpp
+
+---Create a new popup. Function `callback()` will be called each frame to render its content until popup is closed. Pass `title` in parameters to create
+---a window instead (you can still call `ui.closePopup()` from the window to close it).
+---@param callback fun()
+---@param params {onClose: fun()?, position: vec2?, pivot: vec2?, size: vec2|{min: vec2?, max: vec2?, initial: vec2?}?, padding: vec2?, flags: ui.WindowFlags?, backgroundColor: rgbm?, title: string?}?
+function ui.popup(callback, params)
+  if not acpp then acpp = {} end
+
+  params = params or {}
+  local opened, children = params.title ~= nil, {}
+  local listener
+  local lastFrameDrawn = -1
+  local id = (params.title and '\1w'..tostring(params.title)..'###' or '\1')..tostring(math.randomKey()) -- '\1' prefix makes IDs for popups absolute
+  local rb = params.title and refbool(true)
+  local sizeSet, positionSet = false, false
+
+  local fn = function ()
+    local frame = ui.frameCount()
+    if frame == lastFrameDrawn then return end
+    lastFrameDrawn = frame
+    if not opened then
+      opened = true
+      ui.openPopup(id)
+    end
+    if params.position and not positionSet then
+      ui.setNextWindowPosition(params.position, params.pivot)
+    end
+    if params.size then
+      if type(params.size) == 'table' then
+        ui.setNextWindowSizeConstraints(params.size.min, params.size.max)
+        if params.size.initial and not sizeSet then
+          ui.setNextWindowSize(params.size.initial)
+        end
+      elseif vec2.isvec2(params.size) then
+        ui.setNextWindowSize(params.size)
+      end
+    end
+    if params.backgroundColor then
+      ui.pushStyleColor(ui.StyleColor.PopupBg, params.backgroundColor)
+    end
+    local began
+    local flags = bit.bor(params.flags or 0, ui.WindowFlags.NoSavedSettings)
+    if not params.title then
+      ffi.C.lj_setNextWindowExtraTweaks_inner__ui(1) -- to fix selectables
+      began = ui.beginPopup(id, flags, __util.ensure_vec2_nil(params.padding))
+    else
+      began = ui.beginPopup(id, flags, __util.ensure_vec2_nil(params.padding), rb)
+      if not rb.value then
+        if began then ffi.C.lj_end_inner__ui() end
+        listener()
+        if params and params.onClose then params.onClose() end
+        return
+      end
+      if began then
+        positionSet = true
+      end
+    end
+    if params.backgroundColor then
+      ui.popStyleColor()
+    end
+    if began then
+      sizeSet = true
+      table.insert(acpp, children)
+      local s, e = pcall(callback)
+      table.remove(acpp)
+      for i = #children, 1, -1 do
+        children[i]()
+      end
+      if not s then ac.error(e) end
+      if not params.title then
+        ui.endPopup()
+      else
+        ffi.C.lj_end_inner__ui()
+      end
+    elseif not params.title then
+      listener()
+      if params and params.onClose then params.onClose() end
+    end
+  end
+
+  if acpp[1] and not params.title then
+    -- For popups opening other popups within them
+    opened = true
+    ui.openPopup(id)
+    local lacpp = acpp[#acpp]
+    table.insert(lacpp, fn)
+    listener = function ()
+      table.removeItem(lacpp, fn)
+    end
+  else
+    listener = ui.onUIFinale(fn)
+  end
+end
+
+---@class ui.CapturedKeyboard
+---@field pressedCount integer @Number of buttons in `.pressed` array.
+---@field pressed integer[] @Zero-based array of pressed buttons with direct access (be careful).
+---@field repeated integer[] @Zero-based array of flags if pressed buttons are repeated (the same size as `pressed`).
+---@field releasedCount integer @Number of buttons in `.released` array.
+---@field released integer[] @Zero-based array of released buttons with direct access (be careful).
+ffi.metatype('uicapturedinput', {    
+  __len = function (s)
+    return s.__queue.p1
+  end,
+  __tostring = function (s)
+    return s:queue()
+  end,
+  __index = {
+    ---Characters being typed. Automatically takes into account keyboard layout, held shift and all that stuff.
+    ---@return string @Empty string if there were no characters.
+    queue = function (s)
+      if s.__queue.p1 == 0 then return '' end
+      return __util.strrefr(s.__queue)
+    end,
+
+    ---@return boolean
+    down = function (s, index)
+      return index > 0 and index < 256 and s.__down[index]
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrl = function (s, button)
+      return s.__down[17] and not s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyShift = function (s, button)
+      return not s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyAlt = function (s, button)
+      return not s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrlShift = function (s, button)
+      return s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrlAlt = function (s, button)
+      return s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrlShiftAlt = function (s, button)
+      return s.__down[17] and s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+  }
+})
+
 local _uilCache = {}
 
----Creates a new layer with user icons.
----@param priority number @Layer with higher priority will be used.
+---Creates a new layer with user icons. Use `carN::special::driver` to draw an icon of a driver in a certain car (replace N with 0-based car index).
+---@param priority integer @Layer with higher priority will be used.
+---@param column number? @Column. If set, extra icons per user can be set. Columns are ordered from lowest to biggest. To get number of icon columns use `ac.getCar().extraIconsCount`. To draw an icon X, use `carN::special::driver::X`. Note: unlike main icons, those extra icons are not drawn in most parts of UI. New CSP UI only draws up to two extra icons per driver.
 ---@return fun(carIndex: integer, icon: ui.Icons) @Call this function to override actual icons using 0-based car index. Note: car scripts can override icon of their drivers only.
-function ui.UserIconsLayer(priority)
-  local existing = _uilCache[priority]
+function ui.UserIconsLayer(priority, column)
+  local cache
+  if type(column) == 'number' then
+    cache = _uilCache[tostring(column)]
+    if not cache then
+      cache = {}
+      _uilCache[tostring(column)] = cache
+    end
+  else
+    column = math.huge
+    cache = _uilCache
+  end
+  local existing = cache[priority]
   if not existing then
     local set = {}
     ac.onRelease(function ()
       for k, v in pairs(set) do
         if v then
-          ffi.C.lj_setUserIcon_inner__ui(k, priority, nil)
+          ffi.C.lj_setUserIcon_inner__ui(k, priority, column, nil)
         end
       end
     end)
@@ -1950,21 +1901,81 @@ function ui.UserIconsLayer(priority)
       carIndex = tonumber(carIndex) or 0
       if not icon and not set[carIndex] then return end
       set[carIndex] = icon and true or false
-      ffi.C.lj_setUserIcon_inner__ui(carIndex, priority, icon and tostring(icon) or nil)
+      ffi.C.lj_setUserIcon_inner__ui(carIndex, priority, column, icon and tostring(icon) or nil)
     end
-    _uilCache[priority] = existing
+    cache[priority] = existing
   end
   return existing
+end
+
+local ir1, ir2 = vec2(), vec2()
+
+---Note: unlike `ui.itemRectMin()` and `ui.itemRectMax()`, this one returns references instead of creating new vectors. Be careful if you 
+---are to call this function and reuse results after calling it again.
+---@return vec2
+---@return vec2
+function ui.itemRect()
+  ffi.C.lj_itemRect_inner__ui(ir1, ir2)
+  return ir1, ir2
 end
 
 ---Adds a new settings item in settings list in apps.
 --[[@tableparam params {
   icon: ui.Icons = ui.Icons.Settings "Settings icon",
   name: string "Name of the settings item (name of a script by default).",
-  size: {default: vec2, min: vec2, max: vec2} = nil "Size settings. Default size: `vec2(320, 240)`, default min size: `vec2(40, 20)`."
+  size: {default: vec2, min: vec2, max: vec2} = nil "Size settings. Default size: `vec2(320, 240)`, default min size: `vec2(40, 20)`.",
+  id: string = nil "If specified, state of a window will be remembered across AC runs or Lua reloads.",
+  padding: vec2 = nil "Custom padding for the window.",
+  backgroundColor: rgbm = nil "Custom background color for the window.",
+  category: 'settings'|'main'|'developer'|nil = nil "Optionally, this function can be used for simply creating new apps.",
+  onClose: fun() = nil "Callback called when the tool is closed",
+  onMenu: fun() = nil "Callback for extra items in context menu opening from taskbar.",
+  onRemove: fun() = nil "Callback called once when the tool is removed. If set, there will be an item for removing the tool in taskbar context menu.",
+  keepClosed: boolean = nil "Set to `true` to keep app closed even if it was opened before."
 }]]
 ---@param callback fun() @Callback function to draw contents of the settings window.
----@return ac.Disposable
+---@return ac.Disposable|fun(command: 'open'|'close'|'toggle'|'opened'|'focus'|string): any
 function ui.addSettings(params, callback)
-  return ffi.C.lj_addSettings_inner__ui(__util.json(params), __util.setCallback(callback))
+  if type((params or error('Argument “params” is required', 2)).onRemove) == 'function' then
+    params = table.assign({}, params, {
+      onClose = params.onClose and __util.setCallback(params.onClose),
+      onMenu = params.onMenu and __util.setCallback(params.onMenu),
+      onRemove = params.onRemove and __util.expectReply(params.onRemove),
+    }) 
+  end
+  local key = ffi.C.lj_addSettings_inner__ui(__util.json(params), __util.setCallback(callback), false)
+  if key == 0 then return function () end end
+  return function(c)
+    if type(c) == 'string' then 
+      ffi.C.lj_addSettings_inner__ui(c, key, true)
+      return __util.result()
+    else 
+      __util.disposable_impl(key)
+    end
+  end
+  -- return __util.disposable(ffi.C.lj_addSettings_inner__ui(__util.json(params), __util.setCallback(callback)))
 end
+
+---@param from integer @1-based index, similar to string.sub().
+---@param to integer @1-based index, similar to string.sub().
+---@param color rgbm|nil @Default value: `nil`.
+---@param bold boolean|nil @Default value: `nil`.
+function ui.setNextTextSpanStyle(from, to, color, bold)
+  if from > 1e10 then return end
+  if to > 1e10 then to = 1e8 end
+  if bold ~= nil then
+    ffi.C.lj_setNextTextSpanStyle_inner2__ui(from, to, __util.ensure_rgbm_nil(color), bold ~= false)
+  else
+    ffi.C.lj_setNextTextSpanStyle_inner1__ui(from, to, __util.ensure_rgbm_nil(color))
+  end
+end
+
+---@param command 'getSelected'|'getText'|'setText'|'keepStateOnEscape'|'suggest'|'selectAll'|'delete'|'undo'|'redo'|'paste'|'copy'|'cut'|''
+---@param argument string|number|boolean|nil @Default value: `nil`.
+---@param lookActive boolean? @Default value: `true`.
+---@return string?
+function ui.inputTextCommand(command, argument, lookActive) 
+	return __util.strrefp(ffi.C.lj_inputTextCommand_inner__ui(__util.str(command), __util.str_opt(argument), lookActive ~= false))
+end
+
+ui.setFontBoldEffect = function () end

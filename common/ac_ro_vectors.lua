@@ -5,6 +5,9 @@ ffi.metatype('luavec___TYPE__', {
   __len = function (v)
     return v._end - v._begin
   end,
+  __ipairs = function (v)
+    return __util.lvi, v, -1
+  end,
   __tostring = function(v)
     local t, n = {'('}, 2
     for i = 0, v._end - v._begin - 1 do

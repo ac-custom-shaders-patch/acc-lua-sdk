@@ -44,6 +44,7 @@ function vec3.tmp() end
 ---@operator div(number|vec3): vec3
 ---@operator pow(number|vec3): vec3
 ---@operator len: number
+---@operator unm: vec3
 ---@constructor fun(x: number?, y: number?, z: number?): vec3
 
 ---Makes a copy of a vector.

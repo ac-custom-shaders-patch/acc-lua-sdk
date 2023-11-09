@@ -45,6 +45,7 @@ rgb.colors = { transparent = rgb(0, 0, 0), black = rgb(0, 0, 0), silver = rgb(0.
 ---@operator div(number|rgb): rgb
 ---@operator pow(number|rgb): rgb
 ---@operator len: number
+---@operator unm: rgb
 ---@constructor fun(r: number?, g: number?, b: number?): rgb
 
 ---Makes a copy of a vector.
@@ -173,3 +174,7 @@ function rgb:hsv() end
 ---Returns rgb*mult turned to vec3.
 ---@return vec3
 function rgb:vec3() end
+
+---Returns string with hex representation and leading “#”.
+---@return string
+function rgb:hex() end

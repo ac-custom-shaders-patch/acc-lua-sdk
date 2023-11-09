@@ -1,45 +1,7 @@
 __source 'lua/api_game.cpp'
-__source 'lua/api_replay_extension.cpp'
 __allow 'game'
 
-ac.PhysicsDebugLines = __enum({ cpp = 'phys_debug_lines_switches' }, { 
-  None = 0,
-  Tyres = 1,         -- Tyres raycasting
-  WetSkidmarks = 2,  -- Marks left by tyres reducing grip in rain
-  Script = 4,        -- Lines drawn by custom physics script
-  RainLane = 65536,  -- Alternative AI lane for rain
-})
-
-ac.LightsDebugMode = __enum({ cpp = 'lights_debug_mode' }, { 
-  Off = 0, -- @hidden
-  None = 0,
-  Outline = 1,
-  BoundingBox = 2,
-  BoundingSphere = 4,
-  Text = 8,
-})
-
-ac.VAODebugMode = __enum({ cpp = 'vao_mode' }, { 
-  Active = 1,
-  Inactive = 3,
-  VAOOnly = 4,
-  ShowNormals = 5
-})
-
-ac.ScreenshotFormat = __enum({ cpp = 'screenshot_format' }, {
-  Auto = 0, -- As configured in AC system settings
-  BMP = 1,
-  JPG = 2,
-  JPEG = 2,
-  PNG = 3,
-  DDS = 4,
-})
-
-ac.SceneTweakFlag = __enum({}, {
-  Default = 0,
-  ForceOn = 1,
-  ForceOff = 2,
-})
+require './ac_game_enums'
 
 ffi.cdef [[ 
 typedef struct {
@@ -60,6 +22,7 @@ ffi.cdef [[
 typedef struct {
   int forceHeadlights;
   int forceBrakeLights;
+  int forceHighBeams;
   float timeOffset;
   float headingAngleOffset;
   bool forceFlames;
@@ -73,6 +36,7 @@ typedef struct {
 ---@class ac.SceneTweaks
 ---@field forceHeadlights ac.SceneTweakFlag 
 ---@field forceBrakeLights ac.SceneTweakFlag 
+---@field forceHighBeams ac.SceneTweakFlag 
 ---@field timeOffset number
 ---@field headingAngleOffset number
 ---@field forceFlames boolean
@@ -80,32 +44,6 @@ typedef struct {
 ---@field disableDamage boolean
 ---@field disableDirt boolean
 ac.SceneTweaks = ffi.metatype('camera_scene_adjustments', { __index = {} })
-
-ffi.cdef [[ 
-typedef struct {
-  void* __something;
-} binaryinput;
-]]
-
----@alias ac.ControlButtonModifiers {ctrl: boolean, shift: boolean, alt: boolean, ignore: boolean, gamepad: boolean, system: boolean}
-
----@param id string
----@param key ui.KeyIndex?
----@param modifiers ac.ControlButtonModifiers?
----@param repeatPeriod number?
----@return ac.ControlButton
-function ac.ControlButton(id, key, modifiers, repeatPeriod)
-  local m = 0
-  if type(modifiers) == 'table' then
-    if modifiers.ctrl then m = m + 2 end
-    if modifiers.shift then m = m + 8 end
-    if modifiers.alt then m = m + 4 end
-    if modifiers.ignore then m = -1 end
-    if modifiers.gamepad then m = -2 end
-    if modifiers.system then m = -3 end
-  end
-  return ffi.gc(ffi.C.lj_binaryinput_new__game(tostring(id), tonumber(key) or 0, m, tonumber(repeatPeriod) or 1e9), ffi.C.lj_binaryinput_gc__game)
-end
 
 ---Returns VRAM stats if available (older versions of Windows won’t provide access to this API). All sizes are in megabytes. Note: values
 ---provided are for a GPU in general, not for the Assetto Corsa itself.
@@ -116,95 +54,130 @@ function ac.getVRAMConsumption()
   return { budget = r.x, usage = r.y, availableForReservation = r.z, reserved = r.w }
 end
 
----For internal use.
----@class ac.ControlButton
----@explicit-constructor ac.ControlButton
-ffi.metatype('binaryinput', {
+ffi.cdef [[ 
+typedef struct {
+  const float range;
+  const float applied;
+  float input;
+} driverweightshift;
+]]
+
+---Driver seat parameters.
+---@class ac.DriverWeightShift
+---@field range number @Maximum range in meters. Read only.
+---@field applied number @Applied shift in meters. Read only.
+---@field input number @Requested shift in meters. Can be altered.
+ffi.metatype('driverweightshift', { __index = {} })
+
+---Access driver weight shift.
+---@param carIndex integer @0-based car index.
+---@return ac.DriverWeightShift?
+function ac.DriverWeightShift(carIndex)
+  local r = ffi.C.lj_accessDriverWeightShift_inner__game(tonumber(carIndex) or 0)
+  if r == nil then return nil end
+  return r
+end
+
+
+
+
+ffi.cdef [[ 
+typedef struct {
+  uint64_t _lastActiveFrame;
+  bool headlights;
+  bool headlightsFlash;
+  bool changeCamera;
+  bool horn;
+  bool lookLeft;
+  bool lookRight;
+  bool lookBack;
+  bool _pad;
+  bool gearUp;
+  bool gearDown;
+  int8_t drs;
+  int8_t kers;
+  bool brakeBalanceUp;
+  bool brakeBalanceDown;
+  int requestedGearIndex;
+  bool __pad;
+  float handbrake;
+  bool absUp;
+  bool absDown;
+  bool tractionControlUp;
+  bool tractionControlDown;
+  bool turboUp;
+  bool turboDown;
+  bool engineBrakeUp;
+  bool engineBrakeDown;
+  bool mgukDeliveryUp;
+  bool mgukDeliveryDown;
+  bool mgukRecoveryUp;
+  bool mgukRecoveryDown;
+  int8_t mguhMode;
+  float gas;
+  float brake;
+  float steer;
+  float clutch;
+} carcontrolsoverride;
+]]
+
+---A helper structure to simulate some inputs for controlling the car.
+---@class ac.CarControlsInput
+---@field gearUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field gearDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field brakeBalanceUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field brakeBalanceDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field absUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field absDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field tractionControlUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field tractionControlDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field turboUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field turboDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field engineBrakeUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field engineBrakeDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field mgukDeliveryUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field mgukDeliveryDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field mgukRecoveryUp boolean @Set to `true` to activate a flag for the next physics step.
+---@field mgukRecoveryDown boolean @Set to `true` to activate a flag for the next physics step.
+---@field drs boolean @Set to `true` to switch the DRS state in the next physics step.
+---@field kers ac.CarControlsInput.Flag @Set to `ac.CarControlsInput.Flag.Skip` to leave the user-selected value be.
+---@field mguhMode integer @Set to `-1` to keep existing value, or to a 0-based index of the required MGUH mode.
+---@field requestedGearIndex integer @Set to `0` to keep existing gear, to `-1` to engage reverse, or to a positive value to engage a regular gear.
+---@field steer number @Value from -1 to 1. Set to `math.huge` to instead leave the original steering value.
+---@field gas number @Value from 0 to 1. Final value will be the maximum of original and this.
+---@field brake number @Value from 0 to 1. Final value will be the maximum of original and this.
+---@field handbrake number @Value from 0 to 1. Final value will be the maximum of original and this.
+---@field clutch number @Value from 0 to 1. Final value will be the minimum of original and this (1 is for clutch pedal fully depressed, 0 for pressed).
+---@field headlights boolean @Set to `true` to toggle headlights in the next frame (after that, field will be reset).
+---@field headlightsFlash boolean @Set to `true` to flash headlights in the next frame (after that, field will be reset).
+---@field changeCamera boolean @Set to `true` to change camera in the next frame (after that, field will be reset).
+---@field horn boolean @Set to `true` to honk. Reset to `false` when done. Note: with sirens instead of horn, behaviour might be different. 
+---@field lookLeft boolean @Set to `true` to look left. Reset to `false` when done.
+---@field lookRight boolean @Set to `true` to look right. Reset to `false` when done.
+---@field lookBack boolean @Set to `true` to look back. Reset to `false` when done.
+---@cpptype carcontrolsoverride
+ffi.metatype('carcontrolsoverride', {
   __index = {
-    ---Button is configured.
+    ---Checks if controls override is active (as in, has been read by AC physics in the last couple of frames).
     ---@return boolean
-    configured = ffi.C.lj_binaryinput_set__game,
-
-    ---Button was just pressed.
-    ---@return boolean
-    pressed = ffi.C.lj_binaryinput_pressed__game,
-
-    ---Button is held down.
-    ---@return boolean
-    down = ffi.C.lj_binaryinput_down__game,
-
-    ---Use within UI function to draw an editing button.
-    ---@param size vec2?
-    ---@return boolean
-    control = function(s, size) 
-      return ffi.C.lj_binaryinput_control__game(s, __util.ensure_vec2(size))
-    end,
-
-    ---@param value boolean? @Default value: `true`.
-    ---@return ac.ControlButton
-    setAlwaysActive = function(s, value)
-      ffi.C.lj_binaryinput_setalwaysactive__game(s, value ~= false)
-      return s
+    active = function (s)
+      return s._lastActiveFrame + 2 > ac.getSim().frame
     end
   }
 })
 
-local _rpsActive = {}
+
 ffi.cdef [[ 
 typedef struct {
-  void* _frame;
-} replayextension;
+  int displayMode;
+  float _pad[3];
+  bool verticalLayout;
+} lua_overlay_leaderboard;
 ]]
 
----Create a new stream for recording data to replays. Write data in returned structure if not in replay mode, read data if in replay mode (use `sim.isReplayActive` to check if you need to write or read the data).
----Few important points:
---- - Each frame should not exceed 256 bytes to keep replay size appropriate.
---- - While data will be interpolated between frames during reading, directional vectors won’t be re-normalized. 
---- - If two different apps would open a stream with the same layout, they’ll share a replay entry.
---- - Each opened replay stream will persist through the entire AC session to be saved at the end. Currently, the limit is 128 streams per session.
---- - Default values for unitialized frames are zeroes.
----@generic T
----@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Unlike other similar functions, here you shouldn’t use string, otherwise data blending won’t work.
----@param callback fun()? @Callback that will be called when replay stops. Use this callback to re-apply data from structure: at the moment of the call it will contain stuff from last recorded frame allowing you to restore the state of a simulation to when replay mode was activated.
----@return T? @Might return `nil` if there is game is launched in replay mode and there is no such data stored in the replay.
-function ac.ReplayStream(layout, callback)
-  local layoutStr, reordered = ac.StructItem.__build(layout)
-  if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
-  if layoutStr:match('%(') then error('Invalid layout', 2) end
-
-  local name = '__rps_'..tostring(ac.checksumXXH(layoutStr))
-  local ret = _rpsActive[name]
-  if ret == nil then
-    ffi.cdef(ac.StructItem.__cdef(name, layoutStr, true))
-    local size = ffi.sizeof(name)
-    local mixing = {}
-    if reordered then
-      local offset = 0
-      for _, v in ipairs(reordered) do
-        local t = v.replayType
-        if t then
-          for _ = 1, v.array or 1 do
-            if t > 99 then
-              local c = math.floor(t / 100)
-              for _ = 1, c do
-                mixing[#mixing + 1] = string.format('%d:%d', offset, t % 100)
-                offset = offset + v.size / c
-              end
-            else
-              mixing[#mixing + 1] = string.format('%d:%d', offset, t)
-              offset = offset + v.size
-            end
-          end
-        else
-          offset = offset + v.size * (v.array or 1)
-        end
-      end
-    end
-    ret = ffi.gc(ffi.C.lj_replayextension_new(name, size, table.concat(mixing, '\n'), __util.setCallback(callback)), ffi.C.lj_replayextension_gc)
-    _rpsActive[name] = ret
-  end
-  if ret._frame == nil then
-    return nil
-  end
-  return ffi.cast(name..'*', ret._frame)
-end
+---A helper structure to simulate some inputs for controlling the car.
+---@class ac.OverlayLeaderboardParams
+---@field displayMode integer
+---@field verticalLayout boolean
+---@cpptype lua_overlay_leaderboard
+ffi.metatype('lua_overlay_leaderboard', { __index = {} })

@@ -17,11 +17,9 @@ car = nil
 ---@type ac.StateSim
 sim = nil
 
-function __script.updateChaserState(carIndex)
-  ac.debug('carIndex', carIndex)
+function __script.updateState(carIndex)
   if not car or car.index ~= carIndex then
     car = ac.getCar(carIndex)
-    ac.debug('car', car ~= nil)
     if not sim then
       sim = ac.getSim()
     end

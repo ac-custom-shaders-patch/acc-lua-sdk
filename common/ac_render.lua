@@ -4,6 +4,10 @@ __namespace 'render'
 require './ac_render_enums'
 require './ac_render_shader'
 
+local _sp_renderf = {template = 'fullscreen.fx', defaultBlendMode = render.BlendMode.Opaque}
+local _sp_renderq = {template = 'quad.fx'}
+local _sp_renderm = {template = 'mesh.fx'}
+
 ---Affects positioning of debug shapes or meshes drawn next.
 ---@param pos vec3
 ---@param look vec3?
@@ -12,7 +16,6 @@ require './ac_render_shader'
 ---@overload fun(transform: mat4x4, applySceneOriginOffset: boolean)
 function render.setTransform(pos, look, up, applySceneOriginOffset)
   if mat4x4.ismat4x4(pos) then
-    ac.debug('not not look', not not look)
     ffi.C.lj_setTransform_mat__render(pos, not not look)
   else
     ffi.C.lj_setTransform_vec__render(__util.ensure_vec3(pos), __util.ensure_vec3_nil(look), __util.ensure_vec3_nil(up),
@@ -73,10 +76,11 @@ end
   defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+  directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
   shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/fullscreen.fx”."
 }]]
 function render.fullscreenPass(params)
-  local dc = __util.setShaderParams(params, 'fullscreen.fx', render.BlendMode.Opaque)
+  local dc = __util.setShaderParams2(params, _sp_renderf)
   if not dc then return false end
   ffi.C.lj_cshader_fullscreen__render(dc, tonumber(params.depthMode) or 4, tonumber(params.depth) or math.huge, vec4.isvec4(params.region) and params.region or nil)
   return true
@@ -128,6 +132,9 @@ end
 ---
 ---Note: if shader would fail to compile, a C++ exception will be triggered, terminating script completely (to prevent AC 
 ---from crashing, C++ exceptions halt Lua script that triggered them until script gets a full reload).
+---
+---Since v0.1.80-preview400 you can now pass `pos: vec3`, `width: number`, `height: number` instead to draw a camera-aligned
+---quad. You can also pass optional `up: vec3` to specify upwards direction to keep quad from tilting.
 ---@return boolean @Returns `false` if shader is not yet ready and no drawing occured (happens only if `async` is set to `true`).
 --[[@tableparam params {
   p1: vec3 = vec3(0, 0, 0),
@@ -139,12 +146,17 @@ end
   defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+  directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
   shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/quad.fx”."
 }]]
 function render.shaderedQuad(params)
-  local dc = __util.setShaderParams(params, 'quad.fx')
+  local dc = __util.setShaderParams2(params, _sp_renderq)
   if not dc then return false end
-  ffi.C.lj_cshader_quad__render(dc, __util.ensure_vec3(params.p1), __util.ensure_vec3(params.p2), __util.ensure_vec3(params.p3), __util.ensure_vec3(params.p4))
+  if params.pos and params.width and params.height then
+    ffi.C.lj_cshader_quad_bb__render(dc, __util.ensure_vec3(params.pos), tonumber(params.width) or 0, tonumber(params.height) or 0, __util.ensure_vec3_nil(params.up))
+  else
+    ffi.C.lj_cshader_quad__render(dc, __util.ensure_vec3(params.p1), __util.ensure_vec3(params.p2), __util.ensure_vec3(params.p3), __util.ensure_vec3(params.p4))
+  end
   return true
 end
 
@@ -232,10 +244,11 @@ end
   defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
   textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
   values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
+  directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
   shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/mesh.fx”."
 }]]
 function render.mesh(params)
-  local dc = __util.setShaderParams(params, 'mesh.fx')
+  local dc = __util.setShaderParams2(params, _sp_renderm)
   if not dc then return false end
   local tr = nil ---@type mat4x4
   if params.transform then
@@ -259,3 +272,15 @@ function render.mesh(params)
   return true
 end
 
+---@param key string
+---@param drawFn fun()
+function render.measure(key, drawFn)
+  local p = ffi.C.lj_measureGPUPerformance_0__render(tostring(key))
+  if p == nil then
+    drawFn()
+  else
+    using(drawFn, function ()
+      ffi.C.lj_measureGPUPerformance_1__render(p)
+    end)
+  end
+end

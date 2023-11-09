@@ -288,3 +288,4 @@ function ClassPool.include(self, mixin)
   end
   return self
 end
+
