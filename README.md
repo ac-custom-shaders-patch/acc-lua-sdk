@@ -1,9 +1,10 @@
-# First see this
-- current LUA libraries are always included in latest CSP version:
-https://github.com/CheesyManiac/cheesy-lua/wiki/Getting-Started-with-CSP-Lua-Scripting
+# Writing your own Lua scripts for Assetto Corsa
 
+## First, check this out
 
-# Prepared scripts to use as examples
+Current LUA libraries are always included in latest CSP version. [Here is some documentation that could help to start scripting](https://github.com/CheesyManiac/cheesy-lua/wiki/Getting-Started-with-CSP-Lua-Scripting).
+
+## Also, here are some scripts to use as examples
 
 - [Built-in apps](https://github.com/ac-custom-shaders-patch/app-csp-defaults);
 - [Built-in internal scripts](https://github.com/ac-custom-shaders-patch/acc-lua-internal);
@@ -11,17 +12,6 @@ https://github.com/CheesyManiac/cheesy-lua/wiki/Getting-Started-with-CSP-Lua-Scr
 - [Default WeatherFX implementation](https://github.com/ac-custom-shaders-patch/acc-weatherfx-base);
 - [Paintshop app](https://github.com/ac-custom-shaders-patch/app-paintshop);
 - [Various Lua examples](https://github.com/ac-custom-shaders-patch/acc-lua-examples).
-
-
-# this is kinda old now:
-(code in this repo is old too)
-
-## CSP Lua SDK
-
-Source code for CSP Lua libraries. Feel free to use any of its parts, like its [class implementation](/common/class.lua), in your projects, 
-or just use it for a reference.
-
-Designed to work with [OpenResty’s fork of LuaJIT](https://github.com/openresty/luajit2), with LuaJIT compiled with 5.2 compatibility option.
 
 ## How to start writing scripts
 
@@ -45,9 +35,8 @@ For backwards compatibility some functions, like `function script.update()`, can
 but `script.…` ones will be looked for first. Once CSP finds a function, it would store a reference to it for faster lookup when calling
 in the future, so changing functions on-fly wouldn’t work.
 
-## Points of interest
+# This repository: standard CSP Lua library
 
-A few places in this repo that might interest you:
+This repository contains source code for standard CSP Lua libraries. Feel free to use any of its parts, like its [class implementation](/common/class.lua), in your projects, or just use it for a reference when writing Lua scripts for Assetto Corsa.
 
-- [Definitions](.definitions): while automatically generated documentation for that Lua plugin is detaile, there are also some simple summary files listing available functions and structures. They’re not as exhaustive and don’t have everything, but they still might help to skim over and possibly notice something useful.
-- [Common API implementation](common): sometimes docs might not be enough and you might want to check how something is implemented, like, for example, [those `table` functions](common/table.lua).
+Designed to work with [OpenResty’s fork of LuaJIT](https://github.com/openresty/luajit2) compiled with 5.2 compatibility option and a few tweaks applied to better suit Assetto Corsa.
