@@ -62,13 +62,16 @@ end
 
 ---Returns the total number of elements in a given Lua table (i.e. from both the array and hash parts combined).
 ---@param t table
+---@return integer
 function table.nkeys(t)
   return _tnkeys(t)
 end
 
 ---Clones table using a fast LuaJIT call.
----@param t table
----@param deep boolean @Set to `true` for deep cloning.
+---@generic T
+---@param t T
+---@param deep boolean? @Set to `true` for deep cloning. Default value: `false`.
+---@return T
 function table.clone(t, deep)
   if deep then
     return __deepCopy(t)
@@ -223,6 +226,56 @@ function table.indexOf(t, item)
   return nil
 end
 
+---Returns true if tables contents are the same.
+---@generic TKey
+---@param t1 table?
+---@param t2 table?
+---@param deep boolean? @Default value: `true`.
+---@return boolean
+function table.same(t1, t2, deep)
+  if t1 == t2 then
+    return true
+  end
+  if type(t1) ~= 'table' or type(t2) ~= 'table' then
+    return false
+  end
+  local n1 = #t1
+  local n2 = #t2
+  local a1 = __isArray(t1, n1)
+  local a2 = __isArray(t2, n2)
+  if a1 ~= a2 or n1 ~= n2 then
+    return false
+  end
+  deep = deep ~= false
+  if a1 then
+    local s1 = next(t1)
+    if s1 ~= next(t2) then return false end
+    for i = s1 or 1, n1 do
+      local v1 = t1[i]
+      local v2 = t2[i]
+      if v1 ~= v2 and (not deep or not table.same(v1, v2, deep)) then
+        return false
+      end
+    end
+  else
+    if _tnkeys(t1) ~= _tnkeys(t2) then
+      return false
+    end
+    for i, v1 in pairs(t1) do
+      local v2 = t2[i]
+      if v1 ~= v2 and (not deep or not table.same(v1, v2, deep)) then
+        return false
+      end
+    end
+    for i, _ in pairs(t2) do
+      if not t1[i] then
+        return false
+      end
+    end
+  end
+  return true
+end
+
 local _tjsp, _tjsn = {}, 0
 
 ---Joins elements of a table to a string, works with both arrays and non-array tables. Optinal
@@ -348,7 +401,7 @@ end
 ---@generic TReturnKey
 ---@generic TReturnValue
 ---@param t table<TKey, T>
----@param callback (fun(item: T, index: TKey, callbackData: TCallbackData): TReturnValue, TReturnKey)|nil @Mapping callback.
+---@param callback (fun(item: T, index: TKey, callbackData: TCallbackData): TReturnValue, TReturnKey?)|nil @Mapping callback.
 ---@param callbackData TCallbackData?
 ---@return table<TReturnKey, TReturnValue>
 function table.map(t, callback, callbackData)

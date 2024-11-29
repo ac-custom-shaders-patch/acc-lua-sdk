@@ -63,3 +63,37 @@ expect(table.flatten{ {1, 2}, {3, 4} }, {1,2,3,4})
 expect(table.flatten({ {1, 2}, {3, {4, 5}} }), {1,2,3,{4,5}})
 expect(table.flatten({ {1, 2}, {3, {4, 5}} }, 1), {1,2,3,{4,5}})
 expect(table.flatten({ {1, 2}, {3, {4, 5}} }, 2), {1,2,3,4,5})
+
+expect(table.same({}, {}), true)
+expect(table.same({}, nil), false)
+expect(table.same(nil, nil), true)
+expect(table.same(nil, {}), false)
+expect(table.same({1,2}, {1,2}), true)
+expect(table.same({key=1,2}, {key=1,2}), true)
+expect(table.same({key=1,2}, {key=1.1,2}), false)
+expect(table.same({key=1.1,2,{a=5}}, {key=1.1,2,{a=5}}), true)
+expect(table.same({[0]=1, 2}, {1}), false)
+expect(table.same({[0]=1, 2}, {[0]=1, 2}), true)
+
+local x = 0
+local function counter()
+  x = x + 1
+  return x
+end
+
+local ordered = {
+  k1 = counter(),
+  k2 = counter(),
+  k3 = counter(),
+  k4 = counter(),
+  k5 = counter(),
+  k6 = counter(),
+  k7 = counter(),
+  k8 = counter(),
+  k9 = counter(),
+  k10 = counter(),
+  k11 = counter(),
+}
+expect(ordered.k1, 1)
+expect(ordered.k2, 2)
+expect(ordered.k10, 10)

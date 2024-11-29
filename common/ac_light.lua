@@ -101,6 +101,14 @@ ffi.metatype('lightsource', {
     ---@deprecated
     keepAlive = function (s) end,
 
+    ---Link light to a node. Switches `position` and `direction` to operate in local coordinates.
+    ---@param sceneReference ac.SceneReference? @Set to `nil` to unlink the light source.
+    ---@return self
+    linkTo = function (s, sceneReference) 
+      ffi.C.lj_lightsource_settransformfrom(s, sceneReference)
+      return s
+    end,
+
     ---Removes light from the scene.
     dispose = function (s) table.removeItem(__lightSourceKeepAlive, s) ffi.C.lj_lightsource_dispose(s) end,
   }

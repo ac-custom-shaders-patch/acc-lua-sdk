@@ -6,6 +6,12 @@ require './common/class'
 io = {}
 os = {}
 
+--[[? if (ctx.ldoc) out(]]
+
+ui = {}
+
+--[[) ?]]
+
 -- all sorts of modules:
 require 'ffi'
 require './common/debug'
@@ -30,7 +36,9 @@ require './common/ac_ui_enums'
 
 require './common/ac_extras_ini'
 require './common/ac_extras_datalut'
+require './common/ac_extras_connect'
 require './common/ac_reftypes'
+require './common/ac_weatherconditions'
 require './common/ac_state'
 require './common/stringify'
 require './common/json'
@@ -39,9 +47,9 @@ require './common/secure'
 -- automatically generated entries go here:
 __definitions('nodocs')
 
-function __script.__init__()
+function __script.__initbase__()
   __script.__secure__()
-  if __carindex__ and (__mode__ == 'car_cphys' or __mode__ == 'car_scriptable_display' or __mode__ == 'car_script') then
+  if __mode__ == 'car_cphys' or __mode__ == 'car_scriptable_display' or __mode__ == 'car_script' then
     car = ac.getCar(__carindex__ - 1)
   end
 end

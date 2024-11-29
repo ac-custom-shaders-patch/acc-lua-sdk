@@ -51,8 +51,8 @@ function vec3.tmp() end
 ---@return vec3
 function vec3:clone() end
 
----Unpacks vec3 into rgb and number.
----@return rgb, number
+---Unpacks vec3 into three numbers.
+---@return number, number, number
 function vec3:unpack() end
 
 ---Turns vec3 into a table with three values.

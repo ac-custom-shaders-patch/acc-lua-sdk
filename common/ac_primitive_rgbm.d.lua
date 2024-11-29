@@ -10,6 +10,7 @@
 ---@overload fun(hexColor: string): rgbm
 ---@overload fun(colorAlpha: number): rgbm
 ---@overload fun(color: number, alpha: number): rgbm
+---@overload fun(color: rgb, alpha: number): rgbm
 ---@param r number?
 ---@param g number?
 ---@param b number?

@@ -2,7 +2,12 @@ __source 'custom_physics/cphys_script.cpp'
 __states 'custom_physics/cphys_script.cpp'
 __allow 'cphys'
 
+--[[? ctx.flags.physicsThread = true; ?]]
 require './common/internal_import'
+require './common/ac_extras_binaryinput'
+require './common/ac_car_control_physics'
+require './common/ac_car_cphys_enums'
+require './common/ac_physics_raycast'
 require './common/secure'
 
 ffi.cdef [[ 
@@ -64,6 +69,36 @@ ffi.metatype('state_cphys_damper', { __index = {
 ---@field vibrationLength number
 ffi.metatype('state_cphys_surface', { __index = {
 } })
+
+---Override a rendering thread value. Doesn’t affect actual physics (unless your physics script uses data from `ac.getCar()`, which might
+---be a bad idea to begin with).
+---@param key 'steer'|'gas'|'brake'|'clutch'|'handbrake'|'gear'|'rpm'|'limiter'|'limiterActive'|'turbo'|'drivetrain'|'fuel'|'bodyworkVolume'|'wheelAngularSpeed'|'wheelSlipAngle'|'wheelSlipRatio'|'wheelTyreSlip'|'wheelNDSlip'|'wheelLoad'
+---@param value number|boolean @For `limiterActive`, pass boolean. Other types expect numbers. Pass `nil` to cancel out overriding.
+---@param index ac.Wheel? @For `wheel…` values, this value specifies affected wheels.
+function ac.overrideCarState(key, value, index)
+  local k = 0
+  if key == 'steer' then k = 1
+  elseif key == 'gas' then k = 2
+  elseif key == 'brake' then k = 3
+  elseif key == 'clutch' then k = 4
+  elseif key == 'handbrake' then k = 5
+  elseif key == 'gear' then k = 6
+  elseif key == 'rpm' then k = 7
+  elseif key == 'limiter' then k = 8
+  elseif key == 'limiterActive' then k = 9
+  elseif key == 'turbo' then k = 10
+  elseif key == 'drivetrain' then k = 11
+  elseif key == 'fuel' then k = 12
+  elseif key == 'bodyworkVolume' then k = 13
+  elseif key == 'wheelAngularSpeed' then k = 14
+  elseif key == 'wheelSlipAngle' then k = 15
+  elseif key == 'wheelSlipRatio' then k = 16
+  elseif key == 'wheelTyreSlip' then k = 17
+  elseif key == 'wheelNDSlip' then k = 18
+  elseif key == 'wheelLoad' then k = 19
+  end
+  __util.native('ac.overrideCarStateValue', k, value, index)
+end
 
 --[[ ac.TractionType = __enum({ cpp = 'TractionType' }, {
   RWD = 0,

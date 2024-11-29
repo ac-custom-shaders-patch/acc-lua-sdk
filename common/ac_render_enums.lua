@@ -1,6 +1,15 @@
 ---Render namespace for drawing custom shapes and other stuff like that.
 render = {}
 
+render.ProjectFace = __enum({ cpp = 'project_face_id' }, {
+  Auto = -3,    -- use current triple screen face during main rendering pass, or the whole screen during post-processing
+  Screen = -2,  -- `vec2(0, 0)` for the upper left corner of the screen, `vec2(0.5, 0.5)` for the center
+  Current = -1, -- during main rendering pass, points to currently drawn face
+  Left = 0,
+  Center = 1,
+  Right = 2
+})
+
 render.PassID = __enum({ cpp = 'render_callback_pass_id' }, {
   None = 0,
   Main = 1,
@@ -20,6 +29,7 @@ render.BlendMode = __enum({ cpp = 'AC::BlendMode', max = 25 }, {
   BlendSubtract = 12,
   BlendAccurate = 13,
   BlendPremultiplied = 14,
+  OpaqueForced = 27, -- Works even in transparent pass
 })
 
 render.CullMode = __enum({ cpp = 'AC::CullMode', max = 11 }, {
@@ -37,7 +47,8 @@ render.DepthMode = __enum({ cpp = 'AC::DepthMode', max = 5 }, {
   ReadOnly = 1,
   Off = 2,
   LessEqual = 3,
-  ReadOnlyLessEqual = 4
+  ReadOnlyLessEqual = 4,
+  WriteOnly = 7,
 })
 
 render.GLPrimitiveType = __enum({ cpp = 'AC::GLPrimitiveType', max = 5 }, {

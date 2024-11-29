@@ -53,8 +53,8 @@ function quat.tmp() end
 ---@return quat
 function quat:clone() end
 
----Unpacks quat into rgb and number.
----@return rgb, number
+---Unpacks quat into four numbers.
+---@return number, number, number, number
 function quat:unpack() end
 
 ---Turns quat into a table with four values.

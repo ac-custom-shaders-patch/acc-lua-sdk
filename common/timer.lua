@@ -37,7 +37,7 @@ end
 ---and they would only ran when script runs. So if your script is executed each frame and AC runs at 60 FPS, smallest interval
 ---would be 0.016 s, and anything lower that you’d set would still act like 0.016 s. Also, intervals would only be called once
 ---per frame.
----@param callback fun()
+---@param callback fun(): function? @Return `clearInterval` (actual function) to clear interval.
 ---@param period number? @Period time in seconds. Default value: 0.
 ---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
 ---@return integer
@@ -73,7 +73,7 @@ function clearTimeout(cancellationID)
     local n = _timeoutsN
     for i = 1, n do
       local t = _timeouts[i]
-      if t.id == cancellationID then
+      if not t or t.id == cancellationID then
         table.insert(_clearPostponed, cancellationID)
         return true
       end
@@ -85,7 +85,7 @@ function clearTimeout(cancellationID)
     local r = false
     for i = 1, n do
       local t = _timeouts[i]
-      if t.id == cancellationID then
+      if not t or t.id == cancellationID then
         _tremove(_timeouts, i)
         _timeoutsN = n - 1
         r = true
@@ -131,9 +131,14 @@ function __script.updateInner()
         goto next
       end
 
-      t.callback()
-      n = n + t.period
-      t.nextTime = n
+      if t.callback() == clearInterval then
+        _tremove(_timeouts, i)
+        _timeoutsN = _timeoutsN - 1
+        goto next
+      else
+        n = n + t.period
+        t.nextTime = n
+      end
     end
     if n < nextDelay then
       nextDelay = n

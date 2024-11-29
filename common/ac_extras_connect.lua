@@ -2,9 +2,6 @@ __source 'lua/api_extras_connect.cpp'
 
 require('./ac_struct_item')
 
-local _sizes = {}
-local _fficdef = ffi.cdef
-
 ---Creates a new shared structure to quickly exchange data between different Lua scripts within a session. Example:
 ---```
 ---local sharedData = ac.connect{
@@ -27,17 +24,11 @@ local _fficdef = ffi.cdef
 ---@param namespace nil|ac.SharedNamespace @Optional namespace stopping scripts of certain types to access data of scripts with different types. For more details check `ac.SharedNamespace` documentation.
 ---@return T
 function ac.connect(layout, keepLive, namespace)
-  local layoutStr = ac.StructItem.__build(layout)
-  if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
   if not __allowIO__ and namespace == ac.SharedNamespace.Global then error('Script of this type can’t use global namespace', 2) end
-  local name = '__con_'..__util.strrefr(ffi.C.lj_connect_key(layoutStr, type(namespace) == 'string' and namespace or nil))
-  local size = _sizes[name]
-  if size == nil then
-    _fficdef(ac.StructItem.__cdef(name, layoutStr, false))
-    size = ffi.sizeof(name)
-    _sizes[name] = size
-  end
-  return ac.StructItem.__proxy(layout, ffi.gc(ffi.cast(name..'*', ffi.C.lj_connect_new(layoutStr, type(namespace) == 'string' and namespace or nil, size, keepLive ~= false)), ffi.C.lj_connect_gc))
+  local s_name, s_layout = __util.__si_ffi(layout, false)
+  local s_size = ffi.sizeof(s_name)
+  return __util.__si_proxy(layout, ffi.gc(ffi.cast(s_name..'*', 
+    ffi.C.lj_connect_new(s_layout, type(namespace) == 'string' and namespace or nil, s_size, keepLive ~= false)), ffi.C.lj_connect_gc))
 end
 
 ---Create a new struct from a given layout. Could be used in calls like `ac.structBytes()` and `ac.fillStructWithBytes()`. Each call defines and creates a new struct, so don’t
@@ -49,9 +40,6 @@ end
 ---@return integer @Structure size.
 ---@return string @Structure name.
 function ac.StructItem.combine(layout, compact)
-  local layoutStr = ac.StructItem.__build(layout)
-  if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
-  local name = '__cst_'..math.randomKey()
-  _fficdef(ac.StructItem.__cdef(name, layoutStr, compact))
-  return ffi.new(name), ffi.sizeof(name), name
+  local s_name = __util.__si_ffi(layout, compact)
+  return ffi.new(s_name), ffi.sizeof(s_name), s_name
 end

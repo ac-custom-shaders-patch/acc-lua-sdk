@@ -6,14 +6,6 @@ typedef struct {
 } trackcondition;
 ]]
 
----Creates a wrapper to access track condition. If you want to get the value often, consider caching and reusing the wrapper.
----@param expression string @Expression similar to ones config have as CONDITION=… value.
----@param offset number? @Condition offset. Default value: 0.
----@param defaultValue number? @Default value in case referenced condition is missing or parsing failed. Default value: 0.
----@return ac.TrackCondition
-function ac.TrackCondition(expression, offset, defaultValue)
-end
-
 ac.TrackCondition = setmetatable({
   count = function ()
     return ffi.C.lj_trackcondition_count()

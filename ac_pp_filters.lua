@@ -9,7 +9,7 @@ require './common/ac_positioning_helper'
 require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_particles'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
 
 -- automatically generated entries go here:
 __definitions()

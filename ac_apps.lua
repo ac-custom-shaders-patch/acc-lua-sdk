@@ -1,4 +1,5 @@
 __source 'extensions/lua_tools/ac_ext_lua_tools.cpp'
+__source 'lua/api_wfx_apps.cpp'
 __allow 'luatools'
 
 --[[? ctx.flags.withPhysics = true; ?]]
@@ -15,14 +16,17 @@ require './common/ac_particles'
 require './common/ac_physics'
 require './common/ac_physics_ai'
 require './common/ac_gameplay'
+require './common/ac_gameplay_apps'
+require './common/ac_gameplay_replaystream'
 require './common/ac_game'
-require './common/ac_game_apps'
 require './common/ac_track_conditions'
 require './common/ac_car_control'
+require './common/ac_car_control_physics'
 require './common/ac_car_control_switch'
 require './common/ac_apps'
 require './common/ac_extras_backgroundworker'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
+require './common/ac_extras_yebiscolorcorrection'
 -- require './common/ac_extras_leapmotion'
 
 ---Draw virtual mirror. If Real Mirrors module is active and has its virtual mirrors option enabled, mirror might be drawn in two pieces 
@@ -50,13 +54,20 @@ end
 
 local _sslv, _ssrn
 
----Collect information about available spinners in setup menu. Names match section names of setup INI files. Value `label` might contain localized setup items.
----@return {name: string, label: string, min: integer, max: integer, step: integer, value: integer, displayMultiplier: number, readOnly: boolean, units: string?, items: string[]?, defaultValue: integer?, showClicksMode: integer?}[]
+---Collect information about available spinners in setup menu. Names match section names of setup INI files. Value `label` might contain localized setup items. Array `itemValues` is only present for custom CSP setup entries with LUTs.
+---@return {name: string, label: string, min: integer, max: integer, step: integer, value: integer, displayMultiplier: number, readOnly: boolean, units: string?, items: string[]?, itemValues: number[]?, defaultValue: integer?, showClicksMode: integer?}[]
 function ac.getSetupSpinners()
   if not _ssrn then _ssrn = refnumber() end
   ffi.C.lj_getSetupSpinners_inner__apps(_ssrn)
   _sslv = __util.result() or _sslv
   return _sslv or error('Failed to get data', 2)
+end
+
+---Sets window icon. If your icon doesn’t change often, this is preferable to using a live icon.
+---@param windowID string
+---@param iconID ui.Icons
+function ac.setWindowIcon(windowID, iconID) 
+  __util.native('ac.setWindowIcon', windowID, iconID)
 end
 
 -- automatically generated entries go here:

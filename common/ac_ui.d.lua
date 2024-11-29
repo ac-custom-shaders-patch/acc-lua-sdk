@@ -67,7 +67,7 @@ local _uiFileIcon = {}
 ---@param style ui.FileIcon.Style
 function _uiFileIcon:style(style) end
 
----@param name string @Name of the font, should be the name you can see when, for example, opening font with Windows Font Viewer (and not the name of the file).
+---@param name string @Name of the font, should be the name you can see when, for example, opening font with Windows Font Viewer (and not the name of the file). If your TTF file has a single font it in, you can use a path to it instead.
 ---@param dir string|nil @Optionally, path to a directory with TTF files in it. If provided, instead of looking for font in “content/fonts” and “extension/fonts”, CSP will scan given folder. Alternatively you can also use a path to a file here too, if you know for sure which file it’ll be (with TTF, different styles often go in different files).
 ---@return ui.DWriteFont
 ui.DWriteFont = function (name, dir) end
@@ -84,7 +84,7 @@ ui.DWriteFont = function (name, dir) end
 local _uiDWriteFont = {}
 
 ---Set font weight. Bold styles can be emulated even if there isn’t such font face, although quality of real font face would be better.
----@param weight ui.DWriteFont.Weight
+---@param weight ui.DWriteFont.Weight|integer @Alternatively, could be an integer in 1…999 range.
 ---@return self
 function _uiDWriteFont:weight(weight) end
 
@@ -97,6 +97,13 @@ function _uiDWriteFont:style(style) end
 ---@param stretch ui.DWriteFont.Stretch
 ---@return self
 function _uiDWriteFont:stretch(stretch) end
+
+---Set a custom axis value (available on Windows 10 Build 20348 or newer, otherwise values will be ignored).
+---@param key 'weight'|'width'|'slant'|'opticalSize'|'italic'|string @Font variation table with list of keys is shown on https://fontdrop.info/.
+---@param value number
+---@return self
+---@overload fun(s: ui.DWriteFont, values: {weight: number?, width: number?, slant: number?, opticalSize: number?, italic: number?}): self
+function _uiDWriteFont:axis(key, value) end
 
 ---Disable font size rounding. Please use carefully: if you would to animate font size, it would quickly generate way too many atlases
 ---and increase both VRAM consumption and drawing time. If you need to animate font size, consider using `ui.beginScale()`/`ui.endScale()` instead.

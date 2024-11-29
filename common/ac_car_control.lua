@@ -145,6 +145,13 @@ function ac.CarAudioTweak.getParameter(eventID, key)
   return ffi.C.lj_getCarAudioTweak_p__carc(tonumber(eventID) or 0, 6, tostring(key))
 end
 
+---Replaces entire audio event with a different one.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param newEventKey string @Key for the new audio event, like `'/cars/accr_mclaren_f1/engine_ext'`.
+function ac.CarAudioTweak.replaceAudioEvent(eventID, newEventKey)
+  ffi.C.lj_setCarAudioTweak_p__carc(tonumber(eventID) or 0, 7, tostring(newEventKey), 0)
+end
+
 ffi.cdef [[ 
 typedef struct {
   mat4x4 transform;
@@ -170,31 +177,3 @@ function ac.accessCarCamera(cameraIndex)
 end
 
 
-
-
-ffi.cdef [[ 
-typedef struct {
-  bool unavailable;
-  bool holdMode;
-  bool stationaryOnly;
-  bool neutralGearOnly;
-  bool requiresBrake;
-} extra_switch_params;
-]]
-
----A helper structure to simulate some inputs for controlling the car.
----@class ac.CarExtraSwitchParams
----@field unavailable boolean @Set to `true` to make a switch inaccessible by user with hotkeys. Car controlling scripts would still be able to alter its state.
----@field holdMode boolean @Set to `true` to get switch to work only if a button is currently held down.
----@field stationaryOnly boolean @Set to `true` to only allow user to change the flag if car is stationary.
----@field neutralGearOnly boolean @Set to `true` to only allow user to change the flag if car is in neutral gear.
----@field requiresBrake boolean @Set to `true` to only allow user to change the flag if brake pedal is fully pressed.
----@cpptype extra_switch_params
-ffi.metatype('extra_switch_params', { __index = {} })
-
----@param index integer @0-based switch index.
----@return ac.CarExtraSwitchParams? @Returns `nil` if there is no switch with such index.
-function ac.accessExtraSwitchParams(index)
-  local r = ffi.C.lj_accessExtraSwitchParams_inner__carc(tonumber(index) or 0)
-	return r ~= nil and r or nil
-end

@@ -14,13 +14,14 @@ function ac.store(key, value)
   if type(value) == 'number' then
     ffi.C.lj_store_number(key, value)
   else
-    ffi.C.lj_store_string(key, __util.blob(value))
+    ffi.C.lj_store_string(key, value and __util.blob(value) or nil)
   end
 end
 
 ---Reads value from session shared Lua/Python storage. This is not a long-term storage, more of a way for
----different scripts to exchange data. Note: if you need to exchange a lot of data between Lua scripts,
----consider using ac.connect instead.
+---different scripts to exchange data. Note: if you need to exchange data between Lua scripts,
+---use `ac.connect()` instead. And if despite that you need to exchange data between car scripts, make sure to add
+---car index to the key.
 ---@param key string
 ---@return nil|string|number
 function ac.load(key)
@@ -93,18 +94,8 @@ end
 ---@param callback fun(message: string, config: ac.INIConfig) @Callback function.
 ---@return ac.Disposable
 function ac.onOnlineWelcome(callback)
-  if type(callback) ~= 'function' then error('Callback should be a function', 2) end
+  __util.callable(callback)
 	return __util.disposable(ffi.C.lj_onOnlineWelcome_inner(__util.setCallback(function (message, config)
     callback(message, ac.INIConfig(ac.INIFormat.Extended, config))
   end)))
-end
-
----Returns full path to one of known folders. Some folders might not exist, make sure to create them before writing.
----@param folderID ac.FolderID|string @Could also be a system GUID in “{XX…}” form.
----@return string
-function ac.getFolder(folderID)
-  if type(folderID) == 'string' and string.byte(folderID, 1) == 123 then
-    return __util.strrefr(ffi.C.lj_getFolder_g(folderID))
-  end	
-  return __util.strrefr(ffi.C.lj_getFolder_n(__util.cast_enum(folderID, 0, 1025, 0)))
 end

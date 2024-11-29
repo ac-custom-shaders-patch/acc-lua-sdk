@@ -52,8 +52,8 @@ function vec2.intersect(p1, p2, p3, p4) end
 ---@return vec2
 function vec2:clone() end
 
----Unpacks vec2 into rgb and number.
----@return rgb, number
+---Unpacks vec2 into two numbers.
+---@return number, number
 function vec2:unpack() end
 
 ---Turns vec2 into a table with two values.

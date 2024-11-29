@@ -21,6 +21,7 @@ do
         s.row1:set(o.row1)
         s.row2:set(o.row2)
         s.row3:set(o.row3)
+        return s
       end,
       clone = function(s)
         return mat3x3(s.row1, s.row2, s.row3)
@@ -60,6 +61,7 @@ do
         s.row2:set(o.row2)
         s.row3:set(o.row3)
         s.row4:set(o.row4)
+        return s
       end,
       clone = function(s)
         return mat4x4(s.row1, s.row2, s.row3, s.row4)
@@ -117,11 +119,21 @@ do
         r.z = s.row1.z * vec.x +  s.row2.z * vec.y + s.row3.z * vec.z + s.row4.z
         return r
       end,
+      transformTo = function(s, r, vec)
+        r.x = s.row1.x * vec.x +  s.row2.x * vec.y + s.row3.x * vec.z + s.row4.x
+        r.y = s.row1.y * vec.x +  s.row2.y * vec.y + s.row3.y * vec.z + s.row4.y
+        r.z = s.row1.z * vec.x +  s.row2.z * vec.y + s.row3.z * vec.z + s.row4.z
+        r.w = s.row1.w * vec.x +  s.row2.w * vec.y + s.row3.w * vec.z + s.row4.w
+        return r
+      end,
       transformVector = function(s, vec)
         return s:transformVectorTo(vec3(), vec)
       end,
       transformPoint = function(s, vec)
         return s:transformPointTo(vec3(), vec)
+      end,
+      transform = function(s, vec)
+        return s:transformTo(vec4(), vec)
       end,
       identity = function ()
         return mat4x4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1))
@@ -131,6 +143,15 @@ do
       end,
       rotation = function (angle, vec)
         return ffi.C.lj_mat_rotation(tonumber(angle) or 0, __util.ensure_vec3(vec))
+      end,
+      look = function (position, look, up)
+        return ffi.C.lj_mat_look(__util.ensure_vec3(position), __util.ensure_vec3(look), __util.ensure_vec3_nil(up))
+      end,
+      perspective = function (fovY, aspect, zNear, zFar)
+        return ffi.C.lj_mat_perspective(tonumber(fovY) or 1, tonumber(aspect) or 1, tonumber(zNear) or 0.01, tonumber(zFar) or 5e3)
+      end,
+      ortho = function (extendsMin, extendsMax)
+        return ffi.C.lj_mat_ortho(__util.ensure_vec3(extendsMin), __util.ensure_vec3(extendsMax))
       end,
       euler = function (head, pitch, roll)
         return ffi.C.lj_mat_euler(tonumber(head) or 0, tonumber(pitch) or 0, tonumber(roll) or 0)

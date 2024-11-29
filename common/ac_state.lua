@@ -8,12 +8,49 @@ do
 
   ac.iterateCars = setmetatable({
     ordered = function ()
-      return _ptri, ffi.C.lj_getCars_inner(true), 0
+      return _ptri, ffi.C.lj_getCars_inner(1), 0
+    end,
+    leaderboard = function ()
+      return _ptri, ffi.C.lj_getCars_inner(2), 0
+    end,
+    serverSlot = function ()
+      -- for compatibility, there was a typo
+      return _ptri, ffi.C.lj_getCars_inner(3), 0
+    end,
+    serverSlots = function ()
+      return _ptri, ffi.C.lj_getCars_inner(3), 0
     end,
   }, {
     __call = function(_)
-      return _ptri, ffi.C.lj_getCars_inner(false), 0
+      return _ptri, ffi.C.lj_getCars_inner(0), 0
     end
+  })
+
+  local _cc = {}
+  ac.getCar = setmetatable({
+    ordered = function (index)
+      return __util.secure_state(ffi.C.lj_getCar_innerord(1, tonumber(index) or 0))
+    end,
+    leaderboard = function (index)
+      return __util.secure_state(ffi.C.lj_getCar_innerord(2, tonumber(index) or 0))
+    end,
+    serverSlot = function (index)
+      return __util.secure_state(ffi.C.lj_getCar_innerord(3, tonumber(index) or 0))
+    end,
+    serverSlots = function (index)
+      -- for compatibility, there was a typo
+      return __util.secure_state(ffi.C.lj_getCar_innerord(3, tonumber(index) or 0))
+    end,
+  }, {
+    __call = function(_, index)
+    local k = tonumber(index) or 0
+    local r = _cc[k]
+    if not r then
+      r = __util.secure_state(ffi.C.lj_getCar_inner(k))
+      _cc[k] = r
+    end
+    return r
+  end
   })
 end
 

@@ -8,6 +8,15 @@ __namespace 'os'
 os = {}
 --[[) ?]]
 
+---Parse date and return a unix timestamp. Uses `std::get_time()` for actual parsing:
+---<https://en.cppreference.com/w/cpp/io/manip/get_time>.
+---@param date string @String containing date.
+---@param format string? @Format string. Default value: `'%Y-%m-%dT%H:%M:%S'`.
+---@return integer? @Returns `nil` if failed to parse.
+function os.parseDate(date, format)
+  return __util.parseDate(date, format)
+end
+
 ---Opens regular Windows file opening dialog, calls callback with either an error or a path to a file selected by user
 ---(or nil if selection was cancelled). All parameters in `params` table are optional (the whole table too).
 --[[@tableparam params {
@@ -35,7 +44,7 @@ end
 --[[@tableparam params {
   title: string = nil "Dialog title",
   defaultFolder: nil|string = ac.getFolder(ac.FolderID.Root) "Default folder if there is not a recently used folder value available",
-  defaultExtension: string = nil "Sets the default extension to be added to file names.",
+  defaultExtension: string = nil "Sets the default extension to be added to file names, with a dot in front.",
   folder: string = nil "Selected folder (unlike `defaultFolder`, overrides recently used folder)",
   fileName: string = nil "File name that appears in the File name edit box when that dialog box is opened",
   saveAsItem: string = nil "Ann item to be used as the initial entry in a Save As dialog",
@@ -76,7 +85,7 @@ function os.runConsoleProcess(params, callback)
     local callbackID = __util.setCallback(params.dataCallback)
     params.dataCallback = nil
     r = ffi.C.lj_run_console__os(__util.json(params), __util.expectReply(function (err, data)
-      __script.forgetCallback(callbackID)
+      -- __script.forgetCallback(callbackID)
       if callback then callback(err, data) end
     end), callbackID)
   else

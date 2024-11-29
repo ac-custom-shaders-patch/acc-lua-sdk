@@ -5,8 +5,9 @@ require './ac_ray'
 require './ac_display'
 require './ac_render_enums'
 require './ac_render_shader'
+require './ac_extras_tracklines'
 
-local _sp_scenep = {template = 'project.fx', defaultBlendMode = render.BlendMode.BlendAccurate, delayed = true}
+local _sp_scenep = {template = 'project.fx', __cache = {}, defaultBlendMode = render.BlendMode.BlendAccurate, delayed = true}
 
 -- Mesh vertex related stuff:
 
@@ -35,9 +36,20 @@ ac.MeshVertex = ffi.metatype('lua_mesh_vertex', {
 local __vecMeshVertices = __util.arrayType(ffi.typeof('lua_mesh_vertex'))
 local __vecMeshIndices = __util.arrayType(ffi.typeof('uint16_t'))
 
+--[[? if (ctx.ldoc) out(]]
 ---Buffer with mesh vertices. Contains `ac.MeshVertex` items.
 ---@class ac.VertexBuffer : ac.GenericList
 ---@constructor fun(size: nil|integer|ac.MeshVertex[] "Initial size or initializing values."): ac.VertexBuffer
+
+---@param index integer @1-based index.
+---@return ac.MeshVertex
+function _ac_VertexBuffer:get(index) end
+
+---@param index integer @1-based index.
+---@param vertex ac.MeshVertex
+function _ac_VertexBuffer:set(index, vertex) end
+
+--[[) ?]]
 
 function ac.VertexBuffer(size)
   local ret = __vecMeshVertices(0, size)
@@ -55,11 +67,33 @@ function ac.IndicesBuffer(size)
   return __vecMeshIndices(0, size)
 end
 
+---Collect list of textures in KN5 file.
+---@param kn5Filename string
+---@param filter string? @Texture names filter. Default value: `'?'`.
+---@return string[]? @Returns `nil` if there is no such file, no access to it or the file is damaged.
+function ac.collectKN5TextureNames(kn5Filename, filter)
+  return __util.native('kn5_texture_names', kn5Filename, filter)
+end
+
+---Collect list of material properties in KN5 file in a form of shader replacements config.
+---@param kn5Filename string
+---@param filter string? @Material names filter. Default value: `'?'`.
+---@return string[]? @Returns `nil` if there is no such file, no access to it or the file is damaged.
+function ac.collectKN5MaterialProperties(kn5Filename, filter)
+  return __util.native('kn5_material_props', kn5Filename, filter)
+end
+
 -- Scene references:
 
-local function cr(v)
+local aliveRefs = {}
+
+local function cr(v, keepAlive)
   if v == nil then return nil end
-  return ffi.gc(v, ffi.C.lj_noderef_gc__scene)
+  local r = ffi.gc(v, ffi.C.lj_noderef_gc__scene)
+  if keepAlive and not aliveRefs[r] then
+    aliveRefs[r] = true
+  end
+  return r
 end
 
 local function nf(v)
@@ -112,7 +146,10 @@ ffi.metatype('noderef', {
 
     ---Dispose any resources associated with this `ac.SceneReference` and empty it out. Use it if you need to remove a previously
     ---created node or a loaded KN5.
-    dispose = function (s) return ffi.C.lj_noderef_dispose__scene(s) end,
+    dispose = function (s) 
+      aliveRefs[s] = nil
+      return ffi.C.lj_noderef_dispose__scene(s) 
+    end,
 
     ---Set debug outline for meshes in the reference. Outline remains active until explicitly disabled or until reference is released.
     ---Note: each outlined group adds a render target switch and additional draw calls, so avoid adding it to more than, let’s say,
@@ -153,6 +190,7 @@ ffi.metatype('noderef', {
     ---  ```
     ---  meshes:setMaterialTexture('txDiffuse', 'filename.dds')
     ---  ```
+    ---  Since 0.2.2 nothing will happen if the texture is missing (previously it’ll use black transparent texture).
     ---3. Pass a table with parameters to draw a texture in a style of scriptable displays. Be careful as to
     ---  not call it too often, make sure to limit refresh rate unless you really need a quick update. If you’re
     ---  working on a track script, might also be useful to check if camera is close enough with something like
@@ -276,7 +314,7 @@ ffi.metatype('noderef', {
     ---@param name string
     ---@param keepAlive boolean @Set to `true` to create a long-lasting node which wouldn’t be removed when script is reloaded.
     ---@return ac.SceneReference @Newly created node or `nil` if failed
-    createNode = function (s, name, keepAlive) return cr(ffi.C.lj_noderef_createnode__scene(s, name, keepAlive ~= true)) end,
+    createNode = function (s, name, keepAlive) return cr(ffi.C.lj_noderef_createnode__scene(s, name, keepAlive ~= true), true) end,
 
     ---Create a new mesh with a given name and attach it as a child. Steals passed vertices and indices to avoid reallocating
     ---memory, so make sure to use `vertices:clone()` when passing if you want to keep the original data. 
@@ -291,7 +329,7 @@ ffi.metatype('noderef', {
       local v0, v1, v2 = __util.stealVector(vertices, moveData)
       local i0, i1, i2 = __util.stealVector(indices, moveData)
       return cr(ffi.C.lj_noderef_createmesh__scene(s, name, materialName and tostring(materialName) or nil, keepAlive ~= true,
-        v0, v1, v2, i0, i1, i2))
+        v0, v1, v2, i0, i1, i2), true)
     end,
 
     ---Replace mesh vertices dynamically. New number of vertices should match existing one, indices work the same. Can be used for dynamic
@@ -318,38 +356,60 @@ ffi.metatype('noderef', {
     ---Note: for it to work properly, it’s better to attach it to AC cars node, as that one does expect those bounding sphere nodes
     ---to be inside of it. You can find it with `ac.findNodes('carsRoot:yes')`.
     ---@param name string
+    ---@param radius number @Radius in meters.
     ---@return ac.SceneReference @Can return `nil` if failed.
-    createBoundingSphereNode = function (s, name, radius) return cr(ffi.C.lj_noderef_createbsnode__scene(s, name, radius)) end,
+    createBoundingSphereNode = function (s, name, radius) 
+      return cr(ffi.C.lj_noderef_createbsnode__scene(s, name, tonumber(radius) or 1), true) 
+    end,
 
     ---Load KN5 model and attach it as a child. To use remote models, first load them with `web.loadRemoteModel()`.
     ---
     ---Node: The way it actually works, KN5 would be loaded in a pool and then copied here (with sharing
     ---of resources such as vertex buffers). This generally helps with performance.
-    ---@param filename string @KN5 filename relative to script folder or AC root folder.
+    ---@param filename string|{filename: string, filter: string} @KN5 filename relative to script folder or AC root folder. Since 0.2.5, you can instead pass a table with filename and a filter (for example, `'{ ! renderable:no }'`; note that filter will applied to every node and mesh).
     ---@return ac.SceneReference @Can return `nil` if failed.
-    loadKN5 = function (s, filename) return cr(ffi.C.lj_noderef_loadkn5__scene(s, filename)) end,
+    loadKN5 = function (s, filename) 
+      local filter = nil
+      if type(filename) == 'table' then
+        filter = filename.filter and tostring(filename.filter)
+        filename = filename.filename
+      end
+      return cr(ffi.C.lj_noderef_loadkn5__scene(s, filename, filter), true)         
+    end,
 
     ---Load KN5 LOD model and attach it as a child. Parameter `mainFilename` should refer to the main KN5 with all the textures.
     ---
     ---Node: The way it actually works, KN5 would be loaded in a pool and then copied here (with sharing
     ---of resources such as vertex buffers). This generally helps with performance. Main KN5 would be
     ---loaded as well, but not shown, and instead kept in a pool.
-    ---@param filename string @KN5 filename relative to script folder or AC root folder.
+    ---@param filename string|{filename: string, filter: string} @KN5 filename relative to script folder or AC root folder. Since 0.2.5, you can instead pass a table with filename and a filter (for example, `'{ ! renderable:no }'`; note that filter will applied to every node and mesh).
     ---@param mainFilename string @Main KN5 filename relative to script folder or AC root folder.
     ---@return ac.SceneReference @Can return `nil` if failed.
-    loadKN5LOD = function (s, filename, mainFilename) return cr(ffi.C.lj_noderef_loadkn5lod__scene(s, filename, mainFilename)) end,
+    loadKN5LOD = function (s, filename, mainFilename) 
+      local filter = nil
+      if type(filename) == 'table' then
+        filter = filename.filter and tostring(filename.filter)
+        filename = filename.filename
+      end
+      return cr(ffi.C.lj_noderef_loadkn5lod__scene(s, filename, mainFilename, filter), true)
+    end,
 
     ---Load KN5 model and attach it as a child asyncronously. To use remote models, first load them with `web.loadRemoteModel()`.
     ---
     ---Node: The way it actually works, KN5 would be loaded in a pool and then copied here (with sharing
     ---of resources such as vertex buffers). This generally helps with performance.
-    ---@param filename string @KN5 filename relative to script folder or AC root folder.
+    ---@param filename string|{filename: string, filter: string} @KN5 filename relative to script folder or AC root folder. Since 0.2.5, you can instead pass a table with filename and a filter (for example, `'{ ! renderable:no }'`; note that filter will applied to every node and mesh).
     ---@param callback fun(err: string, loaded: ac.SceneReference?) @Callback called once model is loaded.
     loadKN5Async = function (s, filename, callback) 
+      local filter = nil
+      if type(filename) == 'table' then
+        filter = filename.filter and tostring(filename.filter)
+        filename = filename.filename
+      end
       ffi.C.lj_noderef_loadkn5_async__scene(s, filename, __util.expectReply(function (err, returnIndex)
         if err then callback(err, nil)
-        else callback(nil, cr(ffi.C.lj_noderef_access_reply__scene(returnIndex))) end
-      end))
+        else callback(nil, cr(ffi.C.lj_noderef_access_reply__scene(returnIndex), true)) end
+      end), filter)
     end,
 
     ---Load KN5 model and attach it as a child asyncronously. Parameter `mainFilename` should refer to the main KN5 with all the textures.
@@ -357,14 +417,19 @@ ffi.metatype('noderef', {
     ---Node: The way it actually works, KN5 would be loaded in a pool and then copied here (with sharing
     ---of resources such as vertex buffers). This generally helps with performance. Main KN5 would be
     ---loaded as well, but not shown, and instead kept in a pool.
-    ---@param filename string @KN5 filename relative to script folder or AC root folder.
+    ---@param filename string|{filename: string, filter: string} @KN5 filename relative to script folder or AC root folder. Since 0.2.5, you can instead pass a table with filename and a filter (for example, `'{ ! renderable:no }'`; note that filter will applied to every node and mesh).
     ---@param mainFilename string @Main KN5 filename relative to script folder or AC root folder.
     ---@param callback fun(err: string, loaded: ac.SceneReference?) @Callback called once model is loaded.
     loadKN5LODAsync = function (s, filename, mainFilename, callback) 
+      local filter = nil
+      if type(filename) == 'table' then
+        filter = filename.filter and tostring(filename.filter)
+        filename = filename.filename
+      end
       ffi.C.lj_noderef_loadkn5lod_async__scene(s, filename, mainFilename, __util.expectReply(function (err, returnIndex)
         if err then callback(err, nil)
-        else callback(nil, cr(ffi.C.lj_noderef_access_reply__scene(returnIndex))) end
-      end))
+        else callback(nil, cr(ffi.C.lj_noderef_access_reply__scene(returnIndex), true)) end
+      end), filter)
     end,
 
     ---Loads animation from a file (on first call only), sets animation position. To use remote animations, first load them with `web.loadRemoteAnimation()`.
@@ -489,7 +554,7 @@ ffi.metatype('noderef', {
     ---@return mat4x4 @Reference to transformation matrix of the first node, or nil. Use `mat4x4:set()` to update its value, or access its rows directly.
     getTransformationRaw = function (s)
       local m = ffi.C.lj_noderef_getrawmat4x4ptr__scene(s)
-      return m and m[0] or nil
+      return m ~= nil and m[0] or nil
     end,
 
     ---Returns world transformation matrix of the first node. Do not use it to move node in world space (if you need
@@ -499,7 +564,7 @@ ffi.metatype('noderef', {
     ---@return mat4x4 @Reference to transformation matrix of the first node, or nil. Use `mat4x4:set()` to update its value, or access its rows directly.
     getWorldTransformationRaw = function (s)
       local m = ffi.C.lj_noderef_getrawmat4x4world__scene(s)
-      return m and m[0] or nil
+      return m ~= nil and m[0] or nil
     end,
     
     --[[? if (ctx.flags.withPhysics) out(]]
@@ -701,6 +766,17 @@ ffi.metatype('noderef', {
     dumpShaderReplacements = function (s)
       return __util.strrefr(ffi.C.lj_noderef_dumpmaterials__scene(s))
     end,
+
+    ---@param neck ac.SceneReference
+    ---@param modelName string
+    ---@param carIndex integer
+    ---@return fun(value: number): number, number
+    applyHumanMaterials = function (s, neck, modelName, carIndex)
+      ffi.C.lj_noderef_secondaryhuman__scene(s, neck, modelName, carIndex)
+      return function (value)
+        return __util.native('ac.SceneReference.setMouth', s, value)
+      end
+    end,
     
     ---Get value of a certain material property of an element.
     ---@param index integer|nil @1-based index of an element to get a material property of. Default value: 1.
@@ -731,7 +807,7 @@ ffi.metatype('noderef', {
     ---@return ac.SceneReference
     clone = function (s)
       if s == nil then return _emptyNodeRef() end
-      return cr(ffi.C.lj_noderef_clone__scene(s))
+      return cr(ffi.C.lj_noderef_clone__scene(s), true)
     end,
     
     ---Get bounding sphere of an element. Works only with meshes or skinned meshes, nodes will return nil.
@@ -839,7 +915,7 @@ ffi.metatype('noderef', {
     ---@return ac.SceneReference @Reference to a newly created object.
     createFakeShadow = function(s, params)
       if params.points and #params.points ~= 4 then error('Four points are required', 2) end
-      local r = cr(ffi.C.lj_noderef_createfakeshadownode__scene(s, params.name or 'FAKESHADOW'))
+      local r = cr(ffi.C.lj_noderef_createfakeshadownode__scene(s, params.name or 'FAKESHADOW'), true)
       if r == nil then return nil end
       if params.points ~= nil then r:setFakeShadowPoints(params.points, params.corners) end
       if params.opacity ~= nil then r:setFakeShadowOpacity(params.opacity) end
@@ -1157,9 +1233,10 @@ ffi.metatype('carshot', {
 
     ---Updates texture making a shot from a position of a track camera. Pass the index of a car to focus on.
     ---@param carIndex integer? @0-based car index. Default value: `0`.
+    ---@param camerasSet integer? @0-based cameras set index. Default value: `-1` (use currently selected set).
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
-    updateWithTrackCamera = function (s, carIndex)
-      ffi.C.lj_carshot_update_prep_tc__scene(s, tonumber(carIndex) or 0)
+    updateWithTrackCamera = function (s, carIndex, camerasSet)
+      ffi.C.lj_carshot_update_prep_tc__scene(s, tonumber(carIndex) or 0, tonumber(camerasSet) or -1)
       __util.native('carshot_update')
       return s
     end,
@@ -1189,11 +1266,29 @@ ffi.metatype('carshot', {
       return s
     end,
 
+    ---Forces opaque meshes to show up as white in alpha channel. Disabled by default. Might not work with some exotic materials.
+    ---Since v0.2.3 also applies an extra post-processing pass fixing alpha with YEBIS.
+    ---@param value boolean? @Set to `true` to enable a fix. Default value: `true`.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setOpaqueAlphaFix = function(s, value)
+      ffi.C.lj_carshot_setalphafix__scene(s, value ~= false)
+      return s
+    end,
+
     ---Enables or disables transparent pass (secondary drawing pass with transparent surfaces). Disabled by default.
     ---@param value boolean? @Set to `true` to enable transparent pass. Default value: `true`.
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     setTransparentPass = function(s, value)
       ffi.C.lj_carshot_settransparentpass__scene(s, value ~= false)
+      return s
+    end,
+
+    ---Enables or disables drawing of car fake shadows (applies to any car roots in scene reference; when drawing entire scene
+    ---car shadows will be drawn regardless). Disabled by default.
+    ---@param value boolean? @Set to `true` to enable drawing of car fake shadows. Default value: `true`.
+    ---@return ac.GeometryShot @Returns itself for chaining several methods together.
+    setFakeCarShadows = function(s, value)
+      ffi.C.lj_carshot_setfakecarshadows__scene(s, value ~= false)
       return s
     end,
 
@@ -1268,8 +1363,8 @@ ffi.metatype('carshot', {
       return s
     end,
 
-    ---Sets clear color to clear texture with before each update. Transparent by default.
-    ---@param value rgbm @Clear color from 0 to 1. Initial value: `rgbm.colors.transparent`.
+    ---Sets clear color to clear texture with before each update. Initial value: `rgbm(0.1, 0.1, 0.1, 0)`.
+    ---@param value rgbm @Clear color from 0 to 1. Initial value: `rgbm(0.1, 0.1, 0.1, 0)`.
     ---@return ac.GeometryShot @Returns itself for chaining several methods together.
     setClearColor = function(s, value)
       ffi.C.lj_carshot_setclearcolor__scene(s, __util.ensure_rgbm(value))
@@ -1331,6 +1426,18 @@ ffi.metatype('carshot', {
       return ffi.C.lj_carshot_mipscount__scene(s)
     end,
 
+    ---Returns view transform used in the last update. Matrix is all zeroes if update was never called.
+    ---@return mat4x4
+    viewMatrix = function(s)
+      return ffi.C.lj_carshot_lastcview__scene(s)
+    end,
+
+    ---Returns projection transform used in the last update. Matrix is all zeroes if update was never called.
+    ---@return mat4x4
+    projectionMatrix = function(s)
+      return ffi.C.lj_carshot_lastcproj__scene(s)
+    end,
+
     ---Returns shared handle to the texture. Shared handle can be used in other scripts with `ui.SharedTexture()`, or, if `crossProcess` flag
     ---is set to `true`, also accessed by other processes.
     ---@param crossProcess boolean? @Set to `true` to be able to pass a handle to other processes. Requires `render.TextureFlags.Shared` flag to be set during creation. Default value: `false`.
@@ -1382,7 +1489,7 @@ ffi.metatype('carshot', {
     ---@param callback fun(err: string, data: ui.ExtraCanvasData)
     accessData = function (s, callback)
       if not callback then return end
-      if type(callback) ~= 'function' then error('Function is required for callback', 2) end
+      __util.callable(callback)
       ffi.C.lj_carshot_tocpu__scene(s, __util.expectReply(function (err, key)
         if err then callback(err)
         else

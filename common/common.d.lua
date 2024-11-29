@@ -35,6 +35,16 @@ function ac.getCarTags(carIndex) end
 ---@field raw any @Raw pointer for fastest unchecked access with 0-based indices. Use very carefully!
 local _ac_genericList = {}
 
+---Return an element at given index.
+---@param index integer @1-based index.
+---@return any
+function _ac_genericList:get(index) end
+
+---Sets an element at given index.
+---@param index integer @1-based index.
+---@param value any 
+function _ac_genericList:set(index, value) end
+
 ---Number of items in the list.
 ---@return integer
 function _ac_genericList:size() end

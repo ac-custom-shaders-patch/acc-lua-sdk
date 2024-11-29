@@ -20,6 +20,39 @@ function string.split(self, separator, limit, trimResult, skipEmpty, splitByAnyC
 ---@return ... @Numbers
 function string.numbers(self, limit) end
 
+---Pack things. For format, see <https://www.lua.org/manual/5.3/manual.html#6.4.2>.
+---Use `a` for half-precision floating point value (two bytes).
+---@param self string @Format string.
+---@return string
+function string.pack(self, ...) end
+
+---Measure size of packed things. For format, see <https://www.lua.org/manual/5.3/manual.html#6.4.2>.
+---Use `a` for half-precision floating point value (two bytes).
+---@param self string @Format string.
+---@return integer
+function string.packsize(self) end
+
+---Unpack things. For format, see <https://www.lua.org/manual/5.3/manual.html#6.4.2>.
+---Use `a` for half-precision floating point value (two bytes).
+---@param self string @Format string.
+---@return ...
+function string.unpack(self) end
+
+---Checks if string starts with an URL or not. Uses flexible parsing scheme so even URLs not starting with
+---a scheme could be found.
+---@param self string @Target string.
+---@param offset integer? @Starting search index, 1-based.
+---@return integer? @Returns length of URL, or `nil` if string is not an URL.
+function string.urlCheck(self, offset) end
+
+---Finds next URL in a string. Uses flexible parsing scheme so even URLs not starting with
+---a scheme could be found.
+---@param self string @Target string.
+---@param offset integer? @Starting search index, 1-based.
+---@return integer? @First returned value is 1-based index of URL start.
+---@return integer? @Second returned value is 1-based index of URL end (both arguments can be passed to `string.sub()` to cut out the URL).
+function string.urlNext(self, offset) end
+
 ---Works like string.find with plain mode, but ignores case.
 ---@param self string @String to find `needle` in.
 ---@param needle string @String to find.
@@ -41,13 +74,21 @@ function string.replace(self, replacee, replacer, limit, ignoreCase) end
 ---@return string
 function string.codePointToUTF8(codePoint) end
 
+---Returns unicode codepoint and length in bytes from a point in a string. Throws an error with invalid UTF-8.
+---@param self string @String to get a codepoint from
+---@param start integer @Index (starts with 1, if below counts from the end).
+---@return integer? @Symbol codepoint (or `nil` if there is no symbol with given index).
+---@return integer @Symbol length (or `nil` if there is no symbol with given index).
+function string.codePointAt(self, start) end
+
 ---Looks for a next emoji in the string. If next emoji is complex, all the symbols will be processed and returned as a single byte sequence. Uses 15th version
 ---with data from Emoji Keyboard/Display Test Data for UTS #51.
+---Not working properly for CSP versions below v0.2.3-preview50.
 ---@param self string @String to search emojis in.
----@param offset integer? @Optional offset for the matching beginning. Default value: `0`.
+---@param start integer @Index (starts with 1, if below counts from the end).
 ---@return integer? @Returns 1-based starting index of an emojis, or `nil` if no emojis have been found.
 ---@return integer? @Returns 1-based ending index, or `nil` if no emojis have been found.
-function string.nextEmoji(self, offset) end
+function string.nextEmoji(self, start) end
 
 ---Encodes URL argument.
 ---@param self string

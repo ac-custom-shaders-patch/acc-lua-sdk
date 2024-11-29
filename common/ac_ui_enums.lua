@@ -73,7 +73,8 @@ ui.Font = __enum({ override = 'ui.*/fontType:integer' }, {
   Main = 4,
   Italic = 5,
   Title = 6,
-  Huge = 7
+  Huge = 7,
+  SmallItalic = 8
 })
 
 ui.Alignment = __enum({ cpp = 'alignment' }, {

@@ -1,5 +1,7 @@
 require './common/internal_import'
 
+require './common/ac_extras_backgroundworker'
+
 -- automatically generated entries go here:
 __definitions()
 

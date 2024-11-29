@@ -202,7 +202,7 @@ function math.smoothstep(x) return x * x * (3 - 2 * x) end
 ---@return number
 function math.smootherstep(x) return x * x * x * (x * (x * 6 - 15) + 10) end
 
----Creates a copy of a vector and normalizes it. Consider avoiding making a copy with `vec:normalize()`.
+---Creates a copy of a vector and normalizes it. Consider using a method `vec:normalize()` instead when you can change the original vector to save on performanceMeter.
 ---@generic T
 ---@param x T
 ---@return T
@@ -260,6 +260,9 @@ function math.isfinite(x) x = tonumber(x) return x ~= nil and not math.isnan(x) 
 ---@type number
 math.nan = 0/0
 
+---@type number
+math.tau = math.pi * 2
+
 -- For compatibility:
 
 ---@deprecated Use math.isnan instead.
@@ -274,6 +277,52 @@ math.NaN = 0/0
 ---@return number
 function math.lagMult(lag, dt)
   return math.saturateN((1.0 - lag) * dt * 60)
+end
+
+---Perlin noise for given input. Returns value within -1…1 range, or outside of it if `octaves` is above 1. If you’re using octaves, make sure `input`
+---won’t overflow when being multiplied by two multiple times.
+---@param input number|vec2|vec3
+---@param octaves integer? @Pass number greater than 1 to generate octave noise instead (sum `octaves` noise functions together increasing input and multiplying amplitude by `persistence` each step). Default value: 1.
+---@param persistence number? @Persistance for octave noise. Used only if `octaves` is above 1. Default value: 0.5.
+---@return number
+function math.perlin(input, octaves, persistence)
+  octaves = tonumber(octaves) or 1
+  persistence = tonumber(persistence) or 0.5
+  local inputNum = tonumber(input)
+  if inputNum then
+    return ffi.C.lj_perlin_1(inputNum, octaves, persistence)
+  elseif vec2.isvec2(input) then
+    return ffi.C.lj_perlin_2(input, octaves, persistence)
+  elseif vec3.isvec3(input) then
+    return ffi.C.lj_perlin_3(input, octaves, persistence)
+  end
+  error('number, 2D or 3D vector is required', 1)
+end
+
+---Roughly convert HDR value to LDR using conversion hints provided by current WeatherFX style. Doesn’t apply nothing like tonemapping or exposure
+---correction, simply adjusts for a case where WeatherFX style uses small brightness multiplier or linear color space.
+---
+---Note: shaders have the same function called `convertHDR()`.
+---@generic T: number|rgb|rgbm
+---@param input T @Value to convert.
+---@param toLDR boolean? @Pass `true` to do the reverse and convert LDR to HDR. Default value: `false`.
+---@return T
+function math.convertHDR(input, toLDR)
+  toLDR = toLDR == true
+  local inputNum = tonumber(input)
+  if inputNum then
+    return ffi.C.lj_convertHDRToLDR_inner(inputNum, toLDR)
+  elseif rgb.isrgb(input) then
+    return rgb(ffi.C.lj_convertHDRToLDR_inner(input.r, toLDR),
+      ffi.C.lj_convertHDRToLDR_inner(input.g, toLDR),
+      ffi.C.lj_convertHDRToLDR_inner(input.b, toLDR))
+  elseif rgbm.isrgbm(input) then
+    return rgbm(ffi.C.lj_convertHDRToLDR_inner(input.r, toLDR),
+      ffi.C.lj_convertHDRToLDR_inner(input.g, toLDR),
+      ffi.C.lj_convertHDRToLDR_inner(input.b, toLDR),
+      input.mult)
+  end
+  error('number, 2D or 3D vector is required', 1)
 end
 
 -- Simple smooth movement towards target value.

@@ -4,16 +4,16 @@ __namespace 'render'
 require './ac_render_enums'
 require './ac_render_shader'
 
-local _sp_renderf = {template = 'fullscreen.fx', defaultBlendMode = render.BlendMode.Opaque}
-local _sp_renderq = {template = 'quad.fx'}
-local _sp_renderm = {template = 'mesh.fx'}
+local _sp_renderf = {template = 'fullscreen.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque}
+local _sp_renderq = {template = 'quad.fx', __cache = {}}
+local _sp_renderm = {template = 'mesh.fx', __cache = {}}
 
 ---Affects positioning of debug shapes or meshes drawn next.
 ---@param pos vec3
 ---@param look vec3?
 ---@param up vec3?
 ---@param applySceneOriginOffset boolean? @Use it if your matrix is in world-space and not in graphics-space. Default value: `false`.
----@overload fun(transform: mat4x4, applySceneOriginOffset: boolean)
+---@overload fun(transform: mat4x4, applySceneOriginOffset: boolean?)
 function render.setTransform(pos, look, up, applySceneOriginOffset)
   if mat4x4.ismat4x4(pos) then
     ffi.C.lj_setTransform_mat__render(pos, not not look)
@@ -21,6 +21,19 @@ function render.setTransform(pos, look, up, applySceneOriginOffset)
     ffi.C.lj_setTransform_vec__render(__util.ensure_vec3(pos), __util.ensure_vec3_nil(look), __util.ensure_vec3_nil(up),
       not not applySceneOriginOffset)
   end
+end
+
+---Bind texture to a certain slot directly. If you are going to use some shader call with the same texture a lot, it might be
+---faster to simply add texture in there with something like `Texture2D txMyTexture : register(t0);` (number after “t” in “register()”)
+---is the slot index and bind a texture once using this function.
+---@param slot integer @Slot index from 0 to 9.
+---@param texture ui.ImageSource
+function render.bindTexture(slot, texture)
+  slot = tonumber(slot) or 0
+  if slot < 0 or slot >= 10 then
+    error('Only slots from 0 to 9 are supported at the moment', 2)
+  end
+  ffi.C.lj_cshader_settexture_slot_1(slot or 0, tostring(texture))
 end
 
 ---Draws a fullscreen pass with a custom shader. Shader is compiled at first run, which might take a few milliseconds.
@@ -176,9 +189,10 @@ end
 
 ---Creates a description of a simple mesh with a car collider.
 ---@param carIndex integer @0-based car index.
+---@param actualCollider boolean? @Set to `true` to draw actual physics collider (might differ due to some physics alterations).
 ---@return ac.SimpleMesh
-function ac.SimpleMesh.carCollider(carIndex)
-  return (carIndex < 0 or carIndex > 255) and -1 or carIndex + 512
+function ac.SimpleMesh.carCollider(carIndex, actualCollider)
+  return (carIndex < 0 or carIndex > 255) and -1 or carIndex + (actualCollider and 768 or 512)
 end
 
 ---Creates a description of a simple mesh with a track line.
@@ -194,7 +208,8 @@ end
 ---If you’re drawing things continuously, use `async` parameter and shader will be compiled in a separate thread,
 ---while drawing will be skipped until shader is ready.
 ---
----To position mesh, first call `render.setTransform()`.
+---To position mesh, first call `render.setTransform()`, or use a parameter `transform = mat4x4()`. Set 
+---`transform = 'original'` if you want to use original mesh position.
 ---
 ---You can bind up to 32 textures and pass any number/boolean/vector/color/matrix values to the shader, which makes
 ---it a very effective tool for any custom drawing you might need to make.
@@ -204,6 +219,7 @@ end
 ---render.mesh({
 ---  async = true,
 ---  mesh = ac.findMeshes(…),
+---  transform = 'original',
 ---  textures = {
 ---    txInput1 = 'texture.png',  -- any key would work, but it’s easier to have a common prefix like “tx”
 ---    txInput2 = mediaPlayer,
@@ -238,7 +254,7 @@ end
 ---@return boolean @Returns `false` if shader is not yet ready and no drawing occured (happens only if `async` is set to `true`).
 --[[@tableparam params {
   mesh: ac.SceneReference|ac.SimpleMesh = ac.SimpleMesh.carCollider(0),
-  transform: mat4x4 = nil "Optional transform in world space. Does not apply to track spline.",
+  transform: mat4x4|'original' = nil "Optional transform in world space. Does not apply to track spline.",
   async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
   cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
   defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
@@ -265,7 +281,7 @@ function render.mesh(params)
     ffi.C.lj_cshader_mesh__scene(dc, params.mesh, nil, tr, nil)
   elseif type(params.mesh) == 'table' and params.mesh.lineType then
     local v = vec4.tmp():set(params.mesh.absolute, params.mesh.relative, 0, 0)
-    ffi.C.lj_cshader_mesh__scene(dc, 768 + params.mesh.lineType, nil, tr, v)
+    ffi.C.lj_cshader_mesh__scene(dc, 20000 + params.mesh.lineType, nil, tr, v)
   else
     error('Incorrect `mesh` parameter', 2)
   end

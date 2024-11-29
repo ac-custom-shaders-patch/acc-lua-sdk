@@ -1,7 +1,10 @@
-require './common/internal_import'
-
 __source 'lua/api_physics_bw.cpp'
 __namespace 'physics'
+
+--[[? ctx.flags.physicsThread = true; ?]]
+require './common/internal_import'
+require './common/ac_extras_binaryinput'
+require './common/secure'
 
 physics = {}
 

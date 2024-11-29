@@ -13,8 +13,9 @@ require './common/ac_track_conditions'
 require './common/ac_particles'
 require './common/ac_physics'
 require './common/ac_physics_ai'
+require './common/ac_extras_binaryinput'
+require './common/ac_extras_yebiscolorcorrection'
 require './common/secure'
-require './wfx_common/ac_weatherconditions'
 
 ---Returns values from section which defined current script. Use `layout` to specify which
 ---values are needed, with their corresponding default values to determine types. This function

@@ -42,17 +42,91 @@ local _t_cchar = ffi.typeof('char*')
 local _t_blobview = ffi.typeof('blob_view')
 local _t_snb = ffi.typeof('lua_snb_value')
 local _lastb = {}
+local _retblob
+
+function __util.argblob(data)
+  if not _retblob then
+    _retblob = ffi.C.lj_get_ret_blob()[0]
+  end
+  if type(data) == 'cdata' then
+    if ffi.istype(_t_blobview, data) then
+      _retblob.p_begin = data.p_begin
+      _retblob.p_end = data.p_end
+    else
+      local s = ffi.sizeof(data)
+      if s == 8 and string.find(tostring(ffi.typeof(data)), '*', 1, false) then
+        __util.argblob(data[0])
+      else
+        if s == 16 then
+          -- case for vectors
+          local suc, start, size = pcall(data.__blobify, data)
+          if suc then
+            _retblob.p_begin = ffi.cast(_t_cchar, start)
+            _retblob.p_end = _retblob.p_begin + size
+            return
+          end
+        end
+        _retblob.p_begin = ffi.cast(_t_cchar, data)
+        _retblob.p_end = _retblob.p_begin + s
+      end
+    end
+  else
+    if type(data) == 'table' then
+      if data.__data_cdata__ then
+        __util.argblob(data.__data_cdata__.i)
+        return
+      elseif type(data.__blobify) == 'function' then
+        local start, size = data:__blobify()
+        _retblob.p_begin = start
+        _retblob.p_end = start + size
+        return
+      end
+    end
+    data = tostring(data)
+    _retblob.p_begin = data
+    _retblob.p_end = b.p_begin + #data
+  end
+end
+
+function __util.cdata_blob(data)
+  if data == nil then return nil end
+  if type(data) == 'cdata' then
+    if ffi.istype(_t_blobview, data) then
+      return data
+    end
+    local s = ffi.sizeof(data)
+    if s == 8 and string.find(tostring(ffi.typeof(data)), '*', 1, false) then
+      return __util.cdata_blob(data[0])
+    end
+    if s == 16 then
+      -- case for vectors
+      local suc, start, size = pcall(data.__blobify, data)
+      if suc then
+        local t = ffi.cast(_t_cchar, start)
+        return _t_blobview(t, t + size)
+      end
+    end
+    local t = ffi.cast(_t_cchar, data)
+    return _t_blobview(t, t + s)
+  end
+  if type(data) == 'table' then
+    if type(data.__blobify) == 'function' then
+      local start, size = data:__blobify()
+      return _t_blobview(start, start + size)
+    elseif data.__data_cdata__ then
+      return __util.cdata_blob(data.__data_cdata__.i)
+    end
+  end
+  data = tostring(data)
+  local b = _t_blobview()
+  b.p_begin = data
+  b.p_end = b.p_begin + #data
+  return b
+end
 
 function __util.blob(data)
   if type(data) ~= 'string' then
-    if not data then return nil end
-    if type(data) == 'cdata' then
-      local b = _t_blobview()
-      b.p_begin = ffi.cast(_t_cchar, data)
-      b.p_end = b.p_begin + ffi.sizeof(data)
-      return b
-    end
-    data = tostring(data)
+    return __util.cdata_blob(data)
   end
   if _lastb.input == data then return _lastb.blob end 
   local b = _t_blobview()
@@ -99,7 +173,7 @@ function __util.disposable_impl(key)
 end
 
 function __util.disposable(key)
-  if key == 0 then return function() end end
+  if not key or key == 0 then return function() end end
   return function() ffi.C.lj_unlink_inner(key) end
 end
 
@@ -162,6 +236,30 @@ end
 
 function __util.strcrefr()
   return setmetatable({ cache = {}, ptr = false }, __mtstrcref)
+end
+
+function __util.nativb(key)
+  return function (...) return __util.nativf(key, ...) end
+end
+
+function __util.nativ0(key)
+  return function () return __util.nativf(key) end
+end
+
+function __util.nativ1(key)
+  return function (a) return __util.nativf(key, a) end
+end
+
+function __util.nativ2(key)
+  return function (a, b) return __util.nativf(key, a, b) end
+end
+
+function __util.nativ3(key)
+  return function (a, b, c) return __util.nativf(key, a, b, c) end
+end
+
+function __util.nativ4(key)
+  return function (a, b, c, d) return __util.nativf(key, a, b, c, d) end
 end
 
 function __util.str(value)
@@ -391,6 +489,7 @@ function __util.ensure_rgbm_nil(arg)
 end
 
 local tb = debug.traceback
+local gmt = debug.getmetatable
 
 function __util.cbCall(fn, ...)
   local s, err = xpcall(fn, tb, ...)
@@ -433,9 +532,21 @@ function __util.expectImmediateReply(callback)
   return replyID
 end
 
+function __util.callable(x)
+  if type(x) == 'function' then
+    return
+  elseif type(x) == 'table' then
+    local mt = gmt(x)
+    if type(mt) == 'table' and type(mt.__call) == 'function' then return end
+  elseif type(x) == 'cdata' then
+    if tostring(x):find('(', nil, true) ~= nil then return end
+  end  
+  error('Callback should be a function', 3)
+end
+
 local __setCallbacks, __setCallbacksEmpty = {}, nil
 function __util.setCallback(callback)
-  if type(callback) ~= 'function' then error('Callback should be a function', 3) end
+  __util.callable(callback)
   local replyID
   if __setCallbacksEmpty and #__setCallbacksEmpty > 0 then
     replyID = __setCallbacksEmpty[#__setCallbacksEmpty]
@@ -451,6 +562,7 @@ function __script.processCallback(replyID, ...)
   if cb then return cb(...) end
 end
 function __script.forgetCallback(replyID)
+  -- ac.log('FORGET CALLBACK', replyID)
   if replyID == #__setCallbacks then
     table.remove(__setCallbacks, replyID)
   else
@@ -567,13 +679,14 @@ local function __endOfKey(str, i)
   end
 end
 
-function __util.json(v, s)
+function __util.json(v, b, s)
   local t = type(v)
   if t == 'table' then
     if not s then s = {[v] = true} elseif s[v] then return 'null' else s[v] = true end
     s, s[v] = table.isArray(v) 
-      and '['..table.concat(table.map(v, function (i) return __util.json(i, s) end), ',')..']'
-      or '{'..table.concat(table.map(v, function (i, k) return __util.json(tostring(k))..':'..__util.json(i, s) end), ',')..'}', nil
+      and '['..table.concat(table.map(v, function (i) return __util.json(i, b, s) end), ',')..']'
+      or '{'..table.concat(table.map(v, function (i, k) return __util.json(tostring(k), b)..':'..__util.json(i, b, s) end), ',')..'}', nil
+    if b then s = string.__jsonFormat(s) end
     return s
   end
   return (t == 'string' or t == 'cdata') and '"'..string.gsub(tostring(v), '[\1-\31\\"]', __escapeChar)..'"'
@@ -605,13 +718,13 @@ local function __jsonParse(str, i)
       j = j + 1
     end
   elseif o == 116 then
-    if str:sub(i, i + 3) == 'true' then return true, i + 5 end
+    if str:sub(i, i + 3) == 'true' then return true, i + 4 end
     return nil, __nextDelimiter(str, i)
   elseif o == 102 then
-    if str:sub(i, i + 4) == 'false' then return false, i + 6 end
+    if str:sub(i, i + 4) == 'false' then return false, i + 5 end
     return nil, __nextDelimiter(str, i)
   elseif o == 110 then
-    if str:sub(i, i + 3) == 'null' then return nil, i + 5 end
+    if str:sub(i, i + 3) == 'null' then return nil, i + 4 end
     return nil, __nextDelimiter(str, i)
   elseif o >= 48 and o <= 57 or o == 45 then
     local x = __nextDelimiter(str, i)
@@ -619,24 +732,31 @@ local function __jsonParse(str, i)
   elseif o == 91 or o == 123 then
     local res, key = {}, nil
     i = i + 1
+    -- print(string.sub(str, i))
     while i < #str do
       i = __nextNonWhitespace(str, i)
       i = __skip(str, i, true)
-      if string.byte(str, i) == 93 or string.byte(str, i) == 125 then return res, i + 1 end
-      if o == 91 then
+      if string.byte(str, i) == 93 or string.byte(str, i) == 125 then --[[ ], } ]]
+        -- print('END: %s' % string.sub(str, i))
+        return res, i + 1
+      end
+      if o == 91 then --[[ [ ]]
         res[#res + 1], i = __jsonParse(str, i)
-      elseif o == 123 then
-        if string.byte(str, i) == 34 or string.byte(str, i) == 39 then
+      elseif o == 123 then --[[ { ]]
+        if string.byte(str, i) == 34 or string.byte(str, i) == 39 then --[[ ", ' ]]
           key, i = __jsonParse(str, i)
           i = __nextNonWhitespace(str, i)
           i = __skip(str, i)
-          if string.byte(str, i) == 58 then i = i + 1 end
+          -- print(key)
+          -- print(string.byte(str, i))
+          if string.byte(str, i) == 58 --[[ : ]] then i = i + 1 end
         else
           key, i = __endOfKey(str, i + 1)
         end
         res[tostring(key)], i = __jsonParse(str, __nextNonWhitespace(str, i))
       end
     end
+    -- print('ERR:'.. string.sub(str, i))
     return res, #str + 1
   else
     return nil, #str + 1

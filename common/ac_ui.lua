@@ -7,9 +7,9 @@ __namespace 'ui'
 require './ac_render_shader'
 require './ac_ui_enums'
 
-local _sp_uiu = {template = 'ui.fx', defaultBlendMode = render.BlendMode.Opaque, delayed = true}
-local _sp_uif = {template = 'fullscreen.fx', defaultBlendMode = render.BlendMode.Opaque}
-local _sp_uid = {template = 'direct.fx', defaultBlendMode = render.BlendMode.Opaque}
+local _sp_uiu = { template = 'ui.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque, delayed = true }
+local _sp_uif = { template = 'fullscreen.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque }
+local _sp_uid = { template = 'direct.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque }
 
 local weatherIcons = {
   [ac.WeatherType.LightThunderstorm] = ui.Icons.WeatherLightThunderstorm,
@@ -92,7 +92,8 @@ local __itep = refbool()
 ---@return boolean
 ---@return boolean
 function ui.inputText(label, str, flags, size)
-  local changed = ffi.C.lj_inputText_inner__ui(__util.str(label), __util.str(str), tonumber(flags) or 0, __itep, __util.ensure_vec2_nil(size))
+  local changed = ffi.C.lj_inputText_inner__ui(__util.str(label), __util.str(str), tonumber(flags) or 0, __itep,
+    __util.ensure_vec2_nil(size))
   if changed == nil then return str, false, __itep.value end
   return ffi.string(changed), true, __itep.value
 end
@@ -109,7 +110,7 @@ function ui.colorPicker(label, color, flags)
   elseif rgbm.isrgbm(color) then
     return ffi.C.lj_colorPicker_rgbm__ui(__util.str(label), color, tonumber(flags) or 0)
   else
-    error('Unsupported type for color picker: '..color, 2)
+    error('Unsupported type for color picker: ' .. color, 2)
   end
 end
 
@@ -126,7 +127,7 @@ function ui.colorButton(label, color, flags, size)
   elseif rgbm.isrgbm(color) then
     return ffi.C.lj_colorButton_rgbm__ui(__util.str(label), color, tonumber(flags) or 0, __util.ensure_vec2(size))
   else
-    error('Unsupported type for color picker: '..color, 2)
+    error('Unsupported type for color picker: ' .. color, 2)
   end
 end
 
@@ -134,16 +135,16 @@ end
 ---@param icon ui.Icons
 ---@param message string
 ---@param undoCallback fun()|nil @If provided, there’ll be an undo button which, when clicked, will call this callback.
+---@return {button: fun(self, icon: ui.Icons, message: string, callback: fun())} @Use `ui.toast():button(icon, title, callback)` if you want to add an extra icon.
 function ui.toast(icon, message, undoCallback)
-  if undoCallback == nil then
-    ffi.C.lj_toast_inner__ui(__util.str(icon), __util.str(message), 0)
-  else
-    ffi.C.lj_toast_inner__ui(__util.str(icon), __util.str(message), __util.expectReply(function (arg)
-      if arg then
-        undoCallback()
-      end
-    end))
-  end
+  local ptr = ffi.C.lj_toast_inner__ui(__util.str(icon), __util.str(message), __util.expectReply(undoCallback), nil)
+  return {
+    button = function(s, icon, message, callback)
+      if ptr == nil then return end
+      ffi.C.lj_toast_inner__ui(__util.str(icon), __util.str(message), __util.expectReply(callback), ptr)
+      ptr = nil
+    end
+  }
 end
 
 ---Draw a window with transparent background.
@@ -153,7 +154,7 @@ end
 ---@param size vec2 @Window size.
 ---@param noPadding boolean? @Disables window padding. Default value: `false`.
 ---@param inputs boolean? @Enables inputs (buttons and such). Default value: `false`.
----@param content fun(): T @Window content callback.
+---@param content fun(): T? @Window content callback.
 ---@return T
 ---@overload fun(id: string, pos: vec2, size: vec2, content: fun())
 ---@overload fun(id: string, pos: vec2, size: vec2, noPadding: boolean, content: fun())
@@ -171,7 +172,7 @@ end
 ---@param size vec2 @Window size.
 ---@param noPadding boolean? @Disables window padding. Default value: `false`.
 ---@param inputs boolean? @Enables inputs (buttons and such). Default value: `false`.
----@param content fun(): T @Window content callback.
+---@param content fun(): T? @Window content callback.
 ---@return T
 ---@overload fun(id: string, pos: vec2, size: vec2, content: fun())
 ---@overload fun(id: string, pos: vec2, size: vec2, noPadding: boolean, content: fun())
@@ -185,7 +186,7 @@ end
 ---Draw a tooltip with custom content.
 ---@generic T
 ---@param padding vec2? @Tooltip padding. Default value: `vec2(20, 8)`.
----@param content fun(): T @Window content callback.
+---@param content fun(): T? @Window content callback.
 ---@return T
 ---@overload fun(content: fun())
 function ui.tooltip(padding, content)
@@ -206,8 +207,8 @@ end
 ---@param size vec2 @Window size.
 ---@param border boolean? @Window border.
 ---@param flags ui.WindowFlags? @Window flags.
----@param content fun(): T @Window content callback.
----@return T
+---@param content fun(): T? @Window content callback.
+---@return T?
 ---@overload fun(id: string, size: vec2, border: boolean, content: fun())
 ---@overload fun(id: string, size: vec2, content: fun())
 function ui.childWindow(id, size, border, flags, content)
@@ -240,8 +241,8 @@ end
 ---@generic T
 ---@param label string @Tree node label (which also acts like its ID).
 ---@param flags ui.TreeNodeFlags? @Tree node flags.
----@param content fun(): T @Tree node content callback (called only if tree node is expanded).
----@return T
+---@param content fun(): T? @Tree node content callback (called only if tree node is expanded).
+---@return T?
 ---@overload fun(label: string, content: fun())
 function ui.treeNode(label, flags, content)
   if content == nil then flags, content = content, flags end
@@ -260,8 +261,8 @@ end
 ---@generic T
 ---@param id string @Tab bar ID.
 ---@param flags ui.TabBarFlags? @Tab bar flags.
----@param content fun(): T @Individual tabs callback.
----@return T
+---@param content fun(): T? @Individual tabs callback.
+---@return T?
 ---@overload fun(id: string, content: fun())
 function ui.tabBar(id, flags, content)
   if content == nil then flags, content = content, flags end
@@ -282,13 +283,28 @@ end
 ---@generic T
 ---@param label string @Tab label.
 ---@param flags ui.TabItemFlags? @Tab flags.
----@param content fun(): T @Tab content callback (called only if tab is selected).
+---@param content fun(): T? @Tab content callback (called only if tab is selected).
+---@param opened refbool? @Pass a `refbool` with `true` value here to show close button. When clicked, value in `refbool` will  be set to `false`.
 ---@return T
 ---@overload fun(label: string, content: fun())
-function ui.tabItem(label, flags, content)
-  if content == nil then flags, content = content, flags end
-  if ui.beginTabItem(label, flags) then
+function ui.tabItem(label, flags, content, opened)
+  if type(flags) == 'function' then flags, content, opened = nil, flags, content end
+  -- if content == nil then flags, content = nil, flags end
+  if ui.beginTabItem(label, flags, refbool.isrefbool(opened) and opened or nil) then
     return using(content, ui.endTabItem)
+  end
+end
+
+---Sets a callback that will be called when image is loaded. If image is already loaded, calls `callback` immediately, before
+---exiting the function.
+---
+---Note: By default images from local files are loaded syncronously, use `ui.setAsynchronousImagesLoading(true)` function to change this behaviour.
+---@param imageSource ui.ImageSource @Path to the image, absolute or relative to script folder or AC root. URLs are also accepted.
+---@param callback fun() @Callback to call once image is loaded.
+function ui.onImageReady(imageSource, callback)
+  local r = __util.expectReply(callback)
+  if not ffi.C.lj_onImageReady_inner__ui(tostring(imageSource), r) then
+    __script.processReply(r)
   end
 end
 
@@ -306,14 +322,15 @@ end
 ---@generic T
 ---@param id string @Context menu ID.
 ---@param mouseButton ui.MouseButton @Mouse button
----@param content fun(): T @Menu content callback (called only if menu is opened).
+---@param content fun(): T? @Menu content callback (called only if menu is opened).
 ---@return T
 ---@overload fun(id: string, content: fun())
 ---@overload fun(mouseButton: ui.MouseButton, content: fun())
 ---@overload fun(content: fun())
 function ui.itemPopup(id, mouseButton, content)
   if type(id) == 'function' then id, mouseButton, content = '', 1, id end
-  if type(mouseButton) == 'function' then id, mouseButton, content = type(id) == 'number' and '' or id, type(id) == 'number' and id or 1, mouseButton end
+  if type(mouseButton) == 'function' then id, mouseButton, content = type(id) == 'number' and '' or id,
+        type(id) == 'number' and id or 1, mouseButton end
   if ui.beginPopupContextItem(id, mouseButton) then
     return using(content, ui.endPopup)
   end
@@ -344,7 +361,7 @@ function ui.combo(label, previewValue, flags, content)
     if type(previewValue) == 'number' then
       local changed = false
       if ui.beginCombo(label, content[previewValue], flags) then
-        using(function ()
+        using(function()
           for i = content[0] and 0 or 1, #content do
             if ui.selectable(content[i], i == previewValue) and i ~= previewValue then
               previewValue = i
@@ -357,7 +374,7 @@ function ui.combo(label, previewValue, flags, content)
     elseif refnumber.isrefnumber(previewValue) then
       local changed = false
       if ui.beginCombo(label, content[previewValue.value], flags) then
-        using(function ()
+        using(function()
           for i = 1, #content do
             if ui.selectable(content[i], i == previewValue.value) and i ~= previewValue.value then
               previewValue.value = i
@@ -415,11 +432,13 @@ function ui.slider(label, value, min, max, format, power)
   end
 
   if refnumber.isrefnumber(value) then
-    return ffi.C.lj_slider_inner__ui(__util.str(label), value, tonumber(min) or 0, tonumber(max) or 100, __util.str_opt(format) or "%.3f", tonumber(power) or 1)
+    return ffi.C.lj_slider_inner__ui(__util.str(label), value, tonumber(min) or 0, tonumber(max) or 100,
+      __util.str_opt(format) or "%.3f", tonumber(power) or 1)
   end
 
   _rn.value = tonumber(value) or 0
-  local changed = ffi.C.lj_slider_inner__ui(__util.str(label), _rn, tonumber(min) or 0, tonumber(max) or 100, __util.str_opt(format) or "%.3f", tonumber(power) or 1)
+  local changed = ffi.C.lj_slider_inner__ui(__util.str(label), _rn, tonumber(min) or 0, tonumber(max) or 100,
+    __util.str_opt(format) or "%.3f", tonumber(power) or 1)
   return _rn.value, changed
 end
 
@@ -441,21 +460,25 @@ local function smoothInterpolation(value, speed, target, dt)
   return value, speed
 end
 
-ui.SmoothInterpolation = class(function (initialValue, weightMult) return { value = initialValue, speed = 0, dtMult = 1 / (weightMult or 1) } end, class.Minimal, class.NoInitialize)
+ui.SmoothInterpolation = class(
+function(initialValue, weightMult) return { value = initialValue, speed = 0, dtMult = 1 / (weightMult or 1) } end,
+  class.Minimal, class.NoInitialize)
 
 function ui.SmoothInterpolation:__call(target)
   self.value, self.speed = smoothInterpolation(self.value, self.speed, target, ac.getUI().dt * self.dtMult)
   return self.value
 end
 
-ui.FadingElement = class(function (drawCallback, initialState) return { value = ui.SmoothInterpolation(initialState and 1 or 0), draw = drawCallback } end, class.Minimal, class.NoInitialize)
+ui.FadingElement = class(
+function(drawCallback, initialState) return { value = ui.SmoothInterpolation(initialState and 1 or 0), draw =
+  drawCallback } end, class.Minimal, class.NoInitialize)
 
 function ui.FadingElement:__call(state)
   local alpha = self.value(state and 1 or 0)
   if alpha > 0.002 then
     ffi.C.lj_pushStyleVar_v1__ui(ui.StyleVar.Alpha, alpha)
     local err_ = nil
-    try(self.draw, function (err) err_ = err end)
+    try(self.draw, function(err) err_ = err end)
     ffi.C.lj_popStyleVar__ui(1)
     if err_ ~= nil then
       error(err_, 2)
@@ -463,7 +486,7 @@ function ui.FadingElement:__call(state)
   end
 end
 
-ui.FileIcon = class('ui.FileIcon', function (filename, specialized)
+ui.FileIcon = class('ui.FileIcon', function(filename, specialized)
   specialized = specialized and string.sub(filename, #filename - 3, #filename):lower() == '.exe'
   filename = specialized and filename or string.match(filename, '.[^.]*$')
   return {
@@ -483,10 +506,10 @@ function ui.FileIcon:style(style)
 end
 
 function ui.FileIcon:__tostring()
-  return '%fileIcon:'..self._style..self._filename
+  return '%fileIcon:' .. self._style .. self._filename
 end
 
-ui.DWriteFont = class('ui.DWriteFont', function (name, dir)
+ui.DWriteFont = class('ui.DWriteFont', function(name, dir)
   local fullName = dir and string.format('%s:%s', name, dir) or name
   return {
     _baseName = fullName,
@@ -495,23 +518,23 @@ ui.DWriteFont = class('ui.DWriteFont', function (name, dir)
 end, class.NoInitialize)
 
 ui.DWriteFont.Weight = __enum({}, {
-  Thin = 'Thin',              --- Thin (100).
-  UltraLight = 'UltraLight',  --- Ultra-light (200).
-  Light = 'Light',            --- Light (300).
-  SemiLight = 'SemiLight',    --- Semi-light (350).
-  Regular = 'Regular',        --- Regular (400).
-  Medium = 'Medium',          --- Medium (500).
-  SemiBold = 'SemiBold',      --- Semi-bold (600).
-  Bold = 'Bold',              --- Bold (700).
-  UltraBold = 'UltraBold',    --- Ultra-bold (800).
-  Black = 'Black',            --- Black (900).
-  UltraBlack = 'UltraBlack'   --- Ultra-black (950).
+  Thin = 'Thin',             --- Thin (100).
+  UltraLight = 'UltraLight', --- Ultra-light (200).
+  Light = 'Light',           --- Light (300).
+  SemiLight = 'SemiLight',   --- Semi-light (350).
+  Regular = 'Regular',       --- Regular (400).
+  Medium = 'Medium',         --- Medium (500).
+  SemiBold = 'SemiBold',     --- Semi-bold (600).
+  Bold = 'Bold',             --- Bold (700).
+  UltraBold = 'UltraBold',   --- Ultra-bold (800).
+  Black = 'Black',           --- Black (900).
+  UltraBlack = 'UltraBlack'  --- Ultra-black (950).
 })
 
 ui.DWriteFont.Style = __enum({}, {
-  Normal = 'Normal',    --- Charachers are upright in most fonts.
-  Italic = 'Italic',    --- In italic style, characters are truly slanted and appear as they were designed.
-  Oblique = 'Oblique',  --- With oblique style characters are artificially slanted.
+  Normal = 'Normal',   --- Charachers are upright in most fonts.
+  Italic = 'Italic',   --- In italic style, characters are truly slanted and appear as they were designed.
+  Oblique = 'Oblique', --- With oblique style characters are artificially slanted.
 })
 
 ui.DWriteFont.Stretch = __enum({}, {
@@ -540,6 +563,17 @@ end
 
 function ui.DWriteFont:stretch(stretch)
   self._stretch = stretch
+  self._fullName = nil
+  return self
+end
+
+function ui.DWriteFont:axis(key, value)
+  if not self._axes then self._axes = {} end
+  if type(key) == 'table' then
+    table.assign(self._axes, key)
+  else
+    self._axes[key] = value
+  end
   self._fullName = nil
   return self
 end
@@ -576,6 +610,12 @@ function ui.DWriteFont:__tostring()
     local stretch = self._stretch
     if stretch then t[n + 1], t[n + 2], n = ';Stretch=', stretch, n + 2 end
 
+    if self._axes then
+      for k, v in pairs(self._axes) do
+        t[n + 1], t[n + 2], t[n + 3], t[n + 4], n = ';Axis:', k, '=', v, n + 4
+      end
+    end
+
     if self._allowRealSizes then t[n + 1] = ';AnyFontSize' end
     if self._allowEmoji == false then t[n + 1] = ';NoEmoji' end
 
@@ -600,27 +640,45 @@ function ui.drawRaceFlag(color)
   local p2 = vec2(p1.x + 150, p1.y + 80)
   local flag
   if type(color) == 'number' then
-    if color == ac.FlagType.Start then flag, color = '/content/gui/flags/whiteFlag.png', rgbm.colors.green
-    elseif color == ac.FlagType.Caution then flag, color = '/content/gui/flags/yellowFlag.png', rgbm.colors.white
-    elseif color == ac.FlagType.Slippery then flag, color = '/extension/textures/flags/slippery.png', rgbm.colors.white
-    elseif color == ac.FlagType.PitLaneClosed then return
-    elseif color == ac.FlagType.Stop then flag, color = '/content/gui/flags/blackFlag_small.png', rgbm.colors.white
-    elseif color == ac.FlagType.SlowVehicle then flag, color = '/content/gui/flags/whiteFlag.png', rgbm(0.8, 0.8, 0.8, 1)
-    elseif color == ac.FlagType.Ambulance then flag, color = '/extension/textures/flags/ambulance.png', rgbm.colors.white
-    elseif color == ac.FlagType.ReturnToPits then flag, color = '/content/gui/flags/penalty.png', rgbm.colors.white
-    elseif color == ac.FlagType.MechanicalFailure then flag, color = '/extension/textures/flags/mechanical_failure.png', rgbm.colors.white
-    elseif color == ac.FlagType.Unsportsmanlike then flag, color = '/extension/textures/flags/unsportsmanlike.png', rgbm.colors.white
-    elseif color == ac.FlagType.StopCancel then return
-    elseif color == ac.FlagType.FasterCar then flag, color = '/content/gui/flags/blueFlag.png', rgbm.colors.white
-    elseif color == ac.FlagType.Finished then flag, color = '/content/gui/flags/finish.png', rgbm.colors.white
-    elseif color == ac.FlagType.OneLapLeft then flag, color = '/content/gui/flags/whiteFlag.png', rgbm.colors.white
-    elseif color == ac.FlagType.SessionSuspended then flag, color = '/content/gui/flags/whiteFlag.png', rgbm.colors.red
-    elseif color == ac.FlagType.Code60 then flag, color = '/extension/textures/flags/code60.png', rgbm.colors.white
-    else return end
+    if color == ac.FlagType.Start then
+      flag, color = '/content/gui/flags/whiteFlag.png', rgbm.colors.green
+    elseif color == ac.FlagType.Caution then
+      flag, color = '/content/gui/flags/yellowFlag.png', rgbm.colors.white
+    elseif color == ac.FlagType.Slippery then
+      flag, color = '/extension/textures/flags/slippery.png', rgbm.colors.white
+    elseif color == ac.FlagType.PitLaneClosed then
+      return
+    elseif color == ac.FlagType.Stop then
+      flag, color = '/content/gui/flags/blackFlag_small.png', rgbm.colors.white
+    elseif color == ac.FlagType.SlowVehicle then
+      flag, color = '/content/gui/flags/whiteFlag.png', rgbm(0.8, 0.8, 0.8, 1)
+    elseif color == ac.FlagType.Ambulance then
+      flag, color = '/extension/textures/flags/ambulance.png', rgbm.colors.white
+    elseif color == ac.FlagType.ReturnToPits then
+      flag, color = '/content/gui/flags/penalty.png', rgbm.colors.white
+    elseif color == ac.FlagType.MechanicalFailure then
+      flag, color = '/extension/textures/flags/mechanical_failure.png', rgbm.colors.white
+    elseif color == ac.FlagType.Unsportsmanlike then
+      flag, color = '/extension/textures/flags/unsportsmanlike.png', rgbm.colors.white
+    elseif color == ac.FlagType.StopCancel then
+      return
+    elseif color == ac.FlagType.FasterCar then
+      flag, color = '/content/gui/flags/blueFlag.png', rgbm.colors.white
+    elseif color == ac.FlagType.Finished then
+      flag, color = '/content/gui/flags/finish.png', rgbm.colors.white
+    elseif color == ac.FlagType.OneLapLeft then
+      flag, color = '/content/gui/flags/whiteFlag.png', rgbm.colors.white
+    elseif color == ac.FlagType.SessionSuspended then
+      flag, color = '/content/gui/flags/whiteFlag.png', rgbm.colors.red
+    elseif color == ac.FlagType.Code60 then
+      flag, color = '/extension/textures/flags/code60.png', rgbm.colors.white
+    else
+      return
+    end
   else
     flag = '/content/gui/flags/whiteFlag.png'
   end
-  ui.drawImage(ac.getFolder(ac.FolderID.Root)..flag, p1, p2, color)
+  ui.drawImage(ac.getFolder(ac.FolderID.Root) .. flag, p1, p2, color)
 end
 
 ---Draws icon for car state, along with low fuel icon. If more than one icon is visible at once, subsequent ones are drawn
@@ -670,14 +728,15 @@ end
 ---@param icons T @Table with icons from left top corner, each icon is a table with 1-based row and column indices.
 ---@return T
 function ui.atlasIcons(filename, columns, rows, icons)
-  return table.map(icons, function (coords, key)
+  return table.map(icons, function(coords, key)
     local itemX = coords[2] - 1
     local itemY = coords[1] - 1
-    return ui.atlasIconID(filename, vec2(itemX / columns, itemY / rows), vec2((itemX + 1) / columns, (itemY + 1) / rows)), key
+    return ui.atlasIconID(filename, vec2(itemX / columns, itemY / rows), vec2((itemX + 1) / columns, (itemY + 1) / rows)),
+        key
   end)
 end
 
-ffi.cdef [[ 
+ffi.cdef [[
 typedef struct {
   mat4x4 transform;
   float pitch;
@@ -707,6 +766,7 @@ function ui.MediaPlayer.supported() end
   rawOutput: boolean = nil "Set to `true` to output audio directly, without FMOD (won’t respect AC audio device selection or stop when AC is paused)",
   reverbResponse: boolean = false "Set to `true` to get audio to react to reverb",
   use3D: boolean = false "Set to `true` to load audio without any 3D effects (if not set, car display scripts have it as `true` by default and update position based on screen position, but only them)",
+  useOcclusion: boolean = nil "Set to `true` to let audio occlude based on track geometry (for configured tracks, 3D audio events only)",
   insideConeAngle: number = nil "Angle in degrees at which audio is at 100% volume",
   outsideConeAngle: number = nil "Angle in degrees at which audio is at `outsideVolume` volume",
   outsideVolume: number = nil "Volume multiplier if listener is outside of the cone",
@@ -723,13 +783,80 @@ function ui.MediaPlayer(source, audioParams) end
 ui.MediaPlayer = setmetatable({
   supported = ffi.C.lj_mmfholder_supported__ui,
   supportedAsync = function(callback) return ffi.C.lj_mmfholder_supportedasync__ui(__util.expectReply(callback)) end
-}, { 
-  __call = function (_, source, audioParams) 
+}, {
+  __call = function(_, source, audioParams)
     local r = ffi.gc(ffi.C.lj_mmfholder_new__ui(audioParams and __util.json(audioParams)), ffi.C.lj_mmfholder_gc__ui)
     if source ~= nil then r:setSource(source) end
     return r
-  end 
+  end
 })
+
+local function _mmfacb()
+  return {
+    c = setmetatable({ inAutoLoopMode = false }, { __mode = 'kv' }),
+    f = {
+      keepAlive = ac.skipSaneChecks,
+      setParam = ac.skipSaneChecks,
+      setDistanceMin = ac.skipSaneChecks,
+      setDistanceMax = ac.skipSaneChecks,
+      setConeSettings = ac.skipSaneChecks,
+      setDSPParameter = ac.skipSaneChecks,
+      dispose = ac.skipSaneChecks,
+      resume = ac.skipSaneChecks,
+      resumeIf = ac.skipSaneChecks,
+      stop = ac.skipSaneChecks,
+      start = ac.skipSaneChecks,
+      isValid = function(s)
+        return s._owner:hasAudio()
+      end,
+      isWithinRange = function(s)
+        return s._extra.within_range == 1
+      end,
+      isPlaying = function(s)
+        return s._owner:playing()
+      end,
+      isPaused = function(s)
+        return not s._owner:playing()
+      end,
+      setPosition = function(s, pos, dir, up, vel)
+        ffi.C.lj_mmfholder_setpos__ui(s._owner, __util.ensure_vec3(pos), __util.ensure_vec3_nil(dir),
+          __util.ensure_vec3_nil(up), __util.ensure_vec3(vel))
+        return s
+      end,
+      getTransformationRaw = function(s) return s._owner._extra.transform end,
+    },
+    m = {
+      __index = function(s, key)
+        if key == 'volume' then
+          return s._owner:volume()
+        elseif key == 'pitch' then
+          return s._owner._extra.pitch
+        elseif key == 'cameraInteriorMultiplier' then
+          return s._owner._extra.camera_interior_mult
+        elseif key == 'cameraExteriorMultiplier' then
+          return s._owner._extra.camera_exterior_mult
+        elseif key == 'cameraTrackMultiplier' then
+          return s._owner._extra.camera_track_mult
+        else
+          return _mmfac.f[key]
+        end
+      end,
+      __newindex = function(s, key, value)
+        if key == 'volume' then
+          s._owner:setVolume(value)
+        elseif key == 'pitch' then
+          s._owner._extra.pitch = value
+        elseif key == 'cameraInteriorMultiplier' then
+          s._owner._extra.camera_interior_mult = value
+        elseif key == 'cameraExteriorMultiplier' then
+          s._owner._extra.camera_exterior_mult = value
+        elseif key == 'cameraTrackMultiplier' then
+          s._owner._extra.camera_track_mult = value
+        end
+      end,
+    }
+  }
+end
 
 local _mmfac
 
@@ -757,8 +884,8 @@ local _mmfac
 ---a callback.
 ---@class ui.MediaPlayer
 ---@explicit-constructor ui.MediaPlayer
-ffi.metatype('mmfholder', { 
-  __tostring = function (s) return string.format('$ui.MediaPlayer://?id=%d', s._id) end,
+ffi.metatype('mmfholder', {
+  __tostring = function(s) return string.format('$ui.MediaPlayer://?id=%d', s._id) end,
   __index = {
     ---Checks if system supports these media players (Microsoft Media Foundation framework was added in Windows 8). If it’s not supported,
     ---you can still use API, but it would fail to load any video or audio.
@@ -780,85 +907,23 @@ ffi.metatype('mmfholder', {
     ---
     ---For backwards compatibility, these audio events have `cameraInteriorMultiplier` set to `1` by default.
     ---@return ac.AudioEvent
-    audio = function (s)
+    audio = function(s)
       if s._extra.within_range < 0 then error('FMOD integration is not available this player', 2) end
-      if not _mmfac then 
-        _mmfac = {
-          c = setmetatable({inAutoLoopMode = false}, {__mode = 'kv'}),
-          f = {
-            keepAlive = ac.skipSaneChecks,
-            setParam = ac.skipSaneChecks,
-            setDistanceMin = ac.skipSaneChecks,
-            setDistanceMax = ac.skipSaneChecks,
-            setConeSettings = ac.skipSaneChecks,
-            setDSPParameter = ac.skipSaneChecks,
-            dispose = ac.skipSaneChecks,
-            resume = ac.skipSaneChecks,
-            resumeIf = ac.skipSaneChecks,
-            stop = ac.skipSaneChecks,
-            start = ac.skipSaneChecks,
-            isValid = function (s)
-              return s._owner:hasAudio()
-            end,
-            isWithinRange = function (s)
-              return s._extra.within_range == 1
-            end,
-            isPlaying = function (s)
-              return s._owner:playing()
-            end,
-            isPaused = function (s)
-              return not s._owner:playing()
-            end,
-            setPosition = function (s, pos, dir, up, vel)
-              ffi.C.lj_mmfholder_setpos__ui(s._owner, __util.ensure_vec3(pos), __util.ensure_vec3_nil(dir), __util.ensure_vec3_nil(up), __util.ensure_vec3(vel))
-              return s
-            end,
-            getTransformationRaw = function (s) return s._owner._extra.transform end,
-          },
-          m = {
-            __index = function (s, key)
-              if key == 'volume' then 
-                return s._owner:volume()
-              elseif key == 'pitch' then 
-                return s._owner._extra.pitch
-              elseif key == 'cameraInteriorMultiplier' then 
-                return s._owner._extra.camera_interior_mult
-              elseif key == 'cameraExteriorMultiplier' then 
-                return s._owner._extra.camera_exterior_mult
-              elseif key == 'cameraTrackMultiplier' then 
-                return s._owner._extra.camera_track_mult
-              else
-                return _mmfac.f[key]
-              end
-            end,
-            __newindex = function (s, key, value)
-              if key == 'volume' then 
-                s._owner:setVolume(value)
-              elseif key == 'pitch' then 
-                s._owner._extra.pitch = value
-              elseif key == 'cameraInteriorMultiplier' then 
-                s._owner._extra.camera_interior_mult = value
-              elseif key == 'cameraExteriorMultiplier' then 
-                s._owner._extra.camera_exterior_mult = value
-              elseif key == 'cameraTrackMultiplier' then 
-                s._owner._extra.camera_track_mult = value
-              end
-            end,
-          }
-        }
+      if not _mmfac then
+        _mmfac = _mmfacb()
       end
       local r = _mmfac.c[s]
       if not r then
-        r = setmetatable({_owner = s}, _mmfac.m)
+        r = setmetatable({ _owner = s }, _mmfac.m)
         _mmfac.c[s] = r
       end
       return r
     end,
 
     ---Sets file name or URL for video player to play. URL can lead to a remote resource.
-    ---@param url string @URL or a filename.
+    ---@param url string? @URL or a filename.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setSource = function (s, url)
+    setSource = function(s, url)
       ffi.C.lj_mmfholder_setsource__ui(s, url ~= nil and tostring(url) or nil)
       return s
     end,
@@ -931,42 +996,66 @@ ffi.metatype('mmfholder', {
     ---Sets video position.
     ---@param value number @New video position in seconds.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setCurrentTime = function (s, value) ffi.C.lj_mmfholder_setcurrenttime__ui(s, tonumber(value) or 0) return s end,
+    setCurrentTime = function(s, value)
+      ffi.C.lj_mmfholder_setcurrenttime__ui(s, tonumber(value) or 0)
+      return s
+    end,
 
     ---Sets playback speed.
     ---@param value number? @New speed value from 0 to 1. Default value: 1.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setPlaybackRate = function (s, value) ffi.C.lj_mmfholder_setplaybackrate__ui(s, tonumber(value) or 1) return s end,
-    
+    setPlaybackRate = function(s, value)
+      ffi.C.lj_mmfholder_setplaybackrate__ui(s, tonumber(value) or 1)
+      return s
+    end,
+
     ---Sets volume.
     ---@param value number? @New volume value from 0 to 1. Default value: 1.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setVolume = function (s, value) ffi.C.lj_mmfholder_setvolume__ui(s, tonumber(value) or 1) return s end,
-    
+    setVolume = function(s, value)
+      ffi.C.lj_mmfholder_setvolume__ui(s, tonumber(value) or 1)
+      return s
+    end,
+
     ---Sets pitch. Available only with FMOD audio.
     ---@param value number? @New pitch value. Default value: 1.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setPitch = function (s, value) ffi.C.lj_mmfholder_setpitch__ui(s, tonumber(value) or 1) return s end,
-    
+    setPitch = function(s, value)
+      ffi.C.lj_mmfholder_setpitch__ui(s, tonumber(value) or 1)
+      return s
+    end,
+
     ---Sets audio balance.
     ---@param value number? @New balance value from -1 (left channel only) to 1 (right channel only). Default value: 0.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setBalance = function (s, value) ffi.C.lj_mmfholder_setbalance__ui(s, tonumber(value) or 0) return s end,
+    setBalance = function(s, value)
+      ffi.C.lj_mmfholder_setbalance__ui(s, tonumber(value) or 0)
+      return s
+    end,
 
     ---Sets muted parameter.
     ---@param value boolean? @Set to `true` to disable audio.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setMuted = function (s, value) ffi.C.lj_mmfholder_setmuted__ui(s, value ~= false) return s end,
+    setMuted = function(s, value)
+      ffi.C.lj_mmfholder_setmuted__ui(s, value ~= false)
+      return s
+    end,
 
     ---Sets looping parameter.
     ---@param value boolean? @Set to `true` if video needs to start from beginning when it ends.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setLooping = function (s, value) ffi.C.lj_mmfholder_setlooping__ui(s, value ~= false) return s end,
+    setLooping = function(s, value)
+      ffi.C.lj_mmfholder_setlooping__ui(s, value ~= false)
+      return s
+    end,
 
     ---Sets auto playing parameter.
     ---@param value boolean? @Set to `true` if video has to be started automatically.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setAutoPlay = function (s, value) ffi.C.lj_mmfholder_setautoplay__ui(s, value ~= false) return s end,
+    setAutoPlay = function(s, value)
+      ffi.C.lj_mmfholder_setautoplay__ui(s, value ~= false)
+      return s
+    end,
 
     ---Sets MIP maps generation flag. Use it if you want to tie media resource directly to a mesh instead of using it
     ---in UI or scriptable display.
@@ -975,7 +1064,10 @@ ffi.metatype('mmfholder', {
     ---would read those downscaled copies instead of main texture to both avoid aliasing and improve performance.
     ---@param value boolean? @Set to `true` to generate MIP maps.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setGenerateMips = function (s, value) ffi.C.lj_mmfholder_setgeneratemips__ui(s, value ~= false) return s end,
+    setGenerateMips = function(s, value)
+      ffi.C.lj_mmfholder_setgeneratemips__ui(s, value ~= false)
+      return s
+    end,
 
     ---If you’re using a video element in UI or a scriptable display, this method would not do anything. But if you’re
     ---tying media to a mesh (with, for example, `ac.findMeshes():setMaterialTexture()`), this method allows to control
@@ -983,13 +1075,19 @@ ffi.metatype('mmfholder', {
     ---to update video every frame (final framerate would still be limited by frame rate of original video).
     ---@param period number? @Update period in seconds. Default value: 0.05.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    setUpdatePeriod = function (s, period) ffi.C.lj_mmfholder_setupdateperiod__ui(s, tonumber(period) or 0.05) return s end,
+    setUpdatePeriod = function(s, period)
+      ffi.C.lj_mmfholder_setupdateperiod__ui(s, tonumber(period) or 0.05)
+      return s
+    end,
 
     ---Links playback rate to simulation speed: pauses when game or replay are paused, slows down with replay slow motion,
     ---speeds up with replay fast forwarding.
     ---@param value boolean? @Set to `true` to link playback rate.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    linkToSimulationSpeed = function (s, value) ffi.C.lj_mmfholder_linktosim__ui(s, value ~= false) return s end,
+    linkToSimulationSpeed = function(s, value)
+      ffi.C.lj_mmfholder_linktosim__ui(s, value ~= false)
+      return s
+    end,
 
     ---Sets media element to be used as texture by calling these functions:
     ---```
@@ -1002,25 +1100,32 @@ ffi.metatype('mmfholder', {
     ---Of course, you can call those functions manually, or call this one and then use any other functions
     ---to change the behaviour. It’s only a helping shortcut, that’s all.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    useAsTexture = function (s) return s:setAutoPlay(true):setMuted(true):setLooping(true):setGenerateMips(true):linkToSimulationSpeed(true) end,
+    useAsTexture = function(s) return s:setAutoPlay(true):setMuted(true):setLooping(true):setGenerateMips(true)
+      :linkToSimulationSpeed(true) end,
 
     ---Starts to play a video.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    play = function (s) ffi.C.lj_mmfholder_play__ui(s) return s end,
+    play = function(s)
+      ffi.C.lj_mmfholder_play__ui(s)
+      return s
+    end,
 
     ---Pauses a video. To fully stop it, use `player:pause():setCurrentTime(0)`.
     ---@return ui.MediaPlayer @Returns itself for chaining several methods together.
-    pause = function (s) ffi.C.lj_mmfholder_pause__ui(s) return s end,
+    pause = function(s)
+      ffi.C.lj_mmfholder_pause__ui(s)
+      return s
+    end,
 
     ---Some debug information for testing and fixing things.
     ---@return string
-    debugText = function (s) return __util.strrefr(ffi.C.lj_mmfholder_debugtext__ui(s)) end,
+    debugText = function(s) return __util.strrefr(ffi.C.lj_mmfholder_debugtext__ui(s)) end,
   }
 })
 
 --[[) ?]]
 
-ffi.cdef [[ 
+ffi.cdef [[
 typedef struct { int _id; } uirt;
 typedef struct { int _something; } uirtcpu;
 ]]
@@ -1033,9 +1138,13 @@ typedef struct { int _something; } uirtcpu;
 ---@return ui.ExtraCanvas
 ---@overload fun(resolution: vec2|integer, mips: integer, textureFormat: render.TextureFormat)
 function ui.ExtraCanvas(resolution, mips, antialiasingMode, textureFormat, flags)
-  if type(resolution) == 'number' then resolution = vec2(resolution, resolution)
-  elseif not vec2.isvec2(resolution) then error('Resolution is required', 2) 
-  else resolution = resolution:clone() end
+  if type(resolution) == 'number' then
+    resolution = vec2(resolution, resolution)
+  elseif not vec2.isvec2(resolution) then
+    error('Resolution is required', 2)
+  else
+    resolution = resolution:clone()
+  end
   resolution.x = math.clamp(math.ceil(resolution.x), 1, 8192)
   resolution.y = math.clamp(math.ceil(resolution.y), 1, 8192)
 
@@ -1058,18 +1167,18 @@ end
 ---Note: update happens from a different short-lived UI context, so interactive controls would not work here.
 ---@class ui.ExtraCanvas
 ---@explicit-constructor ui.ExtraCanvas
-ffi.metatype('uirt', { 
-  __tostring = function (s) return string.format('$ui.ExtraCanvas://?id=%d', s._id) end,
+ffi.metatype('uirt', {
+  __tostring = function(s) return string.format('$ui.ExtraCanvas://?id=%d', s._id) end,
   __index = {
     ---Disposes canvas and releases resources.
-    dispose = function (s)
+    dispose = function(s)
       return ffi.C.lj_uirt_dispose__ui(s)
     end,
 
     ---Sets canvas name for debugging. Canvases with set name appear in Lua Debug App, allowing to monitor their state.
     ---@param name string? @Name to display texture as. If set to `nil` or `false`, name will be reset and texture will be hidden.
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
-    setName = function (s, name)
+    setName = function(s, name)
       ffi.C.lj_uirt_setname__ui(s, name and tostring(name) or nil)
       return s
     end,
@@ -1080,11 +1189,11 @@ ffi.metatype('uirt', {
     ---Note: canvas won’t be cleared here, to clear it first, use `canvas:clear()` method.
     ---@param callback fun(dt: number) @Drawing function. Might not be called if canvas has been disposed or isn’t available for drawing into.
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
-    update = function (s, callback)
+    update = function(s, callback)
       local dt = ffi.C.lj_uirt_begin__ui(s)
       if dt == -2 then error('Canvas is already being updated', 2) end
       if dt >= 0 then
-        __util.pushEnsureToCall(function () ffi.C.lj_uirt_end__ui(s) end)
+        __util.pushEnsureToCall(function() ffi.C.lj_uirt_end__ui(s) end)
         callback(dt)
         __util.popEnsureToCall()
       end
@@ -1110,15 +1219,15 @@ ffi.metatype('uirt', {
       cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
       defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
-      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",      
+      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
       directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
     }]]
-    updateWithShader = function (s, params)
+    updateWithShader = function(s, params)
       if not ffi.C.lj_uicshader_runoncanvas0__ui(s) then return false end
       local dc = __util.setShaderParams2(params, _sp_uid)
-      if dc then 
-        ffi.C.lj_uicshader_runoncanvas1__ui(s, dc, __util.ensure_vec2_nil(params.p1), __util.ensure_vec2_nil(params.p2), 
+      if dc then
+        ffi.C.lj_uicshader_runoncanvas1__ui(s, dc, __util.ensure_vec2_nil(params.p1), __util.ensure_vec2_nil(params.p2),
           __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2))
       else
         ffi.C.lj_uicshader_restorert__ui()
@@ -1149,14 +1258,14 @@ ffi.metatype('uirt', {
       cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
       defines: table = nil "Defines to pass to the shader, either boolean, numerical or string values (don’t forget to wrap complex expressions in brackets). False values won’t appear in code and true will be replaced with 1 so you could use `#ifdef` and `#ifndef` with them.",
       textures: table = {} "Table with textures to pass to a shader. For textures, anything passable in `ui.image()` can be used (filename, remote URL, media element, extra canvas, etc.). If you don’t have a texture and need to reset bound one, use `false` for a texture value (instead of `nil`)",
-      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",      
+      values: table = {} "Table with values to pass to a shader. Values can be numbers, booleans, vectors, colors or 4×4 matrix. Values will be aligned automatically.",
       directValuesExchange: boolean = nil "If you’re reusing table between calls instead of recreating it each time and pass `true` as this parameter, `values` table will be swapped with an FFI structure allowing to skip data copying step and achieve the best performance. Note: with this mode, you’ll have to transpose matrices manually.",
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
     }]]
-    updateSceneWithShader = function (s, params)
+    updateSceneWithShader = function(s, params)
       if not ffi.C.lj_uicshader_runoncanvas_fullscreen0__ui(s) then return false end
       local dc = __util.setShaderParams2(params, _sp_uif)
-      if dc then 
+      if dc then
         ffi.C.lj_uicshader_runoncanvas_fullscreen1__ui(s, dc)
       else
         ffi.C.lj_uicshader_restorert__ui()
@@ -1165,7 +1274,7 @@ ffi.metatype('uirt', {
     end,
 
     ---Clears canvas.
-    ---@param col rgbm
+    ---@param col rgbm? @Default value: `rgbm.colors.transparent`.
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
     clear = function(s, col)
       ffi.C.lj_uirt_clear__ui(s, __util.ensure_rgbm(col))
@@ -1203,11 +1312,17 @@ ffi.metatype('uirt', {
       if not filename or type(filename) ~= 'string' or #filename == '' then return end
       if format == nil then
         local ext = string.sub(filename, #filename - 3, #filename):lower()
-        if ext == '.png' then format = ac.ImageFormat.PNG 
-        elseif ext == '.dds' then format = ac.ImageFormat.DDS
-        elseif ext == '.zip' then format = ac.ImageFormat.ZippedDDS
-        elseif ext == '.bmp' then format = ac.ImageFormat.BMP
-        else format = ac.ImageFormat.JPG end
+        if ext == '.png' then
+          format = ac.ImageFormat.PNG
+        elseif ext == '.dds' then
+          format = ac.ImageFormat.DDS
+        elseif ext == '.zip' then
+          format = ac.ImageFormat.ZippedDDS
+        elseif ext == '.bmp' then
+          format = ac.ImageFormat.BMP
+        else
+          format = ac.ImageFormat.JPG
+        end
       end
       ffi.C.lj_uirt_save__ui(s, filename, format)
       return s
@@ -1247,7 +1362,7 @@ ffi.metatype('uirt', {
 
     ---Clones current canvas.
     ---@return ui.ExtraCanvas @Returns new canvas.
-    clone = function (s)
+    clone = function(s)
       local res = s:size()
       if res.x == 0 then error('Can’t clone disposed canvas', 2) end
       return ui.ExtraCanvas(res, s:mips()):copyFrom(s)
@@ -1256,7 +1371,7 @@ ffi.metatype('uirt', {
     ---Backup current state of canvas, return a function which can be called to restore original state. Note:
     ---it clones current canvas texture, so don’t make too many backup copies at once.
     ---@return fun() @Returns function which will restore original canvas state when called. Function can be called more than once.
-    backup = function (s)
+    backup = function(s)
       local res = s:size()
       if res.x == 0 then
         return function(cmd)
@@ -1265,14 +1380,17 @@ ffi.metatype('uirt', {
         end
       end
       local copy
-      s:accessData(function (err, data)
-        if err then ac.error('Failed to backup ui.ExtraCanvas: '..tostring(err)) end
+      s:accessData(function(err, data)
+        if err then ac.error('Failed to backup ui.ExtraCanvas: ' .. tostring(err)) end
         if data then copy = data:compress() end
       end)
       return function(cmd)
         if cmd == 'memoryFootprint' then return copy and copy:memoryFootprint() or 0 end
         if cmd == 'update' then return s:backup() end
-        if cmd == 'dispose' then if copy then copy:dispose() end return end
+        if cmd == 'dispose' then
+          if copy then copy:dispose() end
+          return
+        end
         if copy then s:copyFrom(copy) end
       end
     end,
@@ -1282,9 +1400,13 @@ ffi.metatype('uirt', {
     ---@param other ui.ExtraCanvas|ui.ExtraCanvasData|ui.Icons @Canvas to copy content from.
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
     copyFrom = function(s, other)
-      if ffi.istype('uirt*', other) then ffi.C.lj_uirt_copyfrom__ui(s, other)
-      elseif ffi.istype('uirtcpu*', other) then ffi.C.lj_uirt_fromcpu__ui(s, other)
-      else ffi.C.lj_uirt_copyfromtex__ui(s, tostring(other)) end
+      if ffi.istype('uirt*', other) then
+        ffi.C.lj_uirt_copyfrom__ui(s, other)
+      elseif ffi.istype('uirtcpu*', other) then
+        ffi.C.lj_uirt_fromcpu__ui(s, other)
+      else
+        ffi.C.lj_uirt_copyfromtex__ui(s, tostring(other))
+      end
       return s;
     end,
 
@@ -1301,15 +1423,19 @@ ffi.metatype('uirt', {
     ---used to access colors of individual pixels or upload it back to CPU restoring original state.
     ---@param callback fun(err: string, data: ui.ExtraCanvasData)
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
-    accessData = function (s, callback)
+    accessData = function(s, callback)
       if not callback then return end
-      if type(callback) ~= 'function' then error('Function is required for callback', 2) end
-      ffi.C.lj_uirt_tocpu__ui(s, __util.expectReply(function (err, key)
-        if err then callback(err)
+      __util.callable(callback)
+      ffi.C.lj_uirt_tocpu__ui(s, __util.expectReply(function(err, key)
+        if err then
+          callback(err)
         else
           local r = ffi.C.lj_uirtcpu_get__ui(key)
-          if r == nil then callback('Unexpectedly missing data') 
-          else callback(nil, ffi.gc(r, ffi.C.lj_uirtcpu_gc__ui)) end
+          if r == nil then
+            callback('Unexpectedly missing data')
+          else
+            callback(nil, ffi.gc(r, ffi.C.lj_uirtcpu_gc__ui))
+          end
         end
       end))
       return s;
@@ -1328,7 +1454,7 @@ ffi.metatype('uirt', {
 ffi.metatype('uirtcpu', {
   __index = {
     ---Disposes canvas and releases resources.
-    dispose = function (s)
+    dispose = function(s)
       return ffi.C.lj_uirtcpu_dispose__ui(s)
     end,
 
@@ -1398,12 +1524,13 @@ ffi.metatype('uirtcpu', {
 local _uiState, _simState
 
 local _scmt = {
-  __call = function (s, withRepeat)
+  __call = function(s, withRepeat)
     if _uiState.wantCaptureKeyboard or not _simState.isWindowForeground then return false end
     for i = 1, #s do
       local j = s[i]
-      if type(j) == 'number' then 
-        return not _uiState.ctrlDown and not _uiState.shiftDown and not _uiState.altDown and not _uiState.superDown and ui.keyboardButtonPressed(j, withRepeat)
+      if type(j) == 'number' then
+        return not _uiState.ctrlDown and not _uiState.shiftDown and not _uiState.altDown and not _uiState.superDown and
+        ui.keyboardButtonPressed(j, withRepeat)
       end
       if ui.keyboardButtonPressed(j.key, withRepeat)
           and (j.ctrl == true) == _uiState.ctrlDown
@@ -1420,8 +1547,9 @@ local _scmt = {
       if _uiState.wantCaptureKeyboard or not _simState.isWindowForeground then return false end
       for i = 1, #s do
         local j = s[i]
-        if type(j) == 'number' then 
-          return not _uiState.ctrlDown and not _uiState.shiftDown and not _uiState.altDown and not _uiState.superDown and ui.keyboardButtonDown(j)
+        if type(j) == 'number' then
+          return not _uiState.ctrlDown and not _uiState.shiftDown and not _uiState.altDown and not _uiState.superDown and
+          ui.keyboardButtonDown(j)
         end
         if ui.keyboardButtonDown(j.key)
             and (j.ctrl == true) == _uiState.ctrlDown
@@ -1442,7 +1570,7 @@ local _scmt = {
 ---@overload fun(key: ui.KeyIndex|integer, ...): function
 function ui.shortcut(key, ...)
   if not _uiState then _uiState, _simState = ac.getUI(), ac.getSim() end
-  local k = {key, ...}
+  local k = { key, ... }
   if #k == 0 then return function() return false end end
   return setmetatable(k, _scmt)
 end
@@ -1469,11 +1597,15 @@ end
 }]]
 function ui.renderTexture(params)
   if type(params) ~= 'table' then error('Table “params” is required', 2) end
-  ffi.C.lj_renderTexture_inner__ui(__util.str(params.filename), __util.ensure_vec2(params.p1), __util.ensure_vec2(params.p2), 
-    __util.ensure_rgbm_nil(params.color), __util.ensure_rgbm_nil(params.colorOffset), __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2), 
+  ffi.C.lj_renderTexture_inner__ui(__util.str(params.filename), __util.ensure_vec2(params.p1),
+    __util.ensure_vec2(params.p2),
+    __util.ensure_rgbm_nil(params.color), __util.ensure_rgbm_nil(params.colorOffset), __util.ensure_vec2_nil(params.uv1),
+    __util.ensure_vec2_nil(params.uv2),
     tonumber(params.blendMode) or 13,
-    params.mask1 and tostring(params.mask1) or nil, __util.ensure_vec2_nil(params.mask1UV1), __util.ensure_vec2_nil(params.mask1UV2), tonumber(params.mask1Flags) or 6,
-    params.mask2 and tostring(params.mask2) or nil, __util.ensure_vec2_nil(params.mask2UV1), __util.ensure_vec2_nil(params.mask2UV2), tonumber(params.mask2Flags) or 6)
+    params.mask1 and tostring(params.mask1) or nil, __util.ensure_vec2_nil(params.mask1UV1),
+    __util.ensure_vec2_nil(params.mask1UV2), tonumber(params.mask1Flags) or 6,
+    params.mask2 and tostring(params.mask2) or nil, __util.ensure_vec2_nil(params.mask2UV1),
+    __util.ensure_vec2_nil(params.mask2UV2), tonumber(params.mask2Flags) or 6)
 end
 
 ---Draws a quad with a custom shader. Shader is compiled at first run, which might take a few milliseconds.
@@ -1481,7 +1613,7 @@ end
 ---while drawing will be skipped until shader is ready.
 ---
 ---You can bind up to 32 textures and pass any number/boolean/vector/color/matrix values to the shader, which makes
----it a very effective tool for any custom drawing you might need to make.      
+---it a very effective tool for any custom drawing you might need to make.
 ---
 ---Example:
 ---```
@@ -1502,7 +1634,7 @@ end
 ---    gFlag = math.random() > 0.5
 ---  },
 ---  shader = [[
----    float4 main(PS_IN pin) { 
+---    float4 main(PS_IN pin) {
 ---      float4 in1 = txInput1.Sample(samAnisotropic, pin.Tex);
 ---      float4 in2 = txInput2.Sample(samAnisotropic, pin.Tex + gValueVec);
 ---      return gFlag ? in1 + in2 * gValueColor : in2;
@@ -1517,7 +1649,7 @@ end
 ---end up having thousands of no more used shaders). If you don’t have a working texture at the time of first creating
 ---that table, use `false` for missing texture value.
 ---
----Note: if shader would fail to compile, a C++ exception will be triggered, terminating script completely (to prevent AC 
+---Note: if shader would fail to compile, a C++ exception will be triggered, terminating script completely (to prevent AC
 ---from crashing, C++ exceptions halt Lua script that triggered them until script gets a full reload).
 ---@return boolean @Returns `false` if shader is not yet ready and no drawing occured (happens only if `async` is set to `true`).
 --[[@tableparam params {
@@ -1537,7 +1669,7 @@ end
 function ui.renderShader(params)
   local dc = __util.setShaderParams2(params, _sp_uiu)
   if not dc then return false end
-  ffi.C.lj_uicshader_enqueue__ui(dc, __util.ensure_vec2(params.p1), __util.ensure_vec2(params.p2), 
+  ffi.C.lj_uicshader_enqueue__ui(dc, __util.ensure_vec2(params.p1), __util.ensure_vec2(params.p2),
     __util.ensure_vec2_nil(params.uv1), __util.ensure_vec2_nil(params.uv2))
   return true
 end
@@ -1558,7 +1690,7 @@ end
 
 -- GIF player
 
-ffi.cdef [[ 
+ffi.cdef [[
 typedef struct {
   int _id;
   bool _required;
@@ -1569,25 +1701,35 @@ typedef struct {
 } gifholder;
 ]]
 
----@param source string @URL, filename or binary data.
+---@param source string|{width: number, height: number, decompress: boolean?} @URL, filename or binary data.
 ---@return ui.GIFPlayer
-function ui.GIFPlayer(source) 
-  return ffi.gc(ffi.C.lj_gifholder_new__ui(__util.blob(source)), ffi.C.lj_gifholder_gc__ui)
+function ui.GIFPlayer(source)
+  if type(source) == 'table' and type(source.width) == 'number' and type(source.height) == 'number' then
+    return ffi.gc(ffi.C.lj_gifholder_new__ui(__util.blob(__util.json(source)), true), ffi.C.lj_gifholder_gc__ui)
+  end
+  return ffi.gc(ffi.C.lj_gifholder_new__ui(__util.blob(source), false), ffi.C.lj_gifholder_gc__ui)
 end
 
 ---GIF player can be used to display animated GIFs. Also supports regular and animated WEBP images.
 ---@class ui.GIFPlayer
 ---@field keepRunning boolean @By default GIFs stop playing if they are not actively used in rendering. If you need them to keep running in background, set this property to `true`.
 ---@explicit-constructor ui.GIFPlayer
-ffi.metatype('gifholder', { 
-  __tostring = function (s)
+ffi.metatype('gifholder', {
+  __tostring = function(s)
     return string.format('$ui.GIFPlayer://?id=%d', s._id)
   end,
   __index = {
     ---Get GIF resolution. If GIF is not yet loaded, returns zeroes.
     ---@return vec2 @Width and height in pixels.
-    resolution = function (s)
+    resolution = function(s)
       return s._resolution
+    end,
+
+    ---Push new bitmap data to a live-updating image.
+    ---@param data binary
+    ---@return boolean @Returns `false` if data doesn’t fit.
+    push = function(s, data)
+      return ffi.C.lj_gifholder_push__ui(s, __util.blob(data))
     end,
 
     ---Rewinds GIF back to beginning.
@@ -1596,14 +1738,14 @@ ffi.metatype('gifholder', {
 
     ---Checks if GIF is loaded and ready to be drawn.
     ---@return boolean
-    ready = function (s)
+    ready = function(s)
       if not s._has_anything then s._required = true end
       return s._has_anything
     end,
 
     ---Returns `false` if GIF decoding has failed.
     ---@return boolean
-    valid = function (s)
+    valid = function(s)
       return s._is_valid
     end
   }
@@ -1611,7 +1753,7 @@ ffi.metatype('gifholder', {
 
 -- Shared textures
 
-ffi.cdef [[ 
+ffi.cdef [[
 typedef struct {
   uint64_t _handle;
   int _id;
@@ -1640,8 +1782,8 @@ end
 ---A wrapper for accessing textures shared by other Lua scripts or even by other applications. For the latter, textures need to have `D3D11_RESOURCE_MISC_SHARED` flag and be on the same GPU.
 ---@class ui.SharedTexture
 ---@explicit-constructor ui.SharedTexture
-ffi.metatype('sharedtex', { 
-  __tostring = function (s)
+ffi.metatype('sharedtex', {
+  __tostring = function(s)
     return string.format('$ui.SharedTexture://?id=%d', s._id)
   end,
   __index = {
@@ -1650,19 +1792,19 @@ ffi.metatype('sharedtex', {
 
     ---Get texture handle used for creating a texture. If texture has failed to load, returns 0. If texture is loaded by name and loaded properly, returns 1.
     ---@return integer
-    handle = function (s)
+    handle = function(s)
       return s._handle
     end,
 
-    ---Get texture resolution. If texture has failed to load, returns zeroes. 
+    ---Get texture resolution. If texture has failed to load, returns zeroes.
     ---@return vec2 @Width and height in pixels.
-    resolution = function (s)
+    resolution = function(s)
       return s._resolution
     end,
 
     ---Returns `false` if access to a shared texture has failed.
     ---@return boolean
-    valid = function (s)
+    valid = function(s)
       return s._has_anything
     end
   }
@@ -1670,7 +1812,7 @@ ffi.metatype('sharedtex', {
 
 -- Thing for capturing input
 
-ffi.cdef [[ 
+ffi.cdef [[
 typedef struct {
   lua_string_ref __queue;
   int pressedCount;
@@ -1683,16 +1825,17 @@ typedef struct {
 } uicapturedinput;
 ]]
 
----Stops rest of Assetto Corsa from responding to keyboard events (key bindings, etc.), also sets `getUI().wantCaptureKeyboard` flag. 
----Note: if you writing a script reacting to general keyboard events, consider checking that flag to make sure IMGUI doesn’t have 
+---Stops rest of Assetto Corsa from responding to keyboard events (key bindings, etc.), also sets `getUI().wantCaptureKeyboard` flag.
+---Note: if you writing a script reacting to general keyboard events, consider checking that flag to make sure IMGUI doesn’t have
 ---keyboard captured currently.
 ---
 ---Resulting structure is a good way to access keyboard input data, both the button events and characters being entered.
 ---@param wantCaptureKeyboard boolean? @Default value: `true`.
 ---@param wantCaptureText boolean? @Default value: `false`.
+---@param globalInput boolean? @Set to `true` to capture input from something like a script display. Default value: `false`.
 ---@return ui.CapturedKeyboard
-function ui.captureKeyboard(wantCaptureKeyboard, wantCaptureText)
-  return ffi.C.lj_captureKeyboard_inner__ui(wantCaptureKeyboard ~= false, wantCaptureText == true)
+function ui.captureKeyboard(wantCaptureKeyboard, wantCaptureText, globalInput)
+  return ffi.C.lj_captureKeyboard_inner__ui(wantCaptureKeyboard ~= false, wantCaptureText == true, globalInput == true)
 end
 
 local iabr
@@ -1715,7 +1858,7 @@ local acpp
 ---Create a new popup. Function `callback()` will be called each frame to render its content until popup is closed. Pass `title` in parameters to create
 ---a window instead (you can still call `ui.closePopup()` from the window to close it).
 ---@param callback fun()
----@param params {onClose: fun()?, position: vec2?, pivot: vec2?, size: vec2|{min: vec2?, max: vec2?, initial: vec2?}?, padding: vec2?, flags: ui.WindowFlags?, backgroundColor: rgbm?, title: string?}?
+---@param params {onClose: fun()?, position: vec2?, pivot: vec2?, size: vec2|{min: vec2?, max: vec2?, initial: vec2?}?, padding: vec2?, flags: ui.WindowFlags?, backgroundColor: rgbm?, title: string?, parentless: boolean?}?
 function ui.popup(callback, params)
   if not acpp then acpp = {} end
 
@@ -1723,11 +1866,12 @@ function ui.popup(callback, params)
   local opened, children = params.title ~= nil, {}
   local listener
   local lastFrameDrawn = -1
-  local id = (params.title and '\1w'..tostring(params.title)..'###' or '\1')..tostring(math.randomKey()) -- '\1' prefix makes IDs for popups absolute
+  local id = (params.title and '\1w' .. tostring(params.title) .. '###' or '\1') ..
+  tostring(math.randomKey())                                                                             -- '\1' prefix makes IDs for popups absolute
   local rb = params.title and refbool(true)
   local sizeSet, positionSet = false, false
 
-  local fn = function ()
+  local fn = function()
     local frame = ui.frameCount()
     if frame == lastFrameDrawn then return end
     lastFrameDrawn = frame
@@ -1791,13 +1935,13 @@ function ui.popup(callback, params)
     end
   end
 
-  if acpp[1] and not params.title then
+  if acpp[1] and not params.title and not params.parentless then
     -- For popups opening other popups within them
     opened = true
     ui.openPopup(id)
     local lacpp = acpp[#acpp]
     table.insert(lacpp, fn)
-    listener = function ()
+    listener = function()
       table.removeItem(lacpp, fn)
     end
   else
@@ -1811,59 +1955,59 @@ end
 ---@field repeated integer[] @Zero-based array of flags if pressed buttons are repeated (the same size as `pressed`).
 ---@field releasedCount integer @Number of buttons in `.released` array.
 ---@field released integer[] @Zero-based array of released buttons with direct access (be careful).
-ffi.metatype('uicapturedinput', {    
-  __len = function (s)
+ffi.metatype('uicapturedinput', {
+  __len = function(s)
     return s.__queue.p1
   end,
-  __tostring = function (s)
+  __tostring = function(s)
     return s:queue()
   end,
   __index = {
     ---Characters being typed. Automatically takes into account keyboard layout, held shift and all that stuff.
     ---@return string @Empty string if there were no characters.
-    queue = function (s)
+    queue = function(s)
       if s.__queue.p1 == 0 then return '' end
       return __util.strrefr(s.__queue)
     end,
 
     ---@return boolean
-    down = function (s, index)
+    down = function(s, index)
       return index > 0 and index < 256 and s.__down[index]
     end,
 
     ---@param button ui.KeyIndex?
     ---@return boolean
-    hotkeyCtrl = function (s, button)
+    hotkeyCtrl = function(s, button)
       return s.__down[17] and not s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
     end,
 
     ---@param button ui.KeyIndex?
     ---@return boolean
-    hotkeyShift = function (s, button)
+    hotkeyShift = function(s, button)
       return not s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
     end,
 
     ---@param button ui.KeyIndex?
     ---@return boolean
-    hotkeyAlt = function (s, button)
+    hotkeyAlt = function(s, button)
       return not s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
     end,
 
     ---@param button ui.KeyIndex?
     ---@return boolean
-    hotkeyCtrlShift = function (s, button)
+    hotkeyCtrlShift = function(s, button)
       return s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
     end,
 
     ---@param button ui.KeyIndex?
     ---@return boolean
-    hotkeyCtrlAlt = function (s, button)
+    hotkeyCtrlAlt = function(s, button)
       return s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
     end,
 
     ---@param button ui.KeyIndex?
     ---@return boolean
-    hotkeyCtrlShiftAlt = function (s, button)
+    hotkeyCtrlShiftAlt = function(s, button)
       return s.__down[17] and s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
     end,
   }
@@ -1890,14 +2034,14 @@ function ui.UserIconsLayer(priority, column)
   local existing = cache[priority]
   if not existing then
     local set = {}
-    ac.onRelease(function ()
+    ac.onRelease(function()
       for k, v in pairs(set) do
         if v then
           ffi.C.lj_setUserIcon_inner__ui(k, priority, column, nil)
         end
       end
     end)
-    existing = function (carIndex, icon)
+    existing = function(carIndex, icon)
       carIndex = tonumber(carIndex) or 0
       if not icon and not set[carIndex] then return end
       set[carIndex] = icon and true or false
@@ -1910,7 +2054,7 @@ end
 
 local ir1, ir2 = vec2(), vec2()
 
----Note: unlike `ui.itemRectMin()` and `ui.itemRectMax()`, this one returns references instead of creating new vectors. Be careful if you 
+---Note: unlike `ui.itemRectMin()` and `ui.itemRectMax()`, this one returns references instead of creating new vectors. Be careful if you
 ---are to call this function and reuse results after calling it again.
 ---@return vec2
 ---@return vec2
@@ -1923,11 +2067,12 @@ end
 --[[@tableparam params {
   icon: ui.Icons = ui.Icons.Settings "Settings icon",
   name: string "Name of the settings item (name of a script by default).",
-  size: {default: vec2, min: vec2, max: vec2} = nil "Size settings. Default size: `vec2(320, 240)`, default min size: `vec2(40, 20)`.",
+  size: {default: vec2, min: vec2, max: vec2, automatic: nil|boolean} = nil "Size settings. Default size: `vec2(320, 240)`, default min size: `vec2(40, 20)`.",
   id: string = nil "If specified, state of a window will be remembered across AC runs or Lua reloads.",
   padding: vec2 = nil "Custom padding for the window.",
   backgroundColor: rgbm = nil "Custom background color for the window.",
   category: 'settings'|'main'|'developer'|nil = nil "Optionally, this function can be used for simply creating new apps.",
+  onOpen: fun() = nil "Callback called when the tool is opened",
   onClose: fun() = nil "Callback called when the tool is closed",
   onMenu: fun() = nil "Callback for extra items in context menu opening from taskbar.",
   onRemove: fun() = nil "Callback called once when the tool is removed. If set, there will be an item for removing the tool in taskbar context menu.",
@@ -1936,20 +2081,18 @@ end
 ---@param callback fun() @Callback function to draw contents of the settings window.
 ---@return ac.Disposable|fun(command: 'open'|'close'|'toggle'|'opened'|'focus'|string): any
 function ui.addSettings(params, callback)
-  if type((params or error('Argument “params” is required', 2)).onRemove) == 'function' then
-    params = table.assign({}, params, {
-      onClose = params.onClose and __util.setCallback(params.onClose),
-      onMenu = params.onMenu and __util.setCallback(params.onMenu),
-      onRemove = params.onRemove and __util.expectReply(params.onRemove),
-    }) 
-  end
+  if type(params) ~= 'table' then error('Argument “params” is required', 2) end
+  if type(params.onOpen) == 'function' then params.onOpen = __util.setCallback(params.onOpen) end
+  if type(params.onClose) == 'function' then params.onClose = __util.setCallback(params.onClose) end
+  if type(params.onMenu) == 'function' then params.onMenu = __util.setCallback(params.onMenu) end
+  if type(params.onRemove) == 'function' then params.onRemove = __util.expectReply(params.onRemove) end
   local key = ffi.C.lj_addSettings_inner__ui(__util.json(params), __util.setCallback(callback), false)
-  if key == 0 then return function () end end
+  if key == 0 then return function() end end
   return function(c)
-    if type(c) == 'string' then 
+    if type(c) == 'string' then
       ffi.C.lj_addSettings_inner__ui(c, key, true)
       return __util.result()
-    else 
+    else
       __util.disposable_impl(key)
     end
   end
@@ -1974,8 +2117,9 @@ end
 ---@param argument string|number|boolean|nil @Default value: `nil`.
 ---@param lookActive boolean? @Default value: `true`.
 ---@return string?
-function ui.inputTextCommand(command, argument, lookActive) 
-	return __util.strrefp(ffi.C.lj_inputTextCommand_inner__ui(__util.str(command), __util.str_opt(argument), lookActive ~= false))
+function ui.inputTextCommand(command, argument, lookActive)
+  return __util.strrefp(ffi.C.lj_inputTextCommand_inner__ui(__util.str(command), __util.str_opt(argument),
+    lookActive ~= false))
 end
 
-ui.setFontBoldEffect = function () end
+ui.setFontBoldEffect = function() end

@@ -5,7 +5,7 @@ require './common/ac_audio'
 require './common/ac_light'
 require './common/ac_scene'
 require './common/ac_ui'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
 require './pfx_fireworks/ac_fireworks'
 require './pfx_fireworks/ac_lists'
 

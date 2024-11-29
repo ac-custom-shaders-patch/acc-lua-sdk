@@ -51,7 +51,7 @@ end
 ---@param data table<string, io.ZipEntry> @Keys store entry names (use “/” as separator for creating sub-folders), and values store either binary data or tables in `io.ZipEntry` format.
 ---@param callback fun(err: string, data: binary?)? @Callback will contain reference to binary data if `filename` is `nil`.
 function io.createZipAsync(filename, data, callback)
-  __util.native('create_zip', filename, data, __util.expectReply(callback))
+  __util.native('create_zip', filename, data, callback)
 end
 
 ---Scan directory and call callback function for each of files, passing file name (not full name, but only name of the file) and attributes. If callback function would return
@@ -66,9 +66,9 @@ end
 ---@generic TReturn
 ---@param directory string @Directory to look for files in. Note: directory is relative to current directory, not to script directory. For AC in general it’s an AC root directory, but do not rely on it, instead use `ac.getFolder(ac.FolderID.Root)`.
 ---@param mask string? @Mask in a form of usual “*.*”. Default value: '*'.
----@param callback fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: TCallbackData): TReturn @Callback which will be ran for every file in directory fitting mask until it would return a non-nil value.
+---@param callback fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: TCallbackData): TReturn? @Callback which will be ran for every file in directory fitting mask until it would return a non-nil value.
 ---@param callbackData TCallbackData? @Callback data that will be passed to callback as third argument, to avoid creating a capture.
----@return TReturn @First non-nil value returned by callback.
+---@return TReturn? @First non-nil value returned by callback.
 ---@overload fun(directory: string, callback: fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: any), callbackData: any): any
 ---@overload fun(directory: string, mask: string|nil): string[] @This overload just returns the list
 function io.scanDir(directory, mask, callback, callbackData)

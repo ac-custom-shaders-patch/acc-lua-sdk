@@ -26,7 +26,7 @@ function stringify(obj, compact, depthLimit) end
 ---
 ---Would raise an error if failed to parse or if any of initializers would raise an error.
 ---@param serialized string @Serialized data.
----@param namespace table<string, function>|nil @Namespace table. Serialized data would be evaluated as Lua code and would have access to it.
+---@param namespace table|nil @Namespace table. Serialized data would be evaluated as Lua code and would have access to it.
 ---@return table|number|string|boolean|nil
 function stringify.parse(serialized, namespace) end
 
@@ -38,7 +38,7 @@ function stringify.parse(serialized, namespace) end
 ---Returns fallback value if failed to parse, or if `serialized` is empty or not set, or if any of initializers would raise an error.
 ---@generic T
 ---@param serialized string? @Serialized data.
----@param namespace table<string, function>|nil @Namespace table. Serialized data would be evaluated as Lua code and would have access to it.
+---@param namespace table|nil @Namespace table. Serialized data would be evaluated as Lua code and would have access to it.
 ---@param fallback T|nil @Value to return if parsing failed.
 ---@return T
 function stringify.tryParse(serialized, namespace, fallback) end

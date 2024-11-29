@@ -7,6 +7,18 @@ ffi.cdef[[
 typedef struct {
   void* data;
   int blend_mode;
+  bool ready;
+  bool direct_values_exchange;
+  bool _pad0;
+  bool _pad1;
+  void* ps_shader;
+  lua_string_ref _error_str;
+  // cbuffer:
+  void* _cb_vtable;
+  int _cb_slot_;
+  int _cb_size_;
+  int _cb_checksum_;
+  bool _cb_dirty_;
 } lua_cshader_shader;
 ]]
 
@@ -21,7 +33,7 @@ local function _lsfg(templateCache, params, texSlots, ret)
   if firstSlot then
     local stmode = templateCache.delayed == true and 'delay' or 'set'
     local stfa = templateCache.delayed == true and 'd.s, ' or ''
-    p[#p + 1] = 'textures = params.textures'
+    p[#p + 1] = 'local textures = params.textures'
     local n = 1
     while texSlots[firstSlot + n] do
       n = n + 1
@@ -53,7 +65,7 @@ local function _lsfg(templateCache, params, texSlots, ret)
     params.values = ret.d
   elseif params.values and next(params.values) then
     if params.directValuesExchange == true then
-      p[#p + 1] = 'if type(params.values) == "table" then cb, values = d.d, params.values'
+      p[#p + 1] = 'if type(params.values) == "table" then local cb, values = d.d, params.values'
       for k, v in pairs(params.values) do
         if mat4x4.ismat4x4(v) then
           p[#p + 1] = string.format('if values.%s ~= nil then cb.%s = values.%s cb.%s:transposeSelf() end', k, k, k, k)
@@ -69,10 +81,29 @@ local function _lsfg(templateCache, params, texSlots, ret)
       params.__values_bak = params.values
       params.values = ret.d
     else
-      p[#p + 1] = 'cb, values = d.d, params.values'
+      p[#p + 1] = 'local cb, values = d.d, params.values'
       for k, v in pairs(params.values) do
+        -- if mat4x4.ismat4x4(v) then
+        --   p[#p + 1] = string.format('if values.%s ~= nil then cb.%s = values.%s cb.%s:transposeSelf() end', k, k, k, k)
+        -- else
+        --   p[#p + 1] = string.format('if values.%s ~= nil then cb.%s = values.%s end', k, k, k)
+        -- end
         if mat4x4.ismat4x4(v) then
           p[#p + 1] = string.format('if values.%s ~= nil then cb.%s = values.%s cb.%s:transposeSelf() end', k, k, k, k)
+        elseif type(v) == 'number' then
+          p[#p + 1] = string.format('cb.%s = values.%s or 0', k, k)
+        elseif type(v) == 'boolean' then
+          p[#p + 1] = string.format('cb.%s = values.%s and 1 or 0', k, k)          
+        elseif vec2.isvec2(v) then
+          p[#p + 1] = string.format('cb.%s = values.%s or __util.ensure_vec2(nil)', k, k)
+        elseif vec3.isvec3(v) then
+          p[#p + 1] = string.format('cb.%s = values.%s or __util.ensure_vec3(nil)', k, k)
+        elseif vec4.isvec4(v) then
+          p[#p + 1] = string.format('cb.%s = values.%s or __util.ensure_vec4(nil)', k, k)
+        elseif rgb.isrgb(v) then
+          p[#p + 1] = string.format('cb.%s = values.%s or __util.ensure_rgb(nil)', k, k)
+        elseif rgbm.isrgbm(v) then
+          p[#p + 1] = string.format('cb.%s = values.%s or __util.ensure_rgbm(nil)', k, k)
         else
           p[#p + 1] = string.format('if values.%s ~= nil then cb.%s = values.%s end', k, k, k)
         end
@@ -203,34 +234,56 @@ local function createRsData2(params, templateCache)
       params.__existing_ffiSize = ffiSize
     end
   end
+  -- ac.log(_lsfg(templateCache, params, texSlots, ret))
   ret.y = loadstring(_lsfg(templateCache, params, texSlots, ret))()
   return ret
 end
 
+local shaderTables = {}
+
 function __util.getRsData2(params, templateCache)
+  local templateCacheLC = templateCache.__cache
   local key = params.cacheKey or ''
-  local lc = templateCache[key]
+  local lc = templateCacheLC[key]
   if not lc then
     lc = {}
-    templateCache[key] = lc
+    templateCacheLC[key] = lc
   end
   local r = lc[params.shader]
   if r == nil then
     r = createRsData2(params, templateCache)
     lc[params.shader] = r
+    if not table.contains(shaderTables, templateCache) then
+      shaderTables[#shaderTables + 1] = templateCache
+    end
+  elseif params.directValuesExchange and type(params.values) == 'table' then
+    params.__values_bak = params.values
+    params.values = r.d
   end
   return r
+end
+
+function __script.onGammaChange()
+  for _, v in ipairs(shaderTables) do
+    -- ac.log('clear', v.template, table.nkeys(v.__cache))
+    table.clear(v.__cache)
+  end
 end
 
 function __util.setShaderParams2(params, templateCache)
   if type(params) ~= 'table' then error('Table “params” is required', 3) end
   local d = __util.getRsData2(params, templateCache)
-  local e = ffi.C.lj_cshader_start(d.s)
-  if e == nil then
-    d:y(params, _ffic)
-    return d.s
-  elseif e[0] ~= 0 then
-    error(ffi.string(e), 3)
+  local s = d.s
+  if s.ready then    
+    if s.ps_shader ~= nil then
+      s._cb_dirty_ = true
+      if not s.direct_values_exchange then
+        s.blend_mode = 0xffffffff
+      end    
+      d:y(params, _ffic)
+      return s
+    end
+    error(__util.strrefr(s._error_str), 3)
   end
   return nil
 end

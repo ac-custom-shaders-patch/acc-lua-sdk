@@ -14,6 +14,7 @@ typedef struct {
   float cameraInteriorMultiplier;
   float cameraExteriorMultiplier;
   float cameraTrackMultiplier;
+  int channelID_;
   bool inAutoLoopMode;
   bool reverbResponse_;
 } audioevent;
@@ -23,13 +24,20 @@ local __audioEventKeepAlive = {}
 
 ac.AudioEvent = setmetatable({
   fromFile = function(params, reverbResponse)
-    local created = ffi.C.lj_audioevent_newfile(__util.json(params), reverbResponse and true or false)
+    if type(params) ~= 'table' then params = {} end
+    local created = ffi.C.lj_audioevent_newfile(__util.json(params), reverbResponse and true or false, params.group and params.group.channelID_ or 0)
+    __audioEventKeepAlive[#__audioEventKeepAlive + 1] = created
+    return ffi.gc(created, ffi.C.lj_audioevent_gc)
+  end,
+  group = function(params, reverbResponse)
+    if type(params) ~= 'table' then params = {} end
+    local created = ffi.C.lj_audioevent_newfile(__util.json(table.assign({['$group'] = true}, params)), reverbResponse and true or false, params.group and params.group.channelID_ or 0)
     __audioEventKeepAlive[#__audioEventKeepAlive + 1] = created
     return ffi.gc(created, ffi.C.lj_audioevent_gc)
   end
 }, {
-  __call = function(_, eventName, reverbResponse)
-    local created = ffi.C.lj_audioevent_new(tostring(eventName), reverbResponse and true or false)
+  __call = function(_, eventName, reverbResponse, useOcclusion)
+    local created = ffi.C.lj_audioevent_new(tostring(eventName), reverbResponse and true or false, useOcclusion and true or false)
     __audioEventKeepAlive[#__audioEventKeepAlive + 1] = created
     return ffi.gc(created, ffi.C.lj_audioevent_gc)
   end
@@ -55,6 +63,17 @@ ffi.metatype('audioevent', { __index = {
     ffi.C.lj_audioevent_set_pos(s, __util.ensure_vec3(pos), __util.ensure_vec3_nil(dir), __util.ensure_vec3_nil(up), __util.ensure_vec3(vel))
     return s
   end,
+
+    --[[? if (!ctx.flags.withoutSceneAPI) out(]]
+
+  ---Link audio to a node. Switches `setPosition()` to operate in local coordinates. Also, alters the velocity based on node velocity.
+  ---@param sceneReference ac.SceneReference? @Set to `nil` to unlink the light source.
+  ---@return self
+  linkTo = function (s, sceneReference) 
+    return __util.native('lj_audioevent_linkto', s, sceneReference)
+  end,
+
+    --[[) ?]]
 
   ---Deprecated, now all events are alive until `:dispose()` is called.
   ---@deprecated
@@ -123,6 +142,19 @@ ffi.metatype('audioevent', { __index = {
   ---@return ac.AudioEvent @Returns self for easy chaining.
   start = function (s) ffi.C.lj_audioevent_start(s) return s end,
 
+  ---Set timeline position.
+  ---@param time number @Time in seconds.
+  ---@return ac.AudioEvent @Returns self for easy chaining.
+  seek = function (s, time) ffi.C.lj_audioevent_seek(s, time) return s end,
+
+  ---Get current timeline position in seconds.
+  ---@return number @Returns `-1` if actual position is not available.
+  getTimelinePosition = function (s) return ffi.C.lj_audioevent_timelineposition(s) end,
+
+  ---Get total duration in seconds for an audio event loaded from a file.
+  ---@return number @Returns `-1` if actual duration is not available.
+  getDuration = function (s) return ffi.C.lj_audioevent_duration(s) end,
+
   ---If you need to move audio event often, accessing its matrix directly might be the best way. But you have to be extra careful in
   ---making sure matrix is always normalized (vectors `side`, `up` and `look` should be othrogonal with lengths of 1), otherwise
   ---audio might sound strange, with rapid changes in volume.
@@ -131,4 +163,11 @@ ffi.metatype('audioevent', { __index = {
 
   ---Stop and remove audio event.
   dispose = function (s) table.removeItem(__audioEventKeepAlive, s) ffi.C.lj_audioevent_dispose(s) end,
+
+  ---@param i integer
+  ---@param dir 'input'|'output'|'both'|nil
+  ---@return number, number, number, number
+  getDSPMetering = function (s, i, dir)
+    return __util.native('ac.AudioEvent.getDSPMetering', s, i, dir)
+  end,
 }})

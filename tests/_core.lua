@@ -3,7 +3,10 @@ __util = {}
 ffi = require('ffi')
 io = require('io')
 __script = {}
+__script.__test = true
 __source = function () end
+__allow = function () end
+__namespace = function () end
 package.path = package.path .. ';' .. './common/?.lua'
 
 --[[?

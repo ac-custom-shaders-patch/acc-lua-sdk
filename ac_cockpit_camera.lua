@@ -1,8 +1,11 @@
 __source 'extensions/neck/ac_ext_neck.cpp'
 
+--[[? ctx.flags.withoutSceneAPI = true; ?]]
+
 require './common/internal_import'
 require './common/ac_audio'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
+require './common/ac_extras_yebiscolorcorrection'
 
 ac.CockpitCameraMode = __enum({}, {
   Base = 0, -- Regular mode (or a mode with connected TrackIR which hasn’t moved yet)

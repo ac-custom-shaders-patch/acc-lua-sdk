@@ -3,6 +3,7 @@ __allow 'newmodes'
 
 require './common/internal_import'
 require './common/ac_car_control'
+require './common/ac_car_control_physics'
 require './common/ac_car_control_switch'
 require './common/ac_audio'
 require './common/ac_color_corrections'
@@ -12,11 +13,14 @@ require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_particles'
 require './common/ac_gameplay'
+require './common/ac_gameplay_apps'
+require './common/ac_gameplay_replaystream'
 require './common/ac_game'
 require './common/ac_track_conditions'
 require './common/ac_physics'
 require './common/ac_physics_ai'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
+require './common/ac_extras_yebiscolorcorrection'
 
 ---@param message string
 ---@param successfulRun boolean? @Default value: `true`.

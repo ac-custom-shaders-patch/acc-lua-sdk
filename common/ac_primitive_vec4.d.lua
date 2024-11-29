@@ -53,8 +53,8 @@ function vec4.tmp() end
 ---@return vec4
 function vec4:clone() end
 
----Unpacks vec4 into rgb and number.
----@return rgb, number
+---Unpacks vec4 into four numbers.
+---@return number, number, number, number
 function vec4:unpack() end
 
 ---Turns vec4 into a table with four values.

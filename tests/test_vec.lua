@@ -18,3 +18,6 @@ local t = {}
 t[tostring(vec2)] = true
 expect(tostring(vec2), tostring(ffi.typeof(vec2(10, 12))))
 expect(t[tostring(ffi.typeof(vec2(10, 12)))], true)
+
+expect(vec2.isvec2(ffi.new(ffi.typeof(vec2()))), true)
+-- print(tostring(ffi.typeof(vec2())))

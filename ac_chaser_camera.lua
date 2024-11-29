@@ -1,8 +1,11 @@
 __source 'extensions/chaser_camera/ac_ext_chaser_camera.cpp'
 
+--[[? ctx.flags.withoutSceneAPI = true; ?]]
+
 require './common/internal_import'
 require './common/ac_audio'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
+require './common/ac_extras_yebiscolorcorrection'
 
 -- automatically generated entries go here:
 __definitions()

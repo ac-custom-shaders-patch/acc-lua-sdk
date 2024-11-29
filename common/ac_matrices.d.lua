@@ -42,6 +42,27 @@ function mat4x4.euler(head, pitch, roll) end
 ---@return mat4x4
 function mat4x4.scaling(scale) end
 
+---Creates a look-at matrix from position and directional vectors. Ensures all vectors are properly normalized.
+---@param position vec3
+---@param look vec3
+---@param up vec3? @Default value: `vec3(0, 1, 0)`.
+---@return mat4x4
+function mat4x4.look(position, look, up) end
+
+---Creates a perspective matrix.
+---@param fovY number @Vertical view angle in radians.
+---@param aspect number @Aspect ratio.
+---@param zNear number @Near clipping plane.
+---@param zFar number @Far clipping plane.
+---@return mat4x4
+function mat4x4.perspective(fovY, aspect, zNear, zFar) end
+
+---Creates an orthogonal matrix. Might act unexpected with Z values, shifting by range should help.
+---@param extentMin vec3
+---@param extentMax vec3
+---@return mat4x4
+function mat4x4.ortho(extentMin, extentMax) end
+
 ---@class mat4x4
 ---@field row1 vec4
 ---@field row2 vec4
@@ -65,6 +86,15 @@ function mat4x4:transformVectorTo(destination, vec) end
 ---@param vec vec3
 ---@return vec3
 function mat4x4:transformVector(vec) end
+
+---@param destination vec4
+---@param vec vec4
+---@return vec4
+function mat4x4:transformTo(destination, vec) end
+
+---@param vec vec4
+---@return vec4
+function mat4x4:transform(vec) end
 
 ---@param destination vec3
 ---@param vec vec3

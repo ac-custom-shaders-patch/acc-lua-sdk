@@ -1,6 +1,9 @@
 require './common/internal_import'
 __source 'extensions/ffb_tweaks/ac_ext_ffb_tweaks.cpp'
 
+--[[? ctx.flags.physicsThread = true; ?]]
+require './common/ac_extras_binaryinput'
+
 -- automatically generated entries go here:
 __definitions()
 
@@ -29,5 +32,9 @@ script = {}
 ---Called each physics frame.
 ---@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
 function script.update(dt) end
+
+---Disable low speed FFB reduction.
+---@param disable boolean? @Default value: `true`.
+function ac.disableLowSpeedFFBReduction(disable) end
 
 --[[) ?]]

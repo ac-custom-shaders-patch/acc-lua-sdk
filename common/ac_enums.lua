@@ -190,12 +190,16 @@ ac.FolderID = __enum({ cpp = 'known_dir' }, {
 
   ScriptOrigin = 1024,  -- main script directory
   ScriptConfig = 1025,  -- …/Documents/Assetto Corsa/cfg/extension/state/lua/<mode>/<script ID>
+  CurrentTrack = 1026,  -- …/SteamApps/common/assettocorsa/content/tracks/<track ID>
+  CurrentTrackLayout = 1027,  -- …/SteamApps/common/assettocorsa/content/tracks/<track ID>/<layout ID> (or the same as CurrentTrack if no layout is selected)
+  CurrentTrackLayoutUI = 1028,  -- …/SteamApps/common/assettocorsa/content/tracks/<track ID>/ui/<layout ID> (or just …/ui if no layout is selected)
 })
 
 ac.FolderId = ac.FolderID
 
 ac.HolidayType = __enum({ cpp = 'holiday_type' }, {
   None = 0,
+  Generic = 13,
   NewYear = 1,
   Christmas = 2,
   VictoryDay = 3,
@@ -238,6 +242,7 @@ ac.AudioChannel = __enum({ override = 'ac.*/audioChannelKey:*', underlying = 'st
   Main = 'main',
   Rain = 'rain',
   Weather = 'weather',
+  Track = 'track',
   Wipers = 'wipers',
   CarComponents = 'carComponents',
   Wind = 'wind',
@@ -842,4 +847,11 @@ ui.KeyIndex = __enum({ cpp = 'vk_key', override = 'ui.*/keyIndex:integer' }, {
   SquareCloseBracket = 0xDD,
   --[[? for (let i = 0; i < 10; ++i) out(`D${i} = 0x${(''+i).charCodeAt(0).toString(16)}, -- Digit ${i}\n`) ?]]
   --[[? for (let i = 'A'.charCodeAt(0); i <= 'Z'.charCodeAt(0); ++i) out(`${String.fromCharCode(i)} = 0x${i.toString(16)}, -- Letter ${String.fromCharCode(i)}\n`) ?]]
+})
+
+ac.VAODebugMode = __enum({ cpp = 'vao_mode' }, { 
+  Active = 1,
+  Inactive = 3,
+  VAOOnly = 4,
+  ShowNormals = 5
 })

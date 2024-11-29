@@ -52,11 +52,12 @@ local _fficdef = ffi.cdef
 ---@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Alternatively, you can pass a string for the body of the structure here, but be careful with it.
 ---@param callback fun(sender: ac.StateCar|nil, message: T) @Callback that will be called when a new message of this type is received. Note: it would be called even if message was sent from this script. Use `sender` to check message origin: if it’s `nil`, message has come from the server, if its `.index` is 0, message has come from this client (and possibly this script).
 ---@param namespace nil|ac.SharedNamespace @Optional namespace stopping scripts of certain types to access data of scripts with different types. For more details check `ac.SharedNamespace` documentation.
----@param udp boolean|{range: number} @Pass `true` to use UDP messages (available for Lua apps and online scripts only). Use `ac.getSim().directUDPMessagingAvailable` to check if you could use `udp` flag before hand. Note: enabling this option means `repeatForNewConnections` parameter will be ignored. Alternatively, pass a table with advanced UDP settings.
+---@param udp nil|boolean|{range: number} @Pass `true` to use UDP messages (available for Lua apps and online scripts only). Use `ac.getSim().directUDPMessagingAvailable` to check if you could use `udp` flag before hand. Note: enabling this option means `repeatForNewConnections` parameter will be ignored. Alternatively, pass a table with advanced UDP settings.
+---@param params {processPostponed: boolean?}? @Extra params. Set `processPostponed` to process previously received TCP messages (up to 256, callback will be called in the next frame for all messages from first to last).
 ---@return fun(message: T?, repeatForNewConnections: nil|boolean, target: nil|integer): boolean @Function for sending new messages of newly created type. Pass a new table to set fields of a new message. If any field is missing, it would be set to the default zero state. Set `repeatForNewConnections` to `true` if this message should be re-sent later for newly connected cars (good if you’re announcing a change of state, like, for example, a custom car paint color). If after setting it to `true` a function would be called again without `repeatForNewConnections` set to `true`, further re-sending will be deactivated. Function returns `true` if message has been sent successfully, or `false` otherwise (for example, if rate limits were exceeded). Note: `repeatForNewConnections` is ignored for `udp` events. Parameter `target` can be used to specify session ID of a car that needs to receive the message. Use negative number to send message to everybody, or `255` to send it to the server (expecting some plugin to pick the message up). CSP builds before 2506 ignore messages with configured `target` parameter.
 ---@return fun(): T @This function returns the actual data pointer to which you could write arguments directly without having to create a new table, might be useful if you need to send a lot of messages (be careful though, there are all sorts of limits with the original AC server implementation). Call this function once, save the returned reference, and each time you need to send a new message fill it with required data and call the first function with `nil` as `message`.
-function ac.OnlineEvent(layout, callback, namespace, udp)
-  local layoutStr = ac.StructItem.__build(layout)
+function ac.OnlineEvent(layout, callback, namespace, udp, params)
+  local layoutStr = __util.__si_build(layout)
   if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 2) end
 
   if not __allowIO__ and namespace == ac.SharedNamespace.Global then error('Script of this type can’t use global namespace', 2) end
@@ -78,9 +79,8 @@ function ac.OnlineEvent(layout, callback, namespace, udp)
     return created.sendFn, created.accessFn
   end
 
-  local name = '__coo_'..tostring(key)
-  _fficdef(ac.StructItem.__cdef(name, layoutStr, true))
-  local size = ffi.sizeof(name)
+  local s_name = __util.__si_ffi(layoutStr, true)
+  local size = ffi.sizeof(s_name)
   if not size or size > 175 and not ac.getSim().directMessagingAvailable then
     error(string.format('Structure is too large (%d bytes; limit is 175 bytes)', size), 2)
   end
@@ -95,15 +95,15 @@ function ac.OnlineEvent(layout, callback, namespace, udp)
   local writeObj, writeProxy, accessedDirectly
   local accessFn = function ()
     if not writeProxy then
-      writeObj = ffi.new(name)
-      writeProxy = ac.StructItem.__proxy(layout, writeObj)
+      writeObj = ffi.new(s_name)
+      writeProxy = __util.__si_proxy(layout, writeObj)
     elseif not accessedDirectly then
       ffi.fill(writeObj, size)
     end
     return writeProxy
   end
 
-  local readObj = ffi.new(name)
+  local readObj = ffi.new(s_name)
   created = {
     sendFn = function (args, repeatForNewConnections, target)
       local p = accessFn()
@@ -119,9 +119,13 @@ function ac.OnlineEvent(layout, callback, namespace, udp)
       accessedDirectly = true
       return accessFn()
     end,
-    readProxy = ac.StructItem.__proxy(layout, readObj),
+    readProxy = __util.__si_proxy(layout, readObj),
     callbacks = { callback },
   }
+
+  if type(params) == 'table' and not not params.processPostponed then
+    baseFlags = baseFlags + 8
+  end
 
   _created[tonumber(key)] = created
   ffi.C.lj_connectonline_listen(key, baseFlags, readObj, size, __util.setCallback(function (carIndex)
@@ -130,5 +134,6 @@ function ac.OnlineEvent(layout, callback, namespace, udp)
       __util.cbCall(created.callbacks[i], car, created.readProxy)
     end
   end))
+
   return created.sendFn, created.accessFn
 end

@@ -1,7 +1,13 @@
 do
 
-local _mmax = math.max
-local _mmin = math.min
+local _li = 1
+local _eo = nil
+local _fficdef = ffi.cdef
+
+local function counter()
+  _li = _li + 1
+  return _li
+end
 
 ---Helper to define structures in a safe and secure manner. Create a new table and use values returned
 ---by these methods as values and pass it to `ac.connect()` or `ac.registerOnlineMessageType()`.
@@ -21,77 +27,100 @@ local _mmin = math.min
 ---  a reference to it locally.
 ac.StructItem = {}
 
+---Adds a key to a structure to ensure its uniqueness. Consider using something like “yourUsername.yourContentID” or something
+---like that for a key, so that your data would not interfere with data from Lua scripts written by other developers. Note:
+---if you’re exchanging data between physics and graphics thread in your car, you might have to append `car.index` to there as
+---well so that different cars would have either own data things.
 ---@return nil
 function ac.StructItem.key(key) return {key = tostring(key)} end
 
----@return number
-function ac.StructItem.half() return 0.5 end
+---Enables explicit ordering for your structures.
+---By default, CSP will reorder fields in your structures for optimal data packing. Because all scripts written in Lua share the same algorithm,
+---it’s all fine and good, but if you want for your script to exchange data with other programs, explicit order would work much better.
+---@param alignment integer? @Optional override for alignment of child structures.
+---@param packing integer? @Optional overrider for packing of fields.
+---@return nil
+function ac.StructItem.explicit(alignment, packing)
+  _eo = {tonumber(alignment) or 0, tonumber(packing) or 0}
+  return nil
+end
 
 ---@return number
-function ac.StructItem.float() return 1.5 end
+function ac.StructItem.half() return {t = 0.5, c = counter()} end
 
 ---@return number
-function ac.StructItem.double() return 2.5 end
+function ac.StructItem.float() return {t = 1.5, c = counter()} end
 
 ---@return number
-function ac.StructItem.norm8() return -0.08 end
+function ac.StructItem.double() return {t = 2.5, c = counter()} end
 
 ---@return number
-function ac.StructItem.unorm8() return 0.08 end
+function ac.StructItem.norm8() return {t = -0.08, c = counter()} end
 
 ---@return number
-function ac.StructItem.norm16() return -0.16 end
+function ac.StructItem.unorm8() return {t = 0.08, c = counter()} end
 
 ---@return number
-function ac.StructItem.unorm16() return 0.16 end
+function ac.StructItem.norm16() return {t = -0.16, c = counter()} end
+
+---@return number
+function ac.StructItem.unorm16() return {t = 0.16, c = counter()} end
 
 ---@return integer
-function ac.StructItem.int16() return -16 end
+function ac.StructItem.int16() return {t = -16, c = counter()} end
 
 ---@return integer
-function ac.StructItem.uint16() return 16 end
+function ac.StructItem.uint16() return {t = 16, c = counter()} end
 
 ---@return integer
-function ac.StructItem.int32() return -32 end
+function ac.StructItem.int32() return {t = -32, c = counter()} end
 
 ---@return integer
-function ac.StructItem.uint32() return 32 end
+function ac.StructItem.uint32() return {t = 32, c = counter()} end
 
 ---@return integer
-function ac.StructItem.int64() return -64 end
+function ac.StructItem.int64() return {t = -64, c = counter()} end
 
 ---@return integer
-function ac.StructItem.uint64() return 64 end
+function ac.StructItem.uint64() return {t = 64, c = counter()} end
 
 ---@return boolean
-function ac.StructItem.boolean() return true end
+function ac.StructItem.boolean() return {t = true, c = counter()} end
+
+---Same as `ac.StructItem.int8()`.
+---@return integer
+function ac.StructItem.char() return {t = -1, c = counter()} end
+
+---Same as `ac.StructItem.uint8()`.
+---@return integer
+function ac.StructItem.byte() return {t = 1, c = counter()} end
 
 ---@return integer
-function ac.StructItem.char() return -1 end
+function ac.StructItem.int8() return ac.StructItem.char() end
 
 ---@return integer
-function ac.StructItem.byte() return 1 end
+function ac.StructItem.uint8() return ac.StructItem.byte() end
 
 ---@return vec2
-function ac.StructItem.vec2() return vec2.tmp() end
+function ac.StructItem.vec2() return {t = vec2.tmp(), c = counter()} end
 
 ---@return vec3
-function ac.StructItem.vec3() return vec3.tmp() end
+function ac.StructItem.vec3() return {t = vec3.tmp(), c = counter()} end
 
 ---@return vec4
-function ac.StructItem.vec4() return vec4.tmp() end
+function ac.StructItem.vec4() return {t = vec4.tmp(), c = counter()} end
 
 ---@return rgb
-function ac.StructItem.rgb() return rgb.tmp() end
+function ac.StructItem.rgb() return {t = rgb.tmp(), c = counter()} end
 
 ---@return rgbm
-function ac.StructItem.rgbm() return rgbm.tmp() end
+function ac.StructItem.rgbm() return {t = rgbm.tmp(), c = counter()} end
 
 ---@return hsv
-function ac.StructItem.hsv() return hsv.tmp() end
+function ac.StructItem.hsv() return {t = hsv.tmp(), c = counter()} end
 
 ---@return quat
-function ac.StructItem.quat() return quat.tmp() end
+function ac.StructItem.quat() return {t = quat.tmp(), c = counter()} end
 
 ---@generic T
 ---@param elementType T
@@ -100,7 +129,7 @@ function ac.StructItem.quat() return quat.tmp() end
 function ac.StructItem.array(elementType, size)
   if type(elementType) == 'string' then error('Can’t have an array of strings', 2) end
   -- if type(elementType) == 'table' then error('Can’t have an array of arrays or special types', 2) end
-  return { array = size, elementType }
+  return {t = {array = size, type = elementType}, c = counter()}
 end
 
 ---@generic T
@@ -109,18 +138,18 @@ end
 function ac.StructItem.struct(fields)
   if next(fields) == nil then error('Empty sub-structs are not allowed', 2) end
   if table.isArray(fields) then error('Use `ac.StructItem.array()` for arrays', 2) end
-  return { struct = fields }
+  return {t = {struct = fields}, c = counter()}
 end
 
 ---@param capacity integer? @Maximum string capacity. Default value: 32.
 ---@return string
-function ac.StructItem.string(capacity) return tostring(capacity or 32) end
+function ac.StructItem.string(capacity) return {t = tostring(capacity or 32), c = counter()} end
 
 ---@return mat3x3
-function ac.StructItem.mat3x3() return { 'mat3x3 %s;', 36, false, false, false, 901 } end
+function ac.StructItem.mat3x3() return {t = {'mat3x3 %s;', 36, false, false, false, 901}, c = counter()} end
 
 ---@return mat4x4
-function ac.StructItem.mat4x4() return { 'mat4x4 %s;', 64, false, false, false, 1601 } end
+function ac.StructItem.mat4x4() return {t = {'mat4x4 %s;', 64, false, false, false, 1601}, c = counter()} end
 
 ---Matrix packed to 6, 9 or 12 bytes (depending on settings).
 ---
@@ -138,26 +167,29 @@ function ac.StructItem.transform(compactPosition, compactRotation, rangeFrom, ra
   if not rangeTo then rangeTo = nil elseif not vec3.isvec3(rangeTo) then rangeTo = vec3.new(rangeTo) end
   local size = (compactPosition and 3 or 6) + (compactRotation and 3 or 6)
   return { 
-    string.format('char %%s[%d];', size),
-    size,
-    function()
-      local t = mat4x4()
-      return function(v) ffi.C.lj_mat_unpack(v, t, compactPosition, rangeFrom, rangeTo, compactRotation) return t end
-    end,
-    function ()
-      return function(v, dst) ffi.C.lj_mat_pack(dst, v, compactPosition, rangeFrom, rangeTo, compactRotation) end
-    end,
-    function()
-      return function(v) return __util.ffistrhash(v, size) end
-    end 
+    t = {
+      string.format('char %%s[%d];', size),
+      size,
+      function()
+        local t = mat4x4()
+        return function(v) ffi.C.lj_mat_unpack(v, t, compactPosition, rangeFrom, rangeTo, compactRotation) return t end
+      end,
+      function ()
+        return function(v, dst) ffi.C.lj_mat_pack(dst, v, compactPosition, rangeFrom, rangeTo, compactRotation) end
+      end,
+      function()
+        return function(v) return __util.ffistrhash(v, size) end
+      end 
+    },
+    c = counter()
   }
 end
 
 local __slTypes = {
-  [-0.08] = { 'int8_t %s;', 1, function (v) return v / 127 end, function (v) return _mmax(_mmin(v, 1), -1) * 127 end, false, 3 },
-  [0.08] = { 'uint8_t %s;', 1, function (v) return v / 255 end, function (v) return _mmax(_mmin(v, 1), 0) * 255 end, false, 4 },
-  [-0.16] = { 'int16_t %s;', 2, function (v) return v / 32767 end, function (v) return _mmax(_mmin(v, 1), -1) * 32767 end, false, 5 },
-  [0.16] = { 'uint16_t %s;', 2, function (v) return v / 65535 end, function (v) return _mmax(_mmin(v, 1), 0) * 65535 end, false, 6 },
+  [-0.08] = { 'int8_t %s;', 1, function (v) return v / 127 end, function (v) return math.max(math.min(v, 1), -1) * 127 end, false, 3 },
+  [0.08] = { 'uint8_t %s;', 1, function (v) return v / 255 end, function (v) return math.max(math.min(v, 1), 0) * 255 end, false, 4 },
+  [-0.16] = { 'int16_t %s;', 2, function (v) return v / 32767 end, function (v) return math.max(math.min(v, 1), -1) * 32767 end, false, 5 },
+  [0.16] = { 'uint16_t %s;', 2, function (v) return v / 65535 end, function (v) return math.max(math.min(v, 1), 0) * 65535 end, false, 6 },
   [0.5] = { 'uint16_t %s;', 2, function (v) return ac.decodeHalf(v) end, function (v) return ac.encodeHalf(v) end, false, 2 },
   [1.5] = { 'float %s;', 4, false, false, false, 1 },
   [2.5] = { 'double %s;', 8, false, false, false, 0 },
@@ -168,7 +200,7 @@ local __slTypes = {
   [-16] = { 'int16_t %s;', 2 },
   [16] = { 'uint16_t %s;', 2 },
   [-32] = { 'int %s;', 4 },
-  [32] = { 'uint %s;', 4 },
+  [32] = { 'uint32_t %s;', 4 },
   [-64] = { 'int64_t %s;', 8 },
   [64] = { 'uint64_t %s;', 8 },
   [true] = { 'bool %s;', 1 },
@@ -205,26 +237,32 @@ end
 
 local function __slBuild(types, callback)
   local ordered = types
-  table.sort(ordered, function (a, b)
+  table.sort(ordered, _eo and function (a, b)
+    return a.createdIndex < b.createdIndex
+  end or function (a, b)
     if a.packingSize ~= b.packingSize then return a.packingSize > b.packingSize end
     return a.name < b.name
   end)
   local reordered, i, c, pos = {}, 1, #ordered, 0
-  while i <= c do
-    if ordered[i] ~= nil then
-      local v, l = ordered[i], 8 - pos % 8
-      if v.realSize > 1 and v.realSize <= 8 and l < v.realSize then
-        for j = i + 1, c do
-          if ordered[j] ~= nil and ordered[j].realSize > 0 and ordered[j].realSize <= l then
-            v, i, ordered[j] = ordered[j], i - 1, nil
-            break
+  if _eo then
+    reordered = ordered
+  else
+    while i <= c do
+      if ordered[i] ~= nil then
+        local v, l = ordered[i], 8 - pos % 8
+        if v.realSize > 1 and v.realSize <= 8 and l < v.realSize then
+          for j = i + 1, c do
+            if ordered[j] ~= nil and ordered[j].realSize > 0 and ordered[j].realSize <= l then
+              v, i, ordered[j] = ordered[j], i - 1, nil
+              break
+            end
           end
         end
+        table.insert(reordered, v)
+        pos = pos + v.realSize
       end
-      table.insert(reordered, v)
-      pos = pos + v.realSize
+      i = i + 1
     end
-    i = i + 1
   end
   if callback then
     callback(reordered)
@@ -239,45 +277,55 @@ local function __slBuild(types, callback)
 end
 
 local function __slMapOrdered(items, callback, data)
-  local ordered, n = {}, 1
-  for k, v in pairs(items) do
-    ordered[n], n = {k, v}, n + 1
-  end
-  table.sort(ordered, function (a, b)
-    return tostring(a[1]) < tostring(b[1])
-  end)
   local ret = {}
-  for i = 1, n - 1 do
-    local j = callback(ordered[i][2], ordered[i][1], data)
-    if j then
-      table.insert(ret, j)
+  if _eo then
+    for k, v in pairs(items) do
+      local j = callback(v, k, data)
+      if j then
+        table.insert(ret, j)
+      end
+    end
+  else
+    local ordered, n = {}, 1
+    for k, v in pairs(items) do
+      ordered[n], n = {k, v}, n + 1
+    end
+    table.sort(ordered, function (a, b)
+      return tostring(a[1]) < tostring(b[1])
+    end)
+    for i = 1, n - 1 do
+      local j = callback(ordered[i][2], ordered[i][1], data)
+      if j then
+        table.insert(ret, j)
+      end
     end
   end
   return ret
 end
 
-local function __slTypeInfo(item, index, namespace, noStrings)
-  if noStrings and type(item) == 'string' then
-    error('Strings are not allowed', 4)
+local function __slTypeInfo(item, index, namespace)
+  if type(item) ~= 'table' then
+    error('Invalid struct item', 2)
   end
-  if type(item) == 'table' then
-    if item.key then
-      namespace.key = item.key
-      return nil
-    end
-    if item.array then
-      local ret = __slTypeInfo(item[1], index, namespace, true)
+  if item.key then
+    namespace.key = item.key
+    return nil
+  end
+  if type(item.t) == 'table' then
+    if item.t.array then
+      local ret = __slTypeInfo(item.t.type, index, namespace)
       if ret then
         if not ret.array then ret.array = {} end
-        table.insert(ret.array, 1, item.array)
-        ret.realSize = ret.realSize * item.array
+        table.insert(ret.array, 1, item.t.array)
+        ret.realSize = ret.realSize * item.t.array
+        ret.createdIndex = item.c
       end
       return ret
     end
-    if item.struct then
+    if item.t.struct then
       local totalSize = 0
-      local fields = __slMapOrdered(item.struct, function (sub, key)
-        local r = __slTypeInfo(sub, key, namespace, true)
+      local fields = __slMapOrdered(item.t.struct, function (sub, key)
+        local r = __slTypeInfo(sub, key, namespace)
         if r then totalSize = totalSize + r.realSize end
         return r
       end)
@@ -293,26 +341,28 @@ local function __slTypeInfo(item, index, namespace, noStrings)
         type = '__<STRUCTNAME>_'..existing..' %s;',
         packingSize = totalSize,
         realSize = totalSize,
-        struct = reordered
+        struct = reordered,
+        createdIndex = item.c
       }
     end
   end
 
-  local s = __slGet(item, 2) or error('Unknown type: '..item, 2)
+  local s = __slGet(item.t, 2) or error('Unknown type: '..item.t, 2)
   return {
     name = index,
-    type = __slGet(item, 1) or error('Unknown type: '..item, 2),
-    replayType = __slGet(item, 6),
+    type = __slGet(item.t, 1) or error('Unknown type: '..item.t, 2),
+    replayType = __slGet(item.t, 6),
     packingSize = s,
-    realSize = s
+    realSize = s,
+    createdIndex = item.c
   }
 end
 
 local function __slProxy(value)
-  return __slGet(value, 3) or false, __slGet(value, 4) or false, __slGet(value, 5) or false
+  return __slGet(value.t, 3) or false, __slGet(value.t, 4) or false, __slGet(value.t, 5) or false
 end
 
-function ac.StructItem.__build(items, callback)
+function __util.__si_build(items, callback)
   if type(items) == 'string' then
     return items
   end
@@ -325,83 +375,93 @@ function ac.StructItem.__build(items, callback)
   if #namespace.structs > 0 then
     table.insert(prepared, '\n__<STRUCTINNER>_')
     for i = 1, #namespace.structs do
-      table.insert(prepared, string.format('typedef struct __declspec(align(1)){%s}__<STRUCTNAME>_%d;', namespace.structs[i], i))
+      local a = _eo == nil and 1 or _eo[1]
+      table.insert(prepared, a > 0
+        and string.format('typedef struct __declspec(align(%d)){%s}__<STRUCTNAME>_%d;', a, namespace.structs[i], i)
+        or string.format('typedef struct{%s}__<STRUCTNAME>_%d;', namespace.structs[i], i))
     end
+  end
+  if _eo then
+    table.insert(prepared, string.format('//<__EXPAL:%s:%s>', _eo[1] or 0, _eo[2] or 0))
+    _eo = nil
   end
   return table.concat(prepared), reordered
 end
 
-function ac.StructItem.__cdef(name, layout, compact)
+local _known = {}
+
+function __util.__si_cdef(name, layout, compact)
   local f = string.find(layout, '\n__<STRUCTINNER>_', 1, true)
+  local e = string.find(layout, '//<__EXPAL:', f or 1, true)
+  local align, pack = -1, -1
+  if e then
+    local e1 = string.find(layout, ':', e + 12, true)
+    local e2 = string.find(layout, '>', e1 + 2, true)
+    align, pack = tonumber(string.sub(layout, e + 11, e1 - 1)), tonumber(string.sub(layout, e1 + 1, e2 - 1))
+  elseif compact then
+    align, pack = 1, 1
+  end
   local u
   if f then
+    -- There are inner structures, and if explicit packing is not set they have to have their own 1-byte packing
     u = string.replace(string.sub(layout, f + 17), '<STRUCTNAME>', name)
     layout = string.replace(string.sub(layout, 1, f), '<STRUCTNAME>', name)
   end
-  if u then
-    return string.format(compact 
-      and '#pragma pack(push, 1)\n%s\ntypedef struct __declspec(align(1)){\n%s\n} %s;\n#pragma pack(pop)' 
-      or '#pragma pack(push, 1)\n%s\n#pragma pack(pop)\ntypedef struct {\n%s\n} %s;', u, layout, name)
+  local r, n = {}, 1
+  if pack > 0 or u and not e then
+    r[n], n = '#pragma pack(push, ', n + 1
+    r[n], n = tostring(math.max(pack, 1)), n + 1
+    r[n], n = ')\n', n + 1
   end
-  return string.format(compact 
-    and '#pragma pack(push, 1)\ntypedef struct __declspec(align(1)){\n%s\n} %s;\n#pragma pack(pop)' 
-    or 'typedef struct {\n%s\n} %s;', layout, name)
+  if u then
+    r[n], n = u, n + 1
+    r[n], n = pack > 0 and '\n' or '\n#pragma pack(pop)\n', n + 1
+  end
+  r[n], n = 'typedef struct ', n + 1
+  if align > 0 then 
+    r[n], n = '__declspec(align(', n + 1
+    r[n], n = tostring(align), n + 1
+    r[n], n = ')){\n', n + 1
+  else
+    r[n], n = '{\n', n + 1
+  end
+  r[n], n = layout, n + 1
+  r[n], n = '\n} ', n + 1
+  r[n], n = name, n + 1
+  r[n], n = ';', n + 1
+  if pack > 0 then
+    r[n], n = '\n#pragma pack(pop)', n + 1
+  end
+  return table.concat(r)
 end
 
-function ac.StructItem.__replayMixing(reordered)
-  local mixing = {}
-  if reordered then
-    local offset = 0
+-- -@param layoutStr string
+-- -@param compact boolean?
+-- -@return string
+-- -@return string
 
-    local function procItem(v)
-      local u = 1
-      if v.array then
-        for i = 1, #v.array do
-          u = u * v.array[i]
-        end
-      end
-      if v.struct then
-        for _ = 1, u do
-          for _, c in ipairs(v.struct) do
-            procItem(c)
-          end
-        end
-        return
-      elseif v.replayType then
-        for _ = 1, u do
-          if v.replayType > 99 then
-            local c = math.floor(v.replayType / 100)
-            for _ = 1, c do
-              mixing[#mixing + 1] = string.format('%d:%d', offset, v.replayType % 100)
-              offset = offset + v.packingSize / c
-            end
-          else
-            mixing[#mixing + 1] = string.format('%d:%d', offset, v.replayType)
-            offset = offset + v.packingSize
-          end
-        end
-      else
-        offset = offset + v.realSize
-      end
-    end
-
-    for _, v in ipairs(reordered) do
-      procItem(v)
-    end
+function __util.__si_ffi(layoutStr, compact)
+  if type(layoutStr) == 'table' then layoutStr = __util.__si_build(layoutStr) end
+  if type(layoutStr) ~= 'string' then error('Layout is required and should be a table or a string', 3) end
+  local k = _known[layoutStr]
+  if not k then
+    k = '__sif_'..math.randomKey()
+    _fficdef(__util.__si_cdef(k, layoutStr, compact))
+    _known[layoutStr] = k
   end
-  return table.concat(mixing, '\n')
+  return k, layoutStr
 end
 
 local __slProxyMt = { 
   __index = function (s, k)
-    if k == '__stringify' then return end
-    s = s.__data
+    if k == '__stringify' or k == '__blobify' then return end
+    s = s.__data_cdata__
     local r, v = s.p.r[k], s.i[k]
     if not r then return v end
     return r(v)
   end,
   __newindex = function (s, k, v)
-    s = s.__data
+    s = s.__data_cdata__
     local w = s.p.w
     if w[k] then
       local i = w[k](v, s.i[k])
@@ -414,8 +474,8 @@ local __slProxyMt = {
 
 local __slProxyCachingMt = { 
   __index = function (s, k)
-    if k == '__stringify' then return end
-    s = s.__data
+    if k == '__stringify' or k == '__blobify' then return end
+    s = s.__data_cdata__
     local r, v = s.p.r[k], s.i[k]
     if not r then return v end
     local c = s.p.c[k]
@@ -429,7 +489,7 @@ local __slProxyCachingMt = {
     return r(v)
   end,
   __newindex = function (s, k, v)
-    s = s.__data
+    s = s.__data_cdata__
     local w = s.p.w
     if w[k] then
       local i = w[k](v, s.i[k])
@@ -443,7 +503,7 @@ local __slProxyCachingMt = {
 
 local __slProxyCache = {}
 
-function ac.StructItem.__proxy(layout, item)
+function __util.__si_proxy(layout, item)
   if type(layout) ~= 'table' then return item end
   local p = __slProxyCache[layout]
   if p == nil then
@@ -460,7 +520,7 @@ function ac.StructItem.__proxy(layout, item)
   end
   if not p then return item end
   local d = p.c and { l = layout, i = item, p = p, c = {}, h = {} } or { l = layout, i = item, p = p }
-  return setmetatable({ __data = d }, p.c and __slProxyCachingMt or __slProxyMt)
+  return setmetatable({ __data_cdata__ = d }, p.c and __slProxyCachingMt or __slProxyMt)
 end
 
 end

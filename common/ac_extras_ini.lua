@@ -2,6 +2,8 @@
 
 __source 'lua/api_extras_ini.cpp'
 
+local _iniss
+
 ac.INIConfig = class('ac.INIConfig', function (format, sections, filename)
   return { format = format or 0, sections = sections or {}, filename = filename }
 end)
@@ -21,9 +23,10 @@ ac.INIConfig.OptionalList = {}
 ---Parse INI config from a string.
 ---@param data string @Serialized INI data.
 ---@param format ac.INIFormat? @Format to parse. Default value: `ac.INIFormat.Default`.
+---@param includeFolders ('@cars'|'@tracks'|string)[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). Use special values `'@cars'` and `'@tracks'` for car or track configs.
 ---@return ac.INIConfig
-function ac.INIConfig.parse(data, format)
-  ffi.C.lj_parse_ini(data and tostring(data) or nil, tonumber(format) or 0)
+function ac.INIConfig.parse(data, format, includeFolders)
+  ffi.C.lj_parse_ini(data and tostring(data) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
   local ret = __util.result()
   if ret == nil then error('Failed to parse data', 2) end
   return ac.INIConfig(tonumber(format) or 0, ret)
@@ -32,7 +35,7 @@ end
 ---Load INI file, optionally with includes.
 ---@param filename string @INI config filename.
 ---@param format ac.INIFormat? @Format to parse. Default value: `ac.INIFormat.Default`.
----@param includeFolders string[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). If not set, parent folder for config filename is used.
+---@param includeFolders ('@cars'|'@tracks'|string)[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). If not set, parent folder for config filename is used. Use special values `'@cars'` and `'@tracks'` for car or track configs.
 ---@return ac.INIConfig
 function ac.INIConfig.load(filename, format, includeFolders)
   ffi.C.lj_load_ini(filename and tostring(filename) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
@@ -49,12 +52,15 @@ end
 ---@param fileName string @Car data file name, such as `'tyres.ini'`.
 ---@return ac.INIConfig
 function ac.INIConfig.carData(carIndex, fileName)
+  if not _iniss then _iniss = {} end
+  local k = 'c'..tostring(carIndex)..tostring(fileName)
+  if _iniss[k] then return _iniss[k] end
   ffi.C.lj_load_cardata_ini(tonumber(carIndex) or 0, tostring(fileName))
   local ret = __util.result()
   if ret == nil then error('Failed to parse data', 2) end
-  local c = ac.INIConfig(1, ret, nil)
-  c.__car = { carIndex, fileName }
-  return c
+  _iniss[k] = ac.INIConfig(1, ret, nil)
+  _iniss[k].__car = { carIndex, fileName }
+  return  _iniss[k]
 end
 
 ---Load track data INI file. Can be used by track scripts which might not always  have access to those files directly.
@@ -63,10 +69,14 @@ end
 ---@param fileName string @Car data file name, such as `'tyres.ini'`.
 ---@return ac.INIConfig
 function ac.INIConfig.trackData(fileName)
+  if not _iniss then _iniss = {} end
+  local k = 't'..tostring(fileName)
+  if _iniss[k] then return _iniss[k] end
   ffi.C.lj_load_trackdata_ini(tostring(fileName))
   local ret = __util.result()
   if ret == nil then error('Failed to parse data', 2) end
-  return ac.INIConfig(1, ret, nil)
+  _iniss[k] = ac.INIConfig(1, ret, nil)
+  return _iniss[k]
 end
 
 ---Returns CSP config for a car. Might be slow: some of those configs are huge. Make sure to cache the resulting value if you need to reuse it.
@@ -139,17 +149,16 @@ function ac.INIConfig.cspModule(cspModuleID)
   return ac.INIConfig(ac.INIFormat.Extended, ret, ac.getFolder(ac.FolderID.ExtCfgUser)..'/'..cspModuleID..'.ini')
 end
 
-local _iniss
-
 ---Load config of the current Lua script (“settings.ini” in script directory and settings overriden by user, meant to be customizable with Content Manager).
 ---@return ac.INIConfig
 function ac.INIConfig.scriptSettings()
-  if _iniss then return _iniss end
+  if not _iniss then _iniss = {} end
+  if _iniss.ss then return _iniss.ss end
   ffi.C.lj_loadscriptconfig_ini()
   local ret, filename = __util.result()
   if ret == nil then error('Script of this type can’t have settings', 2) end
-  _iniss = ac.INIConfig(ac.INIFormat.Extended, ret, filename)
-  return _iniss
+  _iniss.ss = ac.INIConfig(ac.INIFormat.Extended, ret, filename)
+  return _iniss.ss
 end
 
 local function _indv(defaultValue)
@@ -196,6 +205,23 @@ function ac.INIConfig:tryGetLut(section, key)
   end
   if self.filename then
     return ac.DataLUT11.load(self.filename..'/../'..data)
+  end
+  return nil
+end
+
+function ac.INIConfig:tryGet2DLut(section, key)
+  local data = self:get(section, key, '')
+  if not data then return nil end
+  data = data:trim()
+  if data == '' then return nil end
+  if data:startsWith('(') and data:endsWith(')') then
+    return ac.DataLUT21.parse(data)
+  end
+  if self.__car then
+    return ac.DataLUT21.carData(self.__car[1], data)
+  end
+  if self.filename then
+    return ac.DataLUT21.load(self.filename..'/../'..data)
   end
   return nil
 end

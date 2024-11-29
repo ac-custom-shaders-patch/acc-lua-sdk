@@ -1,6 +1,7 @@
 __source 'extensions/online_plus/online_scripts.cpp'
 
---[[? ctx.flags.withPhysics = true; ctx.flags.withoutIO = true; ?]]
+--[[? ctx.flags.withPhysics = true; ?]]
+--[[? ctx.flags.withoutIO = true; ?]]
 
 require './common/internal_import'
 require './common/ac_audio'
@@ -13,24 +14,19 @@ require './common/ac_ui'
 require './common/ac_scene'
 require './common/ac_track'
 require './common/ac_gameplay'
+require './common/ac_gameplay_apps'
+require './common/ac_gameplay_replaystream'
 require './common/ac_car_control'
+require './common/ac_car_control_physics'
 require './common/ac_particles'
 require './common/ac_physics'
 require './common/ac_physics_ai'
+require './common/ac_extras_binaryinput'
+require './common/ac_extras_yebiscolorcorrection'
 require './common/secure'
-require './wfx_common/ac_weatherconditions'
 
 local function __getServerConfig(section, key, def)
-  if type(def) == 'boolean' then return ffi.C.lj_cfg_server_bool(__util.str(section), __util.str(key), def) end
-  if type(def) == 'number' then return ffi.C.lj_cfg_server_decimal(__util.str(section), __util.str(key), def) end
-  if type(def) == 'string' then return __util.strrefr(ffi.C.lj_cfg_server_string(__util.str(section), __util.str(key), def)) end
-  if rgb.isrgb(def) then return ffi.C.lj_cfg_server_rgb(__util.str(section), __util.str(key), def) end
-  if rgbm.isrgbm(def) then return ffi.C.lj_cfg_server_rgbm(__util.str(section), __util.str(key), def) end
-  if vec2.isvec2(def) then return ffi.C.lj_cfg_server_vec2(__util.str(section), __util.str(key), def) end
-  if vec3.isvec3(def) then return ffi.C.lj_cfg_server_vec3(__util.str(section), __util.str(key), def) end
-  if vec4.isvec4(def) then return ffi.C.lj_cfg_server_vec4(__util.str(section), __util.str(key), def) end
-  if def == nil then error('Default value is required', 2) end
-  error('Unknown type: '..type(def), 2)
+  return __util.native('cfg', 65537, section, key, def)
 end
 
 ---Reconnect to a different server (or, if `params` is not set or empty, same server).

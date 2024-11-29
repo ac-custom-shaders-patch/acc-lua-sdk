@@ -2,9 +2,12 @@ __source 'extensions/gamepad_fx/ac_ext_gamepad_fx.cpp'
 __states 'extensions/gamepad_fx/ac_ext_gamepad_fx.cpp'
 __allow 'joypadassist'
 
+--[[? ctx.flags.physicsThread = true; ?]]
 require './common/internal_import'
 require './common/ac_car_control'
+require './common/ac_car_control_physics'
 require './common/ac_joypad_assist_enums'
+require './common/ac_extras_binaryinput'
 
 -- automatically generated entries go here:
 __definitions()

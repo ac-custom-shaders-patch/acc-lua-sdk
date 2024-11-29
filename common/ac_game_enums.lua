@@ -30,13 +30,6 @@ ac.VRSRateMode = __enum({ cpp = 'vrs_rate_mode' }, {
   X1_4X4 = 11,
 })
 
-ac.VAODebugMode = __enum({ cpp = 'vao_mode' }, { 
-  Active = 1,
-  Inactive = 3,
-  VAOOnly = 4,
-  ShowNormals = 5
-})
-
 ac.ScreenshotFormat = __enum({ cpp = 'screenshot_format' }, {
   Auto = 0, -- As configured in AC system settings
   BMP = 1,

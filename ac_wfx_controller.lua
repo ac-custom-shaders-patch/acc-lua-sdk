@@ -3,7 +3,7 @@ __allow 'controller'
 
 require './common/internal_import'
 require './common/ac_extras_backgroundworker'
-require './wfx_common/ac_weatherconditions'
+require './common/ac_extras_binaryinput'
 
 -- automatically generated entries go here:
 __definitions()

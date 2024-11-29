@@ -35,4 +35,7 @@ expect(JSON.parse('{,, a : 5,, "b":126, }'), {a=5, b=126})
 expect(JSON.parse('{,, a : 5,, "b":136, } some trash'), {a=5, b=136})
 expect(JSON.parse('some trash'), nil)
 expect(JSON.parse('[some trash'), {})
-expect(JSON.parse(nil), nil)
+
+local traffic = '{"lanes":[{"loop":null}],"areas":[124]}'
+-- print(stringify(JSON.parse(traffic)))
+expect(#JSON.parse(traffic).lanes, 1)

@@ -5,7 +5,7 @@
 ffi.cdef [[
 void* lj_calloc(size_t count, size_t size);
 void* lj_realloc(void *ptr, size_t size);
-void* lj_memmove(void *dst, const void *src, size_t len);
+void* lj_memmove(void* base, void *dst, const void *src, size_t len);
 void lj_free(void *ptr); 
 ]]
 
@@ -109,7 +109,7 @@ function Vector:insert(i, x)
   elseif i > self._size then self:push(x) 
   else
     if self._size + 1 > self._cap then VectorT__resize(self) end
-    ffi.C.lj_memmove(self.raw + i, self.raw + i - 1, (self._size - i + 1) * self.__ctSize)
+    ffi.C.lj_memmove(self.raw, self.raw + i, self.raw + i - 1, (self._size - i + 1) * self.__ctSize)
     self.raw[i - 1] = x
     self._size = self._size + 1
     if self.__keepAlive then
@@ -147,7 +147,7 @@ function Vector:remove(i)
   if type(i) == 'nil' then return self:pop() end
   if i < 1 or i > self._size then return nil end
   local x = self.raw[i - 1]
-  ffi.C.lj_memmove(self.raw + i - 1, self.raw + i, (self._size - i + 1) * self.__ctSize)
+  ffi.C.lj_memmove(self.raw, self.raw + i - 1, self.raw + i, (self._size - i + 1) * self.__ctSize)
   self._size = self._size - 1
   if self.__keepAlive then
     table.remove(self.__keepAlive, i)
@@ -163,6 +163,10 @@ function Vector:pop()
     table.remove(self.__keepAlive, #self.__keepAlive)
   end
   return x
+end
+
+function Vector:__blobify()
+  return self.raw, self._size * self.__ctSize
 end
 
 function Vector:clear()

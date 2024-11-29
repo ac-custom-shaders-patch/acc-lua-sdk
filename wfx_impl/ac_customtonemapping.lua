@@ -1,4 +1,4 @@
-local _sp_ctt = {template = 'tonemapping.fx', startingTextureSlot = 4, delayed = true}
+local _sp_ctt = {template = 'tonemapping.fx', __cache = {}, startingTextureSlot = 4, delayed = true}
 
 ---Override current tonemapping function. If you’re using a table and need texture coordinates, add `__CSP_PROVIDE_TEXCOORDS = true` define.
 ---@param v ac.TonemapFunction|string|{textures: table, values: table, defines: table, shader: string, cacheKey: integer}
