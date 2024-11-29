@@ -6,7 +6,8 @@ Current LUA libraries are always included in latest CSP version. [Here is some d
 
 ## Also, here are some scripts to use as examples
 
-- [Built-in apps](https://github.com/ac-custom-shaders-patch/app-csp-defaults);
+- [Built-in apps](https://github.com/ac-custom-shaders-patch/acc-lua-internal/tree/main/included-apps);
+- [Apps from App Shelf](https://github.com/ac-custom-shaders-patch/app-csp-defaults);
 - [Built-in internal scripts](https://github.com/ac-custom-shaders-patch/acc-lua-internal);
 - [Built-in postprocessing filters](https://github.com/ac-custom-shaders-patch/acc-extension-config/tree/master/lua/pp-filters);
 - [Default WeatherFX implementation](https://github.com/ac-custom-shaders-patch/acc-weatherfx-base);
