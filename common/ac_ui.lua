@@ -7,9 +7,9 @@ __namespace 'ui'
 require './ac_render_shader'
 require './ac_ui_enums'
 
-local _sp_uiu = { template = 'ui.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque, delayed = true }
-local _sp_uif = { template = 'fullscreen.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque }
-local _sp_uid = { template = 'direct.fx', __cache = {}, defaultBlendMode = render.BlendMode.Opaque }
+local _sp_uiu = { template = 'ui.fx', __cache = {}, defaultBlendMode = 0, delayed = true }
+local _sp_uif = { template = 'fullscreen.fx', __cache = {}, defaultBlendMode = 0 }
+local _sp_uid = { template = 'direct.fx', __cache = {}, defaultBlendMode = 0 }
 
 local weatherIcons = {
   [ac.WeatherType.LightThunderstorm] = ui.Icons.WeatherLightThunderstorm,
@@ -686,14 +686,16 @@ end
 ---included by default: simply pass a semi-transparent symbol here.
 ---@param iconID ui.Icons|fun(iconSize: number) @Might be an icon ID or anything else `ui.icon()` can take, or a function taking icon size.
 ---@param color rgbm? @Icon tint for background. Default value: `rgbm.colors.white`.
-function ui.drawCarIcon(iconID, color)
+---@param hint string? @Optional hint appearing if mouse is hovering the icon.
+function ui.drawCarIcon(iconID, color, hint)
   local pos = vec2()
   local size = vec2()
   local opacity = ffi.C.lj_draw_car_icon__ui(pos, size)
   if opacity > 0 then
     local color4 = color and rgbm.new(color) or rgbm.colors.white
     color4.mult = color4.mult * opacity
-    ui.drawImage('extension/textures/gui/car_indicator_bg.png', pos, pos + size, color4)
+    local pos2 = pos + size
+    ui.drawImage('extension/textures/gui/car_indicator_bg.png', pos, pos2, color4)
     local cur = ui.getCursor()
     if type(iconID) == 'function' then
       local curNew = pos + size / 2 - 18
@@ -704,6 +706,9 @@ function ui.drawCarIcon(iconID, color)
     else
       ui.setCursor(pos)
       ui.icon(iconID, size, rgbm(0, 0, 0, opacity), 24)
+    end
+    if hint and ui.rectHovered(pos, pos2) and not ui.windowHovered(ui.HoveredFlags.AnyWindow) then
+      ui.setTooltip(hint)
     end
     ui.setCursor(cur)
   end
@@ -1175,6 +1180,12 @@ ffi.metatype('uirt', {
       return ffi.C.lj_uirt_dispose__ui(s)
     end,
 
+    ---Return explicit MIP to use as an image. If called with index of 0, returns texture similar to main one, but only with a single MIP.
+    ---@param index integer @0-based MIP index.
+    mip = function(s, index)      
+      return string.format('$ui.ExtraCanvas://?id=%d', ffi.C.lj_uirt_getmipindex__ui(s, tonumber(index) or 0))
+    end,
+
     ---Sets canvas name for debugging. Canvases with set name appear in Lua Debug App, allowing to monitor their state.
     ---@param name string? @Name to display texture as. If set to `nil` or `false`, name will be reset and texture will be hidden.
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
@@ -1214,6 +1225,7 @@ ffi.metatype('uirt', {
       p2: vec2 = nil "Position of bottom right corner relative to whole screen or canvas. Default value: size of canvas.",
       uv1: vec2 = nil "Texture coordinates for upper left corner. Default value: `vec2(0, 0)`.",
       uv2: vec2 = nil "Texture coordinates for bottom right corner. Default value: `vec2(1, 1)`.",
+      mip: integer = nil "0-based index of target MIP layer. Default value: `0`. Use `:mip(index - 1)` as a texture input to access previous MIP view in case you want to generate new MIPs from previous ones. If this parameter is above 0, automatic MIPs generation stops.",
       blendMode: render.BlendMode = nil "Blend mode. Default value: `render.BlendMode.Opaque`.",
       async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
       cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
@@ -1224,7 +1236,7 @@ ffi.metatype('uirt', {
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
     }]]
     updateWithShader = function(s, params)
-      if not ffi.C.lj_uicshader_runoncanvas0__ui(s) then return false end
+      if not ffi.C.lj_uicshader_runoncanvas0__ui(s, tonumber(params.mip) or 0) then return false end
       local dc = __util.setShaderParams2(params, _sp_uid)
       if dc then
         ffi.C.lj_uicshader_runoncanvas1__ui(s, dc, __util.ensure_vec2_nil(params.p1), __util.ensure_vec2_nil(params.p2),
@@ -1253,6 +1265,7 @@ ffi.metatype('uirt', {
       p2: vec2 = nil "Position of bottom right corner relative to whole screen or canvas. Default value: size of canvas.",
       uv1: vec2 = nil "Texture coordinates for upper left corner. Default value: `vec2(0, 0)`.",
       uv2: vec2 = nil "Texture coordinates for bottom right corner. Default value: `vec2(1, 1)`.",
+      mip: integer = nil "0-based index of target MIP layer. Default value: `0`. Use `:mip(index - 1)` as a texture input to access previous MIP view in case you want to generate new MIPs from previous ones. If this parameter is above 0, automatic MIPs generation stops.",
       blendMode: render.BlendMode = nil "Blend mode. Default value: `render.BlendMode.Opaque`.",
       async: boolean = nil "If set to `true`, drawing won’t occur until shader would be compiled in a different thread.",
       cacheKey: number = nil "Optional cache key for compiled shader (caching will depend on shader source code, but not on included files, so make sure to change the key if included files have changed)",
@@ -1263,7 +1276,7 @@ ffi.metatype('uirt', {
       shader: string = 'float4 main(PS_IN pin) { return float4(pin.Tex.x, pin.Tex.y, 0, 1); }' "Shader code (format is HLSL, regular DirectX shader); actual code will be added into a template in “assettocorsa/extension/internal/shader-tpl/ui.fx”."
     }]]
     updateSceneWithShader = function(s, params)
-      if not ffi.C.lj_uicshader_runoncanvas_fullscreen0__ui(s) then return false end
+      if not ffi.C.lj_uicshader_runoncanvas0__ui(s, tonumber(params.mip) or 0) then return false end
       local dc = __util.setShaderParams2(params, _sp_uif)
       if dc then
         ffi.C.lj_uicshader_runoncanvas_fullscreen1__ui(s, dc)
@@ -1790,6 +1803,14 @@ ffi.metatype('sharedtex', {
     ---Dispose texture and release its view. Call this method if remote texture is being destroyed.
     dispose = ffi.C.lj_sharedtex_dispose__ui,
 
+    ---Sets texture name for debugging. Textures with set name appear in Lua Debug App, allowing to monitor their state.
+    ---@param name string? @Name to display texture as. If set to `nil` or `false`, name will be reset and texture will be hidden.
+    ---@return self @Returns itself for chaining several methods together.
+    setName = function(s, name)
+      ffi.C.lj_sharedtex_setname__ui(s, name and tostring(name) or nil)
+      return s
+    end,
+
     ---Get texture handle used for creating a texture. If texture has failed to load, returns 0. If texture is loaded by name and loaded properly, returns 1.
     ---@return integer
     handle = function(s)
@@ -1806,7 +1827,7 @@ ffi.metatype('sharedtex', {
     ---@return boolean
     valid = function(s)
       return s._has_anything
-    end
+    end,
   }
 })
 
@@ -2123,3 +2144,29 @@ function ui.inputTextCommand(command, argument, lookActive)
 end
 
 ui.setFontBoldEffect = function() end
+
+---Draw filled circle (if `angleTo - angleFrom ≥ 2π`) or its sector. Optionally textured.
+---@param center vec2 @Center of the circle.
+---@param radius number @Circle radius.
+---@param angleFrom number @Starting angle in radians.
+---@param angleTo number @Ending angle in radians.
+---@param color rgb|rgbm? @Color. Default value: `rgbm.colors.white`.
+---@param image ui.ImageSource @Optional background image.
+function ui.drawPie(center, radius, angleFrom, angleTo, color, image)
+  if angleTo < angleFrom then
+    angleTo, angleFrom = angleFrom, angleTo
+  end
+  if angleTo ~= angleFrom then
+    if image then ui.beginTextureShade(image) end
+    if angleTo - angleFrom > math.tau then
+      ui.drawCircleFilled(center, radius, color or rgbm.colors.white, 50)
+    else
+      ui.pathLineTo(center)
+      ui.pathArcTo(center, radius, angleFrom, angleTo, math.ceil(10 + 40 * (angleTo - angleFrom) / math.tau))
+
+      -- Sometimes this shape is concave, but arranged like this, it seems to work. Do not use those tricks on your side though!
+      ui.pathFillConvex(color or rgbm.colors.white)
+    end
+    if image then ui.endTextureShade(center - radius, center + radius, true) end
+  end
+end

@@ -192,6 +192,15 @@ function math.lerp(x, y, mix) return x * (1 - mix) + y * mix end
 ---@return number
 function math.lerpInvSat(value, min, max) return math.saturate((value - min) / (max - min)) end
 
+---Returns `newA` if `value` equals to `oldA`, `newB` if `value` is `oldB`, applies linear interpolation for other input values. Doesn’t apply clamping.
+---@param value number
+---@param oldA number
+---@param oldB number
+---@param newA number
+---@param newB number
+---@return number
+function math.remap(value, oldA, oldB, newA, newB) return (value - oldA) / (oldB - oldA) * (newB - newA) + newA end
+
 ---Smoothstep operation. More about it in [wiki](https://en.wikipedia.org/wiki/Smoothstep).
 ---@param x number
 ---@return number

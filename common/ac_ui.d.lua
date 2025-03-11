@@ -1,6 +1,3 @@
----UI namespace for creating custom widgets or drawing dynamic textures using IMGUI.
-ui = {}
-
 ---Something that can be used as a texture, could be a texture filename, web URL, one of special values or an extra canvas, GIF or media player.
 ---If value starts with “%” and points to an icon in a DLL file, icon will be loaded (for scripts with full IO access only). Special values:
 ---- `color::X`: solid color texture (X can be three or four numbers or a hex representation).

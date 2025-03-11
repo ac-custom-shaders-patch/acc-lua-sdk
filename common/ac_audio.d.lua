@@ -6,6 +6,8 @@
 function ac.AudioEvent(eventName, reverbResponse, useOcclusion) end
 
 ---Create a new audio event from a file. Consequent calls with the same parameters would reuse previously loaded audio file.
+---Note: if `loop` is set to `false` when used with `filename`, audio event will become invalid once played once. Feel free to dispose the old one
+---and create a new audio event.
 --[[@tableparam params {
   filename: string "Audio filename",
   stream: {name: string, size: integer} = nil "Audio stream (as an alternative to `filename` for live streaming data using a memory mapped file)",

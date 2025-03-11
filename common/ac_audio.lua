@@ -64,7 +64,7 @@ ffi.metatype('audioevent', { __index = {
     return s
   end,
 
-    --[[? if (!ctx.flags.withoutSceneAPI) out(]]
+  --[[? if (!ctx.flags.withoutSceneAPI) out(]]
 
   ---Link audio to a node. Switches `setPosition()` to operate in local coordinates. Also, alters the velocity based on node velocity.
   ---@param sceneReference ac.SceneReference? @Set to `nil` to unlink the light source.
@@ -73,7 +73,14 @@ ffi.metatype('audioevent', { __index = {
     return __util.native('lj_audioevent_linkto', s, sceneReference)
   end,
 
-    --[[) ?]]
+  --[[) ?]]
+
+  ---Override used volume channel. Use carefully.
+  ---@param channel ac.AudioChannel? @Set to `nil` to reset to default.
+  ---@return self
+  setVolumeChannel = function (s, channel) 
+    return __util.native('lj_audioevent_linkvolume', s, channel)
+  end,
 
   ---Deprecated, now all events are alive until `:dispose()` is called.
   ---@deprecated
@@ -109,9 +116,10 @@ ffi.metatype('audioevent', { __index = {
   ---@return ac.AudioEvent @Returns self for easy chaining.
   setDSPParameter = function (s, dsp, key, value) ffi.C.lj_audioevent_set_dsp_param(s, tonumber(dsp) or 0, tonumber(key) or 0, tonumber(value) or 0) return s end,
 
-  ---Returns `true` if event is loaded successfully. If event does not load, make sure soundbank is loaded first, and that event name is correct.
+  ---Returns `true` if event is loaded successfully. If event does not load, make sure soundbank is loaded first, and that event name is correct. If event is loaded
+  ---from a file and finished playing, also returns `false`.
   ---@return boolean
-  isValid = function (s) return s.host_ ~= nil and (s.nativeEvent_ ~= nil or s.nativeChannel_ ~= nil) end,
+  isValid = ffi.C.lj_audioevent_is_valid,
 
   ---Returns `true` if audio event is playing.
   ---@return boolean

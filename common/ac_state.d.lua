@@ -1,6 +1,9 @@
 ---Returns reference to a structure with various information about the state of a car. Very cheap to use.
 ---This is a new version with shorter name and 0-based indexing (to match other API functions).
 ---
+---Updates once per graphics frame. You can use it in physics scripts to access things such as tyre radius, but
+---for anything live there please look for specialized physics-rate updating values.
+---
 ---Note: index starts with 0. Make sure to check result for `nil` if you’re accessing a car that might not be there. First car
 ---with index 0 is always there.
 ---@param index integer @0-based index.
@@ -42,8 +45,9 @@ function ac.iterateCars() end
 ---  ac.debug(i, car.position)
 ---end
 ---```
+---@param inverse boolean? @Set to `true` to iterate in inverse order (available since 0.2.5).
 ---@return fun(): integer, ac.StateCar @Iterator to be used in a loop (1-based index and car state)
-function ac.iterateCars.ordered() end
+function ac.iterateCars.ordered(inverse) end
 
 ---Iterates over cars from first to last in the race leaderboard (uses lap times in practice and qualify sessions). Use in a for-loop. To get a Nth car, use `ac.getCar.leaderboard()`.
 ---

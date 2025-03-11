@@ -1109,7 +1109,7 @@ function ac.findAny(s) return s == nil and _emptyNodeRef() or cr(ffi.C.lj_nodere
 ---
 ---Filter is regular stuff, the same as used in INI configs. To use complex filter with commas and operators, wrap it in curly brackets as usual. There are also some special keywords available:
 ---- `'luaRoot:yes'`: root node associated with current script.
----- `'sceneRoot:yes'`: the most root node.
+---- `'sceneRoot:yes'`: the most root node (do not add your objects here, they won’t be drawn properly).
 ---- `'carsRoot:yes'`: node that hosts all the cars. If you want to load custom dynamic objects, especially complex, it’s recommended to load them in bounding sphere and attach here (this node is optimized to render bounding sphere-wrapped objects quickly).
 ---- `'trackRoot:yes'`: track root node.
 ---- `'staticRoot:yes'`: node with static geometry (affected by motion blur from original AC).

@@ -7,8 +7,8 @@ do
   end
 
   ac.iterateCars = setmetatable({
-    ordered = function ()
-      return _ptri, ffi.C.lj_getCars_inner(1), 0
+    ordered = function (inverse)
+      return _ptri, ffi.C.lj_getCars_inner(inverse and 4 or 1), 0
     end,
     leaderboard = function ()
       return _ptri, ffi.C.lj_getCars_inner(2), 0

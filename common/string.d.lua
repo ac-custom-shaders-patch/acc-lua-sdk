@@ -92,8 +92,9 @@ function string.nextEmoji(self, start) end
 
 ---Encodes URL argument.
 ---@param self string
+---@param plusForSpaces boolean? @Use `'+'` for space symbol (works for URLs, but if a regular URL encoding is needed, might be getting in a way). Default value: `true`.
 ---@return string
-function string.urlEncode(self) end
+function string.urlEncode(self, plusForSpaces) end
 
 ---Checks if the beginning of a string matches another string. If string to match is longer than the first one, always returns `false`.
 ---@param self string @String to check the beginning of.
@@ -182,7 +183,15 @@ function string.reggmatch(self, pattern, ignoreCase) end
 ---@param self string @String to search in.
 ---@param pattern string @Regular expression.
 ---@param repl    string|table|function @Replacement value. Used in the same way as with `string.gsub()`, could be a table or a function.
+---@param limit integer? @Limit maximum number of replacements. Default value: `math.huge`.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return string @String with found entries replaced.
 ---@nodiscard
-function string.reggsub(self, pattern, repl, ignoreCase) end
+function string.reggsub(self, pattern, repl, limit, ignoreCase) end
+
+---Compares a string against CSP-style filter (using “?” for “any characters”).
+---@param self string @String to check.
+---@param filter string @Filter to check. Surround with `{…}` to use complex queries, for example, `'{ ABC? & ! ?DEF }'`.
+---@param init integer? @1-based offset to start searching from. Default value: `1`.
+---@return boolean
+function string.cspmatch(self, filter, init) end

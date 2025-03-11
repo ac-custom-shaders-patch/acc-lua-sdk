@@ -15,6 +15,8 @@ typedef struct {
   float monitorShaderSkew;
   float monitorShaderType;
   float monitorBrightness;
+  vec3 monitorCameraPosition;
+  vec3 monitorCameraLook;
 } realmirrorparams;
 ]]
 
@@ -133,8 +135,18 @@ end
 ---@param eventID ac.CarAudioEventID @ID of a target event.
 ---@param key string @Name of the parameter
 ---@param value number @New value in a range expected by FMOD audio event.
-function ac.CarAudioTweak.setParameter(eventID, key, value)
-  ffi.C.lj_setCarAudioTweak_p__carc(tonumber(eventID) or 0, 6, tostring(key), tonumber(value) or 0)
+---@param override boolean? @Set to `true` to override a value AC might set, can be useful to tweak something like `rpms` of engine audio.
+function ac.CarAudioTweak.setParameter(eventID, key, value, override)
+  ffi.C.lj_setCarAudioTweak_p__carc(tonumber(eventID) or 0, override and 8 or 6, tostring(key), tonumber(value) or 0)
+end
+
+---Set value of a custom DSP for the audio event. If DSP is missing, create and add it at the front.
+---@param eventID ac.CarAudioEventID @ID of a target event.
+---@param dsp string @DSP name.
+---@param key integer|'enable'|'disable'|'remove'|'wetDry' @Index of DSP parameter, or an action. If `wetDry` is specified, value should be a table with values `prewet`, `postwet` and `dry`.
+---@param value number|table|nil @Value.
+function ac.CarAudioTweak.setDSP(eventID, dsp, key, value)
+  return __util.native('lj_setCarAudioTweak_d__carc', eventID, dsp, key, value)
 end
 
 ---Get value of an FMOD audio event parameter.

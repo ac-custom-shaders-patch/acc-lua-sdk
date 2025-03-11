@@ -91,9 +91,10 @@ ffi.metatype('lua_rigidbody', {
 
     ---@param linear number
     ---@param angular number
+    ---@param applyToAll boolean @Set to `true` to get the function to work properly (added for backwards compatibility).
     ---@return physics.RigidBody @Returns self for easy chaining.
-    setDamping = function (s, linear, angular)
-      ffi.C.lj_rigidbody_setdamping__physics(s, tonumber(linear) or 0, tonumber(angular) or 0)
+    setDamping = function (s, linear, angular, applyToAll)
+      ffi.C.lj_rigidbody_setdamping__physics(s, tonumber(linear) or 0, tonumber(angular) or 0, applyToAll == true)
       return s
     end,
     

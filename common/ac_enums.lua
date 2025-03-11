@@ -30,7 +30,20 @@ ac.FogAlgorithm = __enum({ cpp = 'fog_algorithm' }, {
 ac.SurfaceType = __enum({ cpp = 'outside_surface_type', underlying = 'uint8_t' }, { 
   Grass = 0,
   Dirt = 1,
+  Snow = 2, ---Could also be ice.
   Default = 255
+})
+
+ac.SurfaceExtendedType = __enum({ cpp = 'lua_extended_surface_type', underlying = 'uint8_t' }, { 
+  Base = 0,
+  ExtraTurf = 1,
+  Grass = 2,
+  Gravel = 3,
+  Kerb = 4,
+  Old = 5,
+  Sand = 6,
+  Ice = 7,
+  Snow = 8
 })
 
 ac.ShadowsState = __enum({ cpp = 'shadows_state' }, { 
@@ -176,6 +189,7 @@ ac.FolderID = __enum({ cpp = 'known_dir' }, {
   ExtCfgUser = 18,      -- …/Documents/Assetto Corsa/cfg/extension
   ExtTextures = 21,     -- …/SteamApps/common/assettocorsa/extension/textures
   ACApps = 23,          -- …/SteamApps/common/assettocorsa/apps
+  ACAppsLua = 1029,     -- …/SteamApps/common/assettocorsa/apps/lua
   ACAppsPython = 24,    -- …/SteamApps/common/assettocorsa/apps/python
   ExtCfgState = 25,     -- …/Documents/Assetto Corsa/cfg/extension/state (changing configs there does not trigger any live reloads)
   ContentFonts = 26,    -- …/SteamApps/common/assettocorsa/content/fonts
@@ -522,7 +536,6 @@ ac.CSPModuleID = __enum({ override = '*.*/cspModuleID:string', underlying = 'str
       const n = /FULLNAME\s*=\s*(.+)/.test($.readText(`${process.env['AC_ROOT']}/extension/config/${x}`)) ? RegExp.$1 : i;
       return `${d} = "${i}", -- ${n}`
     }).join('\n')) ?]]
-  Yebisest = 'yebisest',
   JoypadAssist = 'gamepad_fx', -- @hidden
 })
 
@@ -681,6 +694,7 @@ ac.ScriptResumeCondition = __enum({ cpp = 'resume_condition', passThrough = true
   Reset = 4,             -- Pause until car resets
   Extra = 8,             -- Pause until extra switch is used
   MeshInteraction = 16,  -- Pause until there is a change mesh could have been touched
+  Collision = 32,        -- Pause until car had a contact with something (added in CSP 0.2.8, won’t work for remote cars for now)
 })
 
 ---Key indices, pretty much mirrors all those “VK_…” key tables.
