@@ -1,3 +1,6 @@
+__definitions = function() end
+JSON.parse = require('lib_jsonparse')
+
 expect(JSON.stringify({{a = 5}, {b = 6}}), '[{"a":5},{"b":6}]')
 expect(JSON.parse('5'), 5)
 expect(JSON.parse('-17'), -17)

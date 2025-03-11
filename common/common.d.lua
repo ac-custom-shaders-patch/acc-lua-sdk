@@ -4,6 +4,9 @@
 ---@type string
 __dirname = nil
 
+---A filename, either absolute or relative. If relative, will be resolved against AC root folder. Use `os.setCurrentFolder()` to change current folder.
+---@alias path string
+
 ---Could be either a string, a number or a boolean value (will be converted into string).
 ---String can store any binary data including zero bytes. Could also be an FFI struct and it will
 ---be processed as its binary form.
@@ -15,11 +18,6 @@ __dirname = nil
 
 ---Main CSP namespace.
 ac = {}
-
----Get car tags. If there is no such car, returns `nil`.
----@param carIndex integer @0-based car index.
----@return string[]?
-function ac.getCarTags(carIndex) end
 
 ---FFI-accelerated list, acts like a regular list (consequent items, size and capacity, automatically growing, etc.)
 ---Doesn’t store nil values to act more like a Lua table.

@@ -44,4 +44,13 @@ out(src[0] + '\n');
 out(TYPE + ' = ffi.metatype(ct' + TYPE + ', ' + buildMetaTable(TYPE, src[1].replace()) + ')\n');
 out(src[2] + ' end\n'); } ?]]
 
-smoothing = require './ac_smoothing'
+smoothing = setmetatable({}, {
+  __call = function(_, v, s)
+    return __util.lazy('lib_smoothing').c(v, s)
+  end,
+  __index = {
+    setDT = function(dt)
+      return __util.lazy('lib_smoothing').s(dt)
+    end
+  }
+})

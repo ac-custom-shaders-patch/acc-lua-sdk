@@ -26,10 +26,10 @@ ac.INIConfig.OptionalList = {}
 ---@param includeFolders ('@cars'|'@tracks'|string)[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). Use special values `'@cars'` and `'@tracks'` for car or track configs.
 ---@return ac.INIConfig
 function ac.INIConfig.parse(data, format, includeFolders)
-  ffi.C.lj_parse_ini(data and tostring(data) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
-  local ret = __util.result()
-  if ret == nil then error('Failed to parse data', 2) end
-  return ac.INIConfig(tonumber(format) or 0, ret)
+  -- ffi.C.lj_parse_ini(data and tostring(data) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
+  -- local ret = __util.result()
+  -- if ret == nil then error('Failed to parse data', 2) end
+  return ac.INIConfig(tonumber(format) or 0, __util.native('lj_parse_ini', data, format, includeFolders))
 end
 
 ---Load INI file, optionally with includes.
@@ -38,10 +38,10 @@ end
 ---@param includeFolders ('@cars'|'@tracks'|string)[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). If not set, parent folder for config filename is used. Use special values `'@cars'` and `'@tracks'` for car or track configs.
 ---@return ac.INIConfig
 function ac.INIConfig.load(filename, format, includeFolders)
-  ffi.C.lj_load_ini(filename and tostring(filename) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
-  local ret = __util.result()
-  if ret == nil then error('Failed to parse data', 2) end
-  return ac.INIConfig(tonumber(format) or 0, ret, filename)
+  -- ffi.C.lj_load_ini(filename and tostring(filename) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
+  -- local ret = __util.result()
+  -- if ret == nil then error('Failed to parse data', 2) end
+  return ac.INIConfig(tonumber(format) or 0, __util.native('lj_load_ini', filename, format, includeFolders), filename)
 end
 
 ---Load car data INI file. Supports “data.acd” files as well. Returned files might be tweaked by
@@ -55,10 +55,7 @@ function ac.INIConfig.carData(carIndex, fileName)
   if not _iniss then _iniss = {} end
   local k = 'c'..tostring(carIndex)..tostring(fileName)
   if _iniss[k] then return _iniss[k] end
-  ffi.C.lj_load_cardata_ini(tonumber(carIndex) or 0, tostring(fileName))
-  local ret = __util.result()
-  if ret == nil then error('Failed to parse data', 2) end
-  _iniss[k] = ac.INIConfig(1, ret, nil)
+  _iniss[k] = ac.INIConfig(1, __util.native('lj_load_cardata_ini', carIndex, fileName), nil)
   _iniss[k].__car = { carIndex, fileName }
   return  _iniss[k]
 end
@@ -72,10 +69,7 @@ function ac.INIConfig.trackData(fileName)
   if not _iniss then _iniss = {} end
   local k = 't'..tostring(fileName)
   if _iniss[k] then return _iniss[k] end
-  ffi.C.lj_load_trackdata_ini(tostring(fileName))
-  local ret = __util.result()
-  if ret == nil then error('Failed to parse data', 2) end
-  _iniss[k] = ac.INIConfig(1, ret, nil)
+  _iniss[k] = ac.INIConfig(1, __util.native('lj_load_trackdata_ini', fileName), nil)
   return _iniss[k]
 end
 
@@ -85,9 +79,7 @@ end
 ---@param carIndex number @0-based car index.
 ---@return ac.INIConfig
 function ac.INIConfig.carConfig(carIndex)
-  ffi.C.lj_loadcspcarconfig_ini(carIndex)
-  local ret = __util.result()
-  return ac.INIConfig(10, ret, nil)
+  return ac.INIConfig(10, __util.native('lj_loadcspcarconfig_ini', carIndex), nil)
 end
 
 ---Returns CSP config for a track. Might be slow: some of those configs are huge. Make sure to cache the resulting value if you need to reuse it.
@@ -95,9 +87,7 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.trackConfig()
-  ffi.C.lj_loadcsptrackconfig_ini()
-  local ret = __util.result()
-  return ac.INIConfig(10, ret, nil)
+  return ac.INIConfig(10, __util.native('lj_loadcsptrackconfig_ini'), nil)
 end
 
 ---Returns config with extra online options, the ones that can be set with Content Manager.
@@ -105,10 +95,8 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig|nil @If not an online session, returns `nil`.
 function ac.INIConfig.onlineExtras()
-  ffi.C.lj_loadonlineextras_ini()
-  local ret = __util.result()
-  if ret == nil then return nil end
-  return ac.INIConfig(10, ret, nil)
+  local ret = __util.native('lj_loadonlineextras_ini')
+  return ret and ac.INIConfig(10, ret, nil)
 end
 
 ---Returns race config (`cfg/race.ini`). Password and online GUID won’t be included.
@@ -116,8 +104,7 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.raceConfig()
-  ffi.C.lj_load_race_ini()
-  return ac.INIConfig(10, __util.result(), nil)
+  return ac.INIConfig(10, __util.native('lj_load_race_ini'), nil)
 end
 
 ---Returns video config (`cfg/video.ini`).
@@ -125,8 +112,7 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.videoConfig()
-  ffi.C.lj_load_video_ini()
-  return ac.INIConfig(10, __util.result(), nil)
+  return ac.INIConfig(10, __util.native('lj_load_video_ini'), nil)
 end
 
 ---Returns controls config (`cfg/controls.ini`).
@@ -134,8 +120,7 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.controlsConfig()
-  ffi.C.lj_load_controls_ini()
-  return ac.INIConfig(10, __util.result(), nil)
+  return ac.INIConfig(10, __util.native('lj_load_controls_ini'), nil)
 end
 
 ---Load config of a CSP module by its name.
@@ -143,10 +128,10 @@ end
 ---@return ac.INIConfig
 function ac.INIConfig.cspModule(cspModuleID)
   if cspModuleID == nil then return ac.INIConfig(ac.INIFormat.Default, {}) end
-  ffi.C.lj_loadconfig_ini(tostring(cspModuleID)..'.ini')
-  local ret = __util.result()
-  if ret == nil then error('Failed to parse data', 2) end
-  return ac.INIConfig(ac.INIFormat.Extended, ret, ac.getFolder(ac.FolderID.ExtCfgUser)..'/'..cspModuleID..'.ini')
+  -- ffi.C.lj_loadconfig_ini(tostring(cspModuleID)..'.ini')
+  -- local ret = __util.result()
+  -- if ret == nil then error('Failed to parse data', 2) end
+  return ac.INIConfig(ac.INIFormat.Extended, __util.native('lj_loadconfig_ini', tostring(cspModuleID)..'.ini'), ac.getFolder(ac.FolderID.ExtCfgUser)..'/'..cspModuleID..'.ini')
 end
 
 ---Load config of the current Lua script (“settings.ini” in script directory and settings overriden by user, meant to be customizable with Content Manager).
@@ -154,8 +139,7 @@ end
 function ac.INIConfig.scriptSettings()
   if not _iniss then _iniss = {} end
   if _iniss.ss then return _iniss.ss end
-  ffi.C.lj_loadscriptconfig_ini()
-  local ret, filename = __util.result()
+  local ret, filename = __util.native('lj_loadscriptconfig_ini')
   if ret == nil then error('Script of this type can’t have settings', 2) end
   _iniss.ss = ac.INIConfig(ac.INIFormat.Extended, ret, filename)
   return _iniss.ss
@@ -308,7 +292,7 @@ function ac.INIConfig:setAndSave(section, key, value)
   self:set(section, key, value)
   local new = self:get(section, key, ac.INIConfig.OptionalString)
   if new == old then return false end
-  ffi.C.lj_write_value_ini(self.filename, self.format, section, key, new)
+  __util.native("lj_write_value_ini", self.filename, self.format, section, key, new)
   return true
 end
 

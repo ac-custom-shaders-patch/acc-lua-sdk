@@ -29,11 +29,8 @@ end
 ---@param slot integer @Slot index from 0 to 9.
 ---@param texture ui.ImageSource
 function render.bindTexture(slot, texture)
-  slot = tonumber(slot) or 0
-  if slot < 0 or slot >= 10 then
-    error('Only slots from 0 to 9 are supported at the moment', 2)
-  end
-  ffi.C.lj_cshader_settexture_slot_1(slot or 0, tostring(texture))
+  __util.lazy('lib_shader')
+  render.bindTexture(slot, texture)
 end
 
 ---Draws a fullscreen pass with a custom shader. Shader is compiled at first run, which might take a few milliseconds.

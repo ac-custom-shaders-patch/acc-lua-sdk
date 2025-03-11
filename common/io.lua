@@ -36,23 +36,7 @@ typedef struct {
 
 ]]
 
----Reads file content into a string, if such file exists, otherwise returns fallback data or `nil`.
----@param filename string @Filename.
----@param fallbackData string|nil @Data to return if file could not be read.
----@return string|nil @Returns `nil` if file couldn’t be read and there is no fallback data.
-function io.load(filename, fallbackData)
-  return __util.strrefp(ffi.C.lj_load_inner__io(filename)) or fallbackData
-end
-
 ---@alias io.ZipEntry {filename: string}|{data: binary}|binary
-
----Creates a new ZIP asyncronously.
----@param filename string? @Pass `nil` to instead get the binary data in the callback.
----@param data table<string, io.ZipEntry> @Keys store entry names (use “/” as separator for creating sub-folders), and values store either binary data or tables in `io.ZipEntry` format.
----@param callback fun(err: string, data: binary?)? @Callback will contain reference to binary data if `filename` is `nil`.
-function io.createZipAsync(filename, data, callback)
-  __util.native('create_zip', filename, data, callback)
-end
 
 ---Scan directory and call callback function for each of files, passing file name (not full name, but only name of the file) and attributes. If callback function would return
 ---a non-nil value, iteration will stop and value returned by callback would return from this function. This could be used to
@@ -92,30 +76,4 @@ function io.scanDir(directory, mask, callback, callbackData)
   end
   ffi.C.lj_dirscan_end__io(s)
   return r
-end
-
----Returns list of logical drives, each drive in “A:“ format.
----@return string[]
-function io.scanDrives()
-  local i = ffi.C.lj_scanDrives_inner__io()
-  local j, r = 0, {}
-  while j < 25 do
-    if bit.band(i, bit.lshift(1, j)) ~= 0 then
-      r[#r + 1] = string.char(65 + j)..':'
-    end
-    j = j + 1
-  end
-  return r
-end
-
-local _szr
-__script.scanZipCallback = function (s) _szr = s end
-
----Returns list of entry names from a ZIP-file.
----@param filename string
----@return string[]
-function io.scanZip(filename)
-  _szr = nil
-  ffi.C.lj_scanZip_inner__io(__util.blob(filename))
-  return _szr or {}
 end

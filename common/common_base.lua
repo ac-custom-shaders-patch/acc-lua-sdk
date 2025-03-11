@@ -1,5 +1,7 @@
 __script = {}
 
+--[[? ctx.flags.targetPreprocessor = true; ?]]
+
 ---Disposable thing is something set which you can then un-set. Just call `ac.Disposable` returned
 ---from a function to cancel out whatever happened there. For example, unsubscribe from an event.
 ---@alias ac.Disposable fun()

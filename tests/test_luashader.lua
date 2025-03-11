@@ -1,3 +1,6 @@
+__definitions = function() end
+require('lib_shader')
+
 local function verifyPattern(template, params, texSlots, ret)
   local r = _lsfg(template, params, texSlots, ret)
   if type(loadstring(r)()) ~= 'function' then

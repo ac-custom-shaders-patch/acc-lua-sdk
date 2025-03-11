@@ -7,6 +7,8 @@ __script.__test = true
 __source = function () end
 __allow = function () end
 __namespace = function () end
+__definitions = function() end
+
 package.path = package.path .. ';' .. './common/?.lua'
 
 --[[?
@@ -18,11 +20,34 @@ out(inc('common/ac_matrices.lua'))
 out(inc('common/internal.lua'))
 out(inc('common/string.lua'))
 out(inc('common/table.lua'))
-out(inc('common/stringify.lua'))
 out(inc('common/json.lua'))
 out(inc('common/const.lua'))
 out(inc('common/ac_render_shader.lua'))
+out(inc('lib_shader.lua'))
 ?]]  -- we need macros working
+
+local stringify_lib = (function ()
+--[[?
+out(inc('lib_stringify.lua'))
+?]]  -- we need macros working
+end)()
+  
+stringify = setmetatable({}, {
+  __index = {
+    parse = function (...)
+      return stringify_lib.parse(...)
+    end,
+    register = function (...)
+      return stringify_lib.register(...)
+    end,
+    substep = function (...)
+      return stringify_lib.substep(...)
+    end
+  },
+  __call = function (_, ...)
+    return stringify_lib.call(...)
+  end
+})
 
 function print(v)
   io.stderr:write(v)
