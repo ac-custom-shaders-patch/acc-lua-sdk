@@ -2,7 +2,10 @@ __source 'custom_physics/cphys_script.cpp'
 __states 'custom_physics/cphys_script.cpp'
 __allow 'cphys'
 
+--[[? ctx.flags.withoutIO = true; ?]]
+--[[? ctx.flags.withoutAudio = true; ?]]
 --[[? ctx.flags.physicsThread = true; ?]]
+
 require './common/internal_import'
 require './common/ac_extras_binaryinput'
 require './common/ac_car_control_physics'
@@ -129,16 +132,7 @@ end
 ---Note: joypad assist script runs from physics thread, so update rate is much higher. Please keep it in mind and keep
 ---code as fast as possible.
 ---@class ScriptData
+---@field update fun(dt: number) @Called each physics frame. Param `dt` is time since the last call of `.update()` in seconds. Usually would be around 0.003.
+---@field reset fun() @Called when car resets or teleports, for example teleporting to pits, or when a new session starts.
 ---@single-instance
 script = {}
-
---[[? if (ctx.ldoc) out(]]
-
----Called each physics frame.
----@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
-function script.update(dt) end
-
----Called when car resets or teleports, for example teleporting to pits, or when a new session starts.
-function script.reset() end
-
---[[) ?]]

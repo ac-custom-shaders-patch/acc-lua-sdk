@@ -4,6 +4,13 @@ __source 'lua/api_common_adv.cpp'
 -- a simple wrapper for creating new classes, similar to middleclass (check that file for more info)
 require './common/class'
 
+--[[? if (ctx.ldoc) out(]]
+
+---UI namespace for creating custom widgets or drawing dynamic textures using IMGUI. You can use it to draw things on textures and such, not just for UI.
+ui = {}
+
+--[[) ?]]
+
 -- all sorts of modules:
 require 'ffi'
 require './common/debug'
@@ -56,3 +63,6 @@ require './common/ac_primitive_quat.d'
 
 -- automatically generated entries go here:
 __definitions('core')
+
+-- to err is human (keeping things compatible)
+ac.setClipboadText = ac.setClipboardText

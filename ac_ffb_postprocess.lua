@@ -1,5 +1,6 @@
 require './common/internal_import'
-__source 'extensions/ffb_tweaks/ac_ext_ffb_tweaks.cpp'
+__source 'extensions/ffb_tweaks/ffb_postprocess_script.cpp'
+__states 'extensions/ffb_tweaks/ffb_postprocess_script.cpp'
 
 --[[? ctx.flags.physicsThread = true; ?]]
 require './common/ac_extras_binaryinput'
@@ -7,7 +8,7 @@ require './common/ac_extras_binaryinput'
 -- automatically generated entries go here:
 __definitions()
 
----Reference to information about state of associated car.
+---Reference to information about state of associated car. To access details at physics rate, use `ac.getCarPhysicsRate()`.
 ---@type ac.StateCar
 car = nil
 
@@ -24,14 +25,11 @@ end
 ---Note: joypad assist script runs from physics thread, so update rate is much higher. Please keep it in mind and keep
 ---code as fast as possible.
 ---@class ScriptData
+---@field update fun(ffbValue: number, ffbDamper: number, steerInput: number, steerInputSpeed: number, dt: number): number, number @Called each physics frame. Takes original FFB force and damper as `ffbValue` and `ffbDamper`, expected to return new FFB force and damper values. Param `dt` is time since the last call of `.update()` in seconds, usually around 0.003.
 ---@single-instance
 script = {}
 
 --[[? if (ctx.ldoc) out(]]
-
----Called each physics frame.
----@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
-function script.update(dt) end
 
 ---Disable low speed FFB reduction.
 ---@param disable boolean? @Default value: `true`.

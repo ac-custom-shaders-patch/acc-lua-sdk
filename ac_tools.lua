@@ -30,6 +30,7 @@ __definitions()
 
 -- script format:
 ---@class ScriptData
+---@field update fun(dt: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds.
 ---@single-instance
 script = {}
 
@@ -37,10 +38,6 @@ script = {}
 
 ---Changes to true, if `script.asyncUpdate()` function is defined and being called.
 __withAsyncUpdate = false
-
----Called each frame.
----@param dt number @Time passed since last `update()` call, in seconds.
-function script.update(dt) end
 
 ---Called after `update()` from a different thread. Use it for some background processing, but do not use any AC CSP API which.
 ---might affect state of AC itself. If `asyncUpdate()` would not finish its job by the time another function would be called,

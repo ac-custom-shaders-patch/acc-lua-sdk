@@ -16,6 +16,7 @@ __definitions()
 ---Note: joypad assist script runs from physics thread, so update rate is much higher. Please keep it in mind and keep
 ---code as fast as possible.
 ---@class ScriptData
+---@field update fun(dt: number) @Called each physics frame. Param `dt` is time since the last call of `.update()` in seconds. Usually would be around 0.003.
 ---@single-instance
 script = {}
 
@@ -41,10 +42,6 @@ __carIndex = nil
 ---Index of connected gamepad.
 ---@type number
 __gamepadIndex = nil
-
----Called each physics frame.
----@param dt number @Time passed since last `update()` call, in seconds. Usually would be around 0.003.
-function script.update(dt) end
 
 ---Loads a separate Lua module running in render thread (for showing bits of UI or updating some other in-game elements).
 ---@param name string @File name (without extension) of a module to load to run in render thread.

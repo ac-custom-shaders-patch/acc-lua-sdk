@@ -1,7 +1,7 @@
 __source 'extensions/online_plus/online_scripts.cpp'
 
---[[? ctx.flags.withPhysics = true; ?]]
 --[[? ctx.flags.withoutIO = true; ?]]
+--[[? ctx.flags.withPhysics = true; ?]]
 
 require './common/internal_import'
 require './common/ac_audio'
@@ -92,25 +92,9 @@ end
 
 -- script format:
 ---@class ScriptData
+---@field update fun(dt: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds.
+---@field draw3D fun() @Called when rendering transparent objects (which are rendered after opaque objects). Draw any of your own debug shapes here.
+---@field drawUI fun() @Use it to add custom HUD elements online: messages, or, for example, new race flags (use `ui.drawRaceFlag(color)` for that).
+---@field frameBegin fun(dt: number, gameDT: number) @Called at the beginning of a frame, before all rendering starts. If you want to move things, `script.update()` might be a better option. This one is only if you’d find that `script.update()` happens a bit too early for you. Param `dt` is for how much time has passed since last call, in seconds. Param `gameDT` is for how much time has passed in simulation (slower with slow-mo replays, 0 when paused), in seconds.
 ---@single-instance
 script = {}
-
---[[? if (ctx.ldoc) out(]]
-
----Called when sim updates.
----@param dt number @Time passed since last `update()` call, in seconds.
-function script.update(dt) end
-
----Called when rendering transparent objects (which are rendered after opaque objects). Draw any of your own debug shapes here.
-function script.draw3D() end
-
----Use it to add custom HUD elements online: messages, or, for example, new race flags (use `ui.drawRaceFlag(color)` for that).
-function script.drawUI() end
-
----Called at the beginning of a frame, before all rendering starts. If you want to move things, `script.update()` might be a better option.
----This one is only if you’d find that `script.update()` happens a bit too early for you.
----@param dt number @How much time has passed since last call, in seconds.
----@param gameDT number @How much time has passed in simulation (slower with slow-mo replays, 0 when paused), in seconds.
-function script.frameBegin(dt, gameDT) end
-
---[[) ?]]

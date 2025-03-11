@@ -42,15 +42,7 @@ end
 
 -- script format:
 ---@class ScriptData
+---@field update fun(dt: number, mode: ac.CockpitCameraMode, turnMix: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds. Param `mode` is current mode (mostly for checking if VR is active and stopping extra rotation if so). Param `turnMix` is how much to turn head willingly (goes to 0 with TrackIR or mouse camera rotation).
 ---@single-instance
 script = {}
 
---[[? if (ctx.ldoc) out(]]
-
----Called each frame.
----@param dt number @Time passed since last `update()` call, in seconds.
----@param mode ac.CockpitCameraMode @Current mode. Mostly for checking if VR is active and stopping extra rotation if so.
----@param turnMix number @How much to turn head willingly (goes to 0 with TrackIR or mouse camera rotation)
-function script.update(dt, mode, turnMix) end
-
---[[) ?]]

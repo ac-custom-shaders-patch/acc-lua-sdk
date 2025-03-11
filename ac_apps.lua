@@ -52,36 +52,11 @@ function ui.drawVirtualMirror(p1, p2, color)
   return true
 end
 
-local _sslv, _ssrn
-
----Collect information about available spinners in setup menu. Names match section names of setup INI files. Value `label` might contain localized setup items. Array `itemValues` is only present for custom CSP setup entries with LUTs.
----@return {name: string, label: string, min: integer, max: integer, step: integer, value: integer, displayMultiplier: number, readOnly: boolean, units: string?, items: string[]?, itemValues: number[]?, defaultValue: integer?, showClicksMode: integer?}[]
-function ac.getSetupSpinners()
-  if not _ssrn then _ssrn = refnumber() end
-  ffi.C.lj_getSetupSpinners_inner__apps(_ssrn)
-  _sslv = __util.result() or _sslv
-  return _sslv or error('Failed to get data', 2)
-end
-
----Sets window icon. If your icon doesn’t change often, this is preferable to using a live icon.
----@param windowID string
----@param iconID ui.Icons
-function ac.setWindowIcon(windowID, iconID) 
-  __util.native('ac.setWindowIcon', windowID, iconID)
-end
-
 -- automatically generated entries go here:
 __definitions()
 
 -- script format:
 ---@class ScriptData
+---@field update fun(dt: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds.
 ---@single-instance
 script = {}
-
---[[? if (ctx.ldoc) out(]]
-
----Called each frame.
----@param dt number @Time passed since last `update()` call, in seconds.
-function script.update(dt) end
-
---[[) ?]]

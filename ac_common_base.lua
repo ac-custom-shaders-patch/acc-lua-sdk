@@ -44,6 +44,12 @@ require './common/stringify'
 require './common/json'
 require './common/secure'
 
+local stringify = require('lib_stringify')
+__util.strCns = function(v)
+  -- For const() preprocessing, do not use anywhere else
+  return stringify._strCns(v)
+end
+
 -- automatically generated entries go here:
 __definitions('nodocs')
 

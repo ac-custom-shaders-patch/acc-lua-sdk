@@ -1,4 +1,5 @@
 --[[? ctx.flags.withPhysics = true; ?]]
+--[[? ctx.flags.withoutIO = true; ?]]
 
 require './common/internal_import'
 require './common/ac_audio'
@@ -54,34 +55,10 @@ end
 
 -- script format:
 ---@class ScriptData
+---@field update fun(dt: number): number, number @For `[SCRIPTABLE_DISPLAY_...]` called when display updates. For `[SCRIPT_...]` called when sim updates. Param `dt` is time since the last call of `.update()` in seconds.
+---@field draw3D fun() @Only for `[SCRIPT_...]`. Called when rendering transparent objects (which are rendered after opaque objects). Draw any of your own debug shapes here.
+---@field frameBegin fun(dt: number, gameDT: number) @Only for `[SCRIPT_...]`. Called at the beginning of a frame, before all rendering starts. If you want to move things, `script.update()` might be a better option. This one is only if you’d find that `script.update()` happens a bit too early for you. Param `dt` is for how much time has passed since last call, in seconds. Param `gameDT` is for how much time has passed in simulation (slower with slow-mo replays, 0 when paused), in seconds.
+---@field onReplayStart fun() @Only for `[SCRIPT_...]`. Called when replay starts. If you have any race-only things happening, like maybe a safe car animation, that would be the good time to hide them.
+---@field onReplayStop fun() @Only for `[SCRIPT_...]`. Called when replay stops. If you have any race-only things happening, like maybe a safe car animation, that would be the good time to show them back (if you hid them in `script.onReplayStart()`).
 ---@single-instance
 script = {}
-
---[[? if (ctx.ldoc) out(]]
-
----For `[SCRIPTABLE_DISPLAY_...]` called when display updates. For `[SCRIPT_...]` called when sim updates.
----@param dt number @Time passed since last `update()` call, in seconds.
-function script.update(dt) end
-
----Only for `[SCRIPT_...]`. Called when rendering transparent objects (which are rendered after opaque objects). Draw any of your own debug shapes here.
-function script.draw3D() end
-
----Only for `[SCRIPT_...]`. Called at the beginning of a frame, before all rendering starts. If you want to move things, `script.update()` might be a better option.
----This one is only if you’d find that `script.update()` happens a bit too early for you.
----@param dt number @How much time has passed since last call, in seconds.
----@param gameDT number @How much time has passed in simulation (slower with slow-mo replays, 0 when paused), in seconds.
-function script.frameBegin(dt, gameDT) end
-
----Only for `[SCRIPT_...]`. Called when replay starts. If you have any race-only things happening, like maybe a safe car animation, that would be the good
----time to hide them.
----
----(Some API to record things into replay and play them back will be added later, hopefully.)
-function script.onReplayStart() end
-
----Only for `[SCRIPT_...]`. Called when replay stops. If you have any race-only things happening, like maybe a safe car animation, that would be the good
----time to show them back (if you hid them in `script.onReplayStart()`).
----
----(Some API to record things into replay and play them back will be added later, hopefully.)
-function script.onReplayStop() end
-
---[[) ?]]

@@ -10,13 +10,6 @@ __definitions()
 
 -- script format:
 ---@class ScriptData
+---@field update fun(dt: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds.
 ---@single-instance
 script = {}
-
---[[? if (ctx.ldoc) out(]]
-
----Called each frame.
----@param dt number @Time passed since last `update()` call, in seconds.
-function script.update(dt) end
-
---[[) ?]]
