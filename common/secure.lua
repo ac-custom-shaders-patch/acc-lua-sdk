@@ -93,6 +93,7 @@ function __script.__secure__()
   -- Make sure require would not be able to load DLLs
   function package.loadlib() end
   package.loaders = {package.loaders[1], package.loaders[2]}
+  package.searchers = {package.searchers[1], package.searchers[2]}
   package.preload.ffi = nil
 
   -- A bit of protection for dofile/load/loadfile
