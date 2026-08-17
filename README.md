@@ -12,7 +12,8 @@ Current LUA libraries are always included in latest CSP version. [Here is some d
 - [Built-in postprocessing filters](https://github.com/ac-custom-shaders-patch/acc-extension-config/tree/master/lua/pp-filters);
 - [Default WeatherFX implementation](https://github.com/ac-custom-shaders-patch/acc-weatherfx-base);
 - [Paintshop app](https://github.com/ac-custom-shaders-patch/app-paintshop);
-- [Various Lua examples](https://github.com/ac-custom-shaders-patch/acc-lua-examples).
+- [Various Lua examples](https://github.com/ac-custom-shaders-patch/acc-lua-examples);
+- [Some car scripts by zgushonka with CC-BY-SA license](https://github.com/zgushonka/ac_scripts).
 
 ## How to start writing scripts
 
