@@ -1,4 +1,6 @@
 __source 'lua/api_physics_bw.cpp'
+__source 'lua/api_physics_shared.cpp'
+__source 'lua/api_physics_raycast.cpp'
 __namespace 'physics'
 
 --[[? ctx.flags.physicsThread = true; ?]]
@@ -6,7 +8,11 @@ require './common/internal_import'
 require './common/ac_extras_binaryinput'
 require './common/secure'
 
+--[[? if (ctx.ldoc) out(]]
+
 physics = {}
+
+--[[) ?]]
 
 -- automatically generated entries go here:
 __definitions()

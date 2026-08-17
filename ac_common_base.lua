@@ -24,6 +24,7 @@ require './common/function'
 require './common/math'
 require './common/string'
 require './common/table'
+require './common/coroutine'
 require './common/internal'
 require './common/internal_import'
 

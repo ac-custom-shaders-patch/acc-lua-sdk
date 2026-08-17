@@ -20,7 +20,7 @@ Whole API is fully documented, documentation definitions are shipped with CSP bu
 with a readme file on how to plug them in. You’d need to use [Visual Studio Code](https://code.visualstudio.com/) and 
 [Lua plugin by sumneko](https://github.com/sumneko/lua-language-server), and it would result in a neat seamless docs integration:
 
-![Screenshot](https://files.acstuff.ru/shared/Hv6o/20211223-182954.png)
+![Screenshot](https://files.acstuff.club/Hv6o/20211223-182954.png)
 
 Definition files are generated in [EmmyLua format](https://emmylua.github.io/), and there are plugins for other IDEs too, but it might be
 a bit more tricky to set.

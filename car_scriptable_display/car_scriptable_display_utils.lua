@@ -73,7 +73,9 @@ function display.mirror(params)
 
   local posEnd = pos + size
   ui.beginTonemapping()
+  ui.setShadingOffset(1, 0, 1, 1)
   ui.drawImage('dynamic::mirror', pos, pos + size, color, uvStart, uvEnd)
+  ui.resetShadingOffset()
   ui.endTonemapping(0, 0, true)
   if not _drawnMirror then
     _drawnMirror = {

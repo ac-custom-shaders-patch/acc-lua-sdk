@@ -1,11 +1,7 @@
 __source 'extensions/chaser_camera/ac_ext_chaser_camera.cpp'
 
---[[? ctx.flags.withoutSceneAPI = true; ?]]
-
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_extras_binaryinput'
-require './common/ac_extras_yebiscolorcorrection'
+require './inc_scene'
 
 -- automatically generated entries go here:
 __definitions()
@@ -25,6 +21,8 @@ function __script.updateState(carIndex)
     car = ac.getCar(carIndex)
     if not sim then
       sim = ac.getSim()
+    elseif type(script.onCarChanged) == 'function' then
+      script.onCarChanged()
     end
   end
 end
@@ -42,9 +40,22 @@ function ac.getJoystickLook()
   return parameters.x ~= 0 and vec2(parameters.y, parameters.z) or nil
 end
 
+---Simple helper wrapping calls to `ac.looksLeft()`, `ac.getJoystickLook()` and such and returning a single number.
+---If it’s 0.5, user wants to look to the left. If -0.5, to the right. If 1 or -1, behind (either over left or right shoulder).
+---@return number
+function ac.getDesiredLookDirection()
+  local joystickLook = ac.getJoystickLook()
+  local baseLookDir = (ac.looksLeft() and ac.looksRight() or ac.looksBehind()) and math.sign(lookDirection()) or
+    ac.looksLeft() and 0.5 or
+    ac.looksRight() and -0.5 or nil
+  return joystickLook ~= nil and (not baseLookDir or math.abs(joystickLook.x) > 0.1) 
+    and joystickLook.x or baseLookDir or 0
+end
+
 -- script format:
 ---@class ScriptData
 ---@field update fun(dt: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds.
+---@field onCarChanged fun() @Called when selected car changes mid-run (won’t be called at the start). By the time it’s called, `car` has already been updated.
 ---@single-instance
 script = {}
 

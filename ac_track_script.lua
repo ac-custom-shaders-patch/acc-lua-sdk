@@ -2,20 +2,11 @@
 --[[? ctx.flags.withoutIO = true; ?]]
 
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_light'
-require './common/ac_render'
-require './common/ac_ray'
-require './common/ac_positioning_helper'
-require './common/ac_ui'
-require './common/ac_scene'
+require './inc_scene'
 require './common/ac_track'
 require './common/ac_track_conditions'
-require './common/ac_particles'
 require './common/ac_physics'
 require './common/ac_physics_ai'
-require './common/ac_extras_binaryinput'
-require './common/ac_extras_yebiscolorcorrection'
 require './common/secure'
 
 ---Returns values from section which defined current script. Use `layout` to specify which

@@ -1,15 +1,7 @@
 __source 'extensions/graphics_adjustments/pp_filters.cpp'
 
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_light'
-require './common/ac_render'
-require './common/ac_ray'
-require './common/ac_positioning_helper'
-require './common/ac_ui'
-require './common/ac_scene'
-require './common/ac_particles'
-require './common/ac_extras_binaryinput'
+require './inc_scene'
 require './wfx_impl/ac_postprocessing'
 
 -- automatically generated entries go here:

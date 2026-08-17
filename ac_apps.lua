@@ -1,18 +1,12 @@
 __source 'extensions/lua_tools/ac_ext_lua_tools.cpp'
+__source 'extensions/ffb_tweaks/ac_ext_ffb_tweaks.cpp'
 __source 'lua/api_wfx_apps.cpp'
 __allow 'luatools'
 
 --[[? ctx.flags.withPhysics = true; ?]]
 
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_light'
-require './common/ac_render'
-require './common/ac_ray'
-require './common/ac_positioning_helper'
-require './common/ac_ui'
-require './common/ac_scene'
-require './common/ac_particles'
+require './inc_scene'
 require './common/ac_physics'
 require './common/ac_physics_ai'
 require './common/ac_gameplay'
@@ -25,14 +19,14 @@ require './common/ac_car_control_physics'
 require './common/ac_car_control_switch'
 require './common/ac_apps'
 require './common/ac_extras_backgroundworker'
-require './common/ac_extras_binaryinput'
-require './common/ac_extras_yebiscolorcorrection'
 -- require './common/ac_extras_leapmotion'
 
 ---Draw virtual mirror. If Real Mirrors module is active and has its virtual mirrors option enabled, mirror might be drawn in two pieces 
 ---taking less space width-wise (for cars without middle mirror) or just drawn narrower. If that option is disabled, Real Mirrors will pause.
+---
+---Use 4:1 for aspect ratio for the mirror to be drawn properly.
 ---@param p1 vec2
----@param p2 vec2
+---@param p2 vec2 
 ---@param color rgbm? @Default value: `rgbm.colors.white`.
 ---@return boolean @Returns `false` if there is no virtual mirror currently available.
 function ui.drawVirtualMirror(p1, p2, color)

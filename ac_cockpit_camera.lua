@@ -1,11 +1,7 @@
 __source 'extensions/neck/ac_ext_neck.cpp'
 
---[[? ctx.flags.withoutSceneAPI = true; ?]]
-
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_extras_binaryinput'
-require './common/ac_extras_yebiscolorcorrection'
+require './inc_scene'
 
 ac.CockpitCameraMode = __enum({}, {
   Base = 0, -- Regular mode (or a mode with connected TrackIR which hasn’t moved yet)
@@ -36,6 +32,8 @@ function __script.updateState(carIndex)
     if not sim then
       sim = ac.getSim()
       neck = ffi.C.lj_access_neck_data()
+    elseif type(script.onCarChanged) == 'function' then
+      script.onCarChanged()
     end
   end
 end
@@ -43,6 +41,7 @@ end
 -- script format:
 ---@class ScriptData
 ---@field update fun(dt: number, mode: ac.CockpitCameraMode, turnMix: number) @Called each frame. Param `dt` is time since the last call of `.update()` in seconds. Param `mode` is current mode (mostly for checking if VR is active and stopping extra rotation if so). Param `turnMix` is how much to turn head willingly (goes to 0 with TrackIR or mouse camera rotation).
+---@field onCarChanged fun() @Called when selected car changes mid-run (won’t be called at the start). By the time it’s called, `car` has already been updated.
 ---@single-instance
 script = {}
 

@@ -26,26 +26,32 @@ out(inc('common/ac_render_shader.lua'))
 out(inc('lib_shader.lua'))
 ?]]  -- we need macros working
 
-local stringify_lib = (function ()
+local lib_stringify = (function ()
 --[[?
 out(inc('lib_stringify.lua'))
+?]]  -- we need macros working
+end)()
+
+local lib_replaystream = (function ()
+--[[?
+out(inc('lib_replaystream.lua'))
 ?]]  -- we need macros working
 end)()
   
 stringify = setmetatable({}, {
   __index = {
     parse = function (...)
-      return stringify_lib.parse(...)
+      return lib_stringify.parse(...)
     end,
     register = function (...)
-      return stringify_lib.register(...)
+      return lib_stringify.register(...)
     end,
     substep = function (...)
-      return stringify_lib.substep(...)
+      return lib_stringify.substep(...)
     end
   },
   __call = function (_, ...)
-    return stringify_lib.call(...)
+    return lib_stringify.call(...)
   end
 })
 

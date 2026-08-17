@@ -11,6 +11,7 @@ require './common/ac_extras_binaryinput'
 require './common/ac_car_control_physics'
 require './common/ac_car_cphys_enums'
 require './common/ac_physics_raycast'
+require './common/ac_gameplay_replaystream'
 require './common/secure'
 
 ffi.cdef [[ 
@@ -75,13 +76,14 @@ ffi.metatype('state_cphys_surface', { __index = {
 
 ---Override a rendering thread value. Doesn’t affect actual physics (unless your physics script uses data from `ac.getCar()`, which might
 ---be a bad idea to begin with).
----@param key 'steer'|'gas'|'brake'|'clutch'|'handbrake'|'gear'|'rpm'|'limiter'|'limiterActive'|'turbo'|'drivetrain'|'fuel'|'bodyworkVolume'|'wheelAngularSpeed'|'wheelSlipAngle'|'wheelSlipRatio'|'wheelTyreSlip'|'wheelNDSlip'|'wheelLoad'
+---@param key 'steer'|'gas'|'brake'|'clutch'|'handbrake'|'gear'|'rpm'|'limiter'|'limiterActive'|'turbo'|'drivetrain'|'fuel'|'bodyworkVolume'|'wheelAngularSpeed'|'wheelSlipAngle'|'wheelSlipRatio'|'wheelTyreSlip'|'wheelNDSlip'|'wheelLoad'|'wheelFlatSpot'|'wheelLoadedRadius'|'wheelLiveRadius'|'wheelFlexOffsetX'|'wheelFlexOffsetZ'|'wheelFlexTwist'|'gasForAudio'
 ---@param value number|boolean @For `limiterActive`, pass boolean. Other types expect numbers. Pass `nil` to cancel out overriding.
 ---@param index ac.Wheel? @For `wheel…` values, this value specifies affected wheels.
 function ac.overrideCarState(key, value, index)
   local k = 0
   if key == 'steer' then k = 1
   elseif key == 'gas' then k = 2
+  elseif key == 'gasForAudio' then k = 2000
   elseif key == 'brake' then k = 3
   elseif key == 'clutch' then k = 4
   elseif key == 'handbrake' then k = 5
@@ -99,6 +101,14 @@ function ac.overrideCarState(key, value, index)
   elseif key == 'wheelTyreSlip' then k = 17
   elseif key == 'wheelNDSlip' then k = 18
   elseif key == 'wheelLoad' then k = 19
+  elseif key == 'wheelFlatSpot' then k = 21
+  elseif key == 'wheelFlexOffsetX' then k = 1000
+  elseif key == 'wheelFlexOffsetZ' then k = 1001
+  elseif key == 'wheelLoadedRadius' then k = 1002
+  elseif key == 'wheelLiveRadius' then k = 1003
+  elseif key == 'wheelFlexTwist' then 
+    k = 1004
+    value = math.rad(value)
   end
   __util.native('ac.overrideCarStateValue', k, value, index)
 end
@@ -136,3 +146,21 @@ end
 ---@field reset fun() @Called when car resets or teleports, for example teleporting to pits, or when a new session starts.
 ---@single-instance
 script = {}
+
+local gsvc = {}
+
+---Returns a reference to a setup item value. If there is no item with such index, returns `nil`. Call once
+---and reuse returned reference to keep things fast.
+---
+---To determine selected gear set, use `INTERNAL_GEAR_2` for gear ratio of the first gear.
+---@param id string @ID from section in “setup.ini”.
+---@return refnumber?
+function ac.getSetupValue(id)
+  local r = gsvc[id]
+  if r == nil then
+    r = __util.native('carcphys_getsetupvalue', id)
+    gsvc[id] = r ~= nil and r or false
+  end
+  return r or nil
+end
+

@@ -4,6 +4,9 @@ __source 'lua/api_common_adv.cpp'
 -- a simple wrapper for creating new classes, similar to middleclass (check that file for more info)
 require './common/class'
 
+-- copying locally to ensure values are not modified later
+local __mode__, __allowIO__ = _G.__mode__, _G.__allowIO__
+
 --[[? if (ctx.ldoc) out(]]
 
 ---UI namespace for creating custom widgets or drawing dynamic textures using IMGUI. You can use it to draw things on textures and such, not just for UI.
@@ -24,12 +27,12 @@ require './common/function'
 require './common/math'
 require './common/string'
 require './common/table'
+require './common/coroutine'
 require './common/internal'
 require './common/internal_import'
 require './deps/vector'
 require './common/io'
 require './common/os'
-require './common/timer'
 require './common/ac_enums'
 require './common/ac_extras_ini'
 require './common/ac_extras_datalut'

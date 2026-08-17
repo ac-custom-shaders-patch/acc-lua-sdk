@@ -1,11 +1,7 @@
 __source 'extensions/particles_fx/fireworks_lua.cpp'
 
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_light'
-require './common/ac_scene'
-require './common/ac_ui'
-require './common/ac_extras_binaryinput'
+require './inc_scene'
 require './pfx_fireworks/ac_fireworks'
 require './pfx_fireworks/ac_lists'
 

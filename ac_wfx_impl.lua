@@ -4,16 +4,9 @@ __source 'lua/api_wfx_apps.cpp'
 __allow 'impl'
 
 require './common/internal_import'
-require './common/ac_audio'
 require './common/ac_color_corrections'
-require './common/ac_light'
-require './common/ac_render'
-require './common/ac_ui'
-require './common/ac_scene'
-require './common/ac_particles'
+require './inc_scene'
 require './common/ac_extras_backgroundworker'
-require './common/ac_extras_binaryinput'
-require './common/ac_extras_yebiscolorcorrection'
 require './wfx_impl/ac_clouds'
 require './wfx_impl/ac_cloudscovers'
 require './wfx_impl/ac_gradients'
@@ -32,6 +25,23 @@ __definitions()
 ---@param value number @New input value.
 function ac.setTrackCondition(key, value)
   ffi.C.lj_set_track_condition__impl(__util.str(key), tonumber(value) or 0)
+end
+
+local _sp_vmt = {template = 'virtual_mirror.fx', __cache = {}, startingTextureSlot = 0, delayed = true}
+
+---Override function used to draw virtual mirrors. If set, virtual mirrors will be drawn after the scene and the HDR→LDR post-processing conversion, fixing
+---some issues with scriptable filters, sunrays and other visual effects. Please keep this function fast.
+---
+---Shader receives an HDR color and is expected to return LDR color. Example:
+---```
+---float4 main(float4 hdrCol, float2 uv) {
+---  // HDR texture is accessible as `txInput`
+---  return pow(hdrCol, 0.4545);
+---}
+---```
+---@param v {values: table, defines: table, shader: string, cacheKey: integer}? @Pass `nil` to disable override.
+function ac.overrideVirtualMirrorShader(v)
+  ffi.C.lj_setPpVirtualMirrorTonemapFunction_base__impl(v and __util.setShaderParams2(v, _sp_vmt))
 end
 
 -- script format:

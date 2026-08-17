@@ -4,14 +4,7 @@ __allow 'luatools'
 --[[? ctx.flags.withPhysics = true; ?]]
 
 require './common/internal_import'
-require './common/ac_audio'
-require './common/ac_light'
-require './common/ac_render'
-require './common/ac_ray'
-require './common/ac_positioning_helper'
-require './common/ac_ui'
-require './common/ac_scene'
-require './common/ac_particles'
+require './inc_scene'
 require './common/ac_physics'
 require './common/ac_physics_ai'
 require './common/ac_gameplay'
@@ -22,8 +15,6 @@ require './common/ac_car_control'
 require './common/ac_car_control_physics'
 require './common/ac_car_control_switch'
 require './common/ac_extras_backgroundworker'
-require './common/ac_extras_binaryinput'
-require './common/ac_extras_yebiscolorcorrection'
 
 -- automatically generated entries go here:
 __definitions()
