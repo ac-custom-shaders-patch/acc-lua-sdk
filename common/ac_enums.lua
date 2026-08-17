@@ -43,7 +43,8 @@ ac.SurfaceExtendedType = __enum({ cpp = 'lua_extended_surface_type', underlying 
   Old = 5,
   Sand = 6,
   Ice = 7,
-  Snow = 8
+  Snow = 8,
+  Wall = 9
 })
 
 ac.ShadowsState = __enum({ cpp = 'shadows_state' }, { 
@@ -246,6 +247,7 @@ ac.SkyFeature = __enum({ cpp = 'sky_feature_id' }, {
   ISS = 200
 })
 
+---This enum is used by car state.
 ac.UserInputMode = __enum({ cpp = 'user_input_mode' }, {
   Wheel = 0,
   Gamepad = 1,
@@ -298,6 +300,7 @@ ac.FlagType = __enum({ cpp = 'flag_type' }, {
   Code60 = 16             -- does not work yet
 })
 
+---This enum is used by physics scripts only. For the one for car state, use `ac.UserInputMode`.
 ac.InputMethod = __enum({ cpp = 'lua_input_method' }, {
   Unknown = 0,
   Wheel = 1,
@@ -521,21 +524,86 @@ ac.CompressionType = __enum({ cpp = 'compression_type' }, {
   Gzip = 3 -- Gzip compression (deflate with gzip wrapper).
 })
 
+local function __enumfb(t, f)
+  return setmetatable(t, { __index = function (t, k) return rawget(t, k) or rawget(f, k) end })
+end
+
 ac.NationCode = __enum({ override = '*.*/nationCode:string', underlying = 'string' }, {
-  --[[? out($.readText(`${process.env['AC_ROOT']}/extension/config/data_countries.ini`).split('\n')
-    .map(x => /(\w+)=(.+)/.test(x) && [RegExp.$1, RegExp.$2]).filter(x => x)
-    .map(x => `${x[1].replace(/\W+/g, _ => ({'ô':'o'})[_] || $.fail(`Unexpected symbol: ${_}`))} = "${x[0]}", -- ${x[1]}`).join('\n')) ?]]
+--[[? 
+  function fileToMap(filename) {
+    return $.readText(filename).split('\n')
+      .map(x => /(\w+)=(.+)/.test(x) && [RegExp.$1, RegExp.$2]).filter(x => x)
+      .map(x => ({key: x[1].replace(/[ -](.)/g, (_, a) => a.toUpperCase()).replace(/[’]/g, '').replace(/\W+/g, _ => ({'ô':'o','ü':'u'})[_] 
+        || $.fail(`Unexpected symbol: ${_}`)), iso: x[0], title: x[1] }));
+  }
+  
+  const realMap = fileToMap(`${process.env['AC_ROOT']}/extension/config/data_countries.ini`);
+  out(realMap
+    .map(x => `${x.key} = "${x.iso}", -- ${x.title}`).join('\n')); 
+?]] 
+}, {
+--[[? 
+  function fileToMap(filename) {
+    return $.readText(filename).split('\n')
+      .map(x => /(\w+)=(.+)/.test(x) && [RegExp.$1, RegExp.$2]).filter(x => x)
+      .map(x => ({key: x[1].replace(/[ -](.)/g, (_, a) => a.toUpperCase()).replace(/[’]/g, '').replace(/\W+/g, _ => ({'ô':'o','ü':'u'})[_] 
+        || $.fail(`Unexpected symbol: ${_}`)), iso: x[0], title: x[1] }));
+  }
+  
+  const realMap = fileToMap(`${process.env['AC_ROOT']}/extension/config/data_countries.ini`);
+  const failedMap = fileToMap(process.env['COUNTRIES_FALLBACK']);
+  out(Object.values(failedMap.filter(x => !realMap.some(y => y.key == x.key))
+    .reduce((a, b) => ((a[b.key] = b), a), {}))
+    .map(x => `${x.key} = "${x.iso}", -- @hidden`)
+    .join('\n')); 
+?]] 
 })
 
 ac.CSPModuleID = __enum({ override = '*.*/cspModuleID:string', underlying = 'string' }, {
-  --[[? out(fs.readdirSync(`${process.env['AC_ROOT']}/extension/config`).filter(x => /^(?!data_|module_).+\.ini$/.test(x))
-    .map(x => {
-      const i = x.replace(/\.ini$/, '');
-      const d = i.replace(/(?:^|_)([a-z])/g, (_, a) => a.toUpperCase()).replace(/Fx|Dxgi|Gui|Ffb|Vr/, _ => _.toUpperCase())
-        .replace(/Neck/, 'NeckFX').replace(/Brakedisc/, 'BrakeDisc');
-      const n = /FULLNAME\s*=\s*(.+)/.test($.readText(`${process.env['AC_ROOT']}/extension/config/${x}`)) ? RegExp.$1 : i;
-      return `${d} = "${i}", -- ${n}`
-    }).join('\n')) ?]]
+  BrakeDiscFX = 'brakedisc_fx', -- @hidden
+  CarInstruments = 'car_instruments',
+  ChaserCamera = 'chaser_camera',
+  ChatShortcuts = 'chat_shortcuts',
+  ColorfulShadowing = 'colorful_shadowing', -- @hidden
+  CustomRenderingModes = 'custom_rendering_modes',
+  DXGITweaks = 'dxgi_tweaks',
+  ExtraFX = 'extra_fx',
+  FakeShadowsFX = 'fake_shadows_fx', -- @hidden
+  FFBTweaks = 'ffb_tweaks',
+  FreerCamera = 'freer_camera',
+  G27Lights = 'g27_lights',
+  GamepadFX = 'gamepad_fx',
+  General = 'general',
+  GraphicsAdjustments = 'graphics_adjustments',
+  GrassFX = 'grass_fx',
+  GUI = 'gui',
+  LightingFX = 'lighting_fx',
+  LuaTools = 'lua_tools', -- @hidden
+  MumblePlugin = 'mumble_plugin', -- @hidden
+  Music = 'music',
+  NeckFX = 'neck',
+  NewBehaviour = 'new_behaviour',
+  NiceScreenshots = 'nice_screenshots',
+  ParticlesFX = 'particles_fx',
+  RainFX = 'rain_fx',
+  ReflectionsFX = 'reflections_fx',
+  ShadowedWheels = 'shadowed_wheels', -- @hidden
+  SkidmarksFX = 'skidmarks_fx',
+  SmallTweaks = 'small_tweaks',
+  SmartMirror = 'smart_mirror',
+  SmartShadows = 'smart_shadows',
+  Spectating = 'spectating', -- @hidden
+  Splashscreen = 'splashscreen',
+  SurfacesFX = 'surfaces_fx',
+  Taskbar = 'taskbar',
+  TrackAdjustments = 'track_adjustments',
+  TripleCustom = 'triple_custom',
+  TyresFX = 'tyres_fx',
+  VRTweaks = 'vr_tweaks',
+  WalkingOut = 'walking_out', -- @hidden
+  WeatherFX = 'weather_fx',
+  WindscreenFX = 'windscreen_fx',
+  Yebisest = 'yebisest',
   JoypadAssist = 'gamepad_fx', -- @hidden
 })
 
@@ -868,4 +936,64 @@ ac.VAODebugMode = __enum({ cpp = 'vao_mode' }, {
   Inactive = 3,
   VAOOnly = 4,
   ShowNormals = 5
+})
+
+---@alias physics.ColliderType {type: string}
+
+physics = {}
+
+---Different collider types.
+physics.Collider = {}
+
+---Box collider.
+---@param size vec3
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param look vec3? @Default value: `vec3(0, 0, 1)`.
+---@param up vec3? @Default value: `vec3(0, 1, 0)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Box(size, offset, look, up, debug) return {type = 'box', size = size, offset = offset, look = look, up = up, debug = debug == true} end
+
+---Sphere collider.
+---@param radius number
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Sphere(radius, offset, debug) return {type = 'sphere', radius = radius, offset = offset, debug = debug == true} end
+
+---Capsule collider (like cylinder, but instead of flat caps it has hemispheres and works a bit faster).
+---@param length number
+---@param radius number
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param look vec3? @Default value: `vec3(0, 0, 1)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Capsule(length, radius, offset, look, debug) return {type = 'capsule', length = length, radius = radius, offset = offset, look = look, debug = debug == true} end
+
+---Cylinder collider (slower than capsule, consider using capsule where appropriate).
+---@param length number
+---@param radius number
+---@param offset vec3? @Default value: `vec3(0, 0, 0)`.
+---@param look vec3? @Default value: `vec3(0, 0, 1)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Cylinder(length, radius, offset, look, debug) return {type = 'cylinder', length = length, radius = radius, offset = offset, look = look, debug = debug == true} end
+
+---Ray collider. Added in 0.3.0-preview121.
+---@param length number
+---@param origin vec3? @Default value: `vec3(0, 0, 0)`.
+---@param dir vec3? @Default value: `vec3(0, 0, 1)`.
+---@param debug boolean? @Set to `true` to see an outline. Default value: `false`.
+---@return physics.ColliderType
+function physics.Collider.Ray(length, origin, dir, debug) return {type = 'ray', length = length, origin = origin, dir = dir, debug = debug == true} end
+
+---The entire track geometry. Added in 0.3.0-preview238.
+---@return physics.ColliderType
+function physics.Collider.Track() return {type = 'track'} end
+
+ui.Icons = __enum({ override = 'ui.*/*conID:string|*.*/iconID:string', underlying = 'string' }, {
+  --[[? out($.readText(`${process.env['CSP_ROOT']}/source/imgui/icons.h`).split('\n')
+    .map(x => /ICON_24_(\w+)/.test(x) && RegExp.$1).filter(x => x)
+    .map(x => `${x.toLowerCase().replace(/^(?:gps|fm|qr|vip)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.club/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
+  LoadingSpinner = 'fx:loading',
 })

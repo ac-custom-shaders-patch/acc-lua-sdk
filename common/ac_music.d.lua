@@ -13,5 +13,10 @@
 ---@field trackNumber integer @1-based track number in current album, or 0 if value is not available.
 ---@field trackDuration integer @Track duration in seconds, or -1 if value is not available.
 ---@field trackPosition integer @Track position in seconds, or -1 if value is not available.
+---@field shuffleMode integer @Shuffle mode (1 if active, 0 if not), or -1 if value is not available.
+---@field repeatMode integer @Repeat mode (1 for track, 2 for list, 0 if disabled), or -1 if value is not available.
+---@field playbackType integer @Playback type (0 for unknown, 1 for music, 2 for video, 3 for image), or -1 if value is not available.
+---@field playbackStatus integer @Playback status (0 for closed, 1 for opened, 2 for changing, 3 for stopped, 4 for playing, 5 for paused), or -1 if value is not available.
+---@field playbackRate integer @Playback rate (speed multiplier), or -1 if value is not available.
 local _musicData = {}
 

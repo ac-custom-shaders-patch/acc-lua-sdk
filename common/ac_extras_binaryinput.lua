@@ -17,9 +17,9 @@ function ac.ControlButton(id, key, modifiers, repeatPeriod)
     -- New format
     if type(key.keyboard) == 'table' then
       k = tonumber(key.keyboard.key) or 0
-      m = key.keyboard.ctrl and 2 or 0
-      if key.keyboard.shift then m = m + 8 end
-      if key.keyboard.alt then m = m + 4 end
+      m = key.keyboard.ctrl and 1 or 0
+      if key.keyboard.shift then m = m + 4 end
+      if key.keyboard.alt then m = m + 2 end
     elseif type(key.gamepad) == 'number' then
       k = tonumber(key.gamepad) or 0
       m = -2
@@ -29,9 +29,9 @@ function ac.ControlButton(id, key, modifiers, repeatPeriod)
   else
     -- Old ugly & private format
     if type(modifiers) == 'table' then
-      if modifiers.ctrl then m = m + 2 end
-      if modifiers.shift then m = m + 8 end
-      if modifiers.alt then m = m + 4 end
+      if modifiers.ctrl then m = m + 1 end
+      if modifiers.shift then m = m + 4 end
+      if modifiers.alt then m = m + 2 end
       if modifiers.ignore then m = -1 end
       if modifiers.gamepad then m = -2 end
       if modifiers.system then m = modifiers.system == 'shift' and -6 or modifiers.system == 'ignore' and -5 or -3 end

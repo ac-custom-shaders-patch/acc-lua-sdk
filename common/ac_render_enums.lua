@@ -99,6 +99,7 @@ render.AntialiasingMode = __enum({ cpp = 'aa_mode' }, {
   CMAA = 102,  -- Faster and sharper option comparing to FXAA
   ExtraSharpCMAA = 103, -- Like CMAA, but even sharper
   YEBIS = 104, -- Applies YEBIS antialiasing together with the whole filtering HDR→LDR conversion using main PP settings. Note: first run for each resolution can take a lot of time. Each resolution creates its own YEBIS post-processing step, with many different resolutions things might get too expensive.
+  SimplifiedYEBIS = 105, -- Applies HDR→LDR conversion which is similar to YEBIS, but a lot cheaper. For anti-aliasing, CMAA is used on top.
 })
 
 render.TextureFormat = __enum({ cpp = 'uirt_format' }, {

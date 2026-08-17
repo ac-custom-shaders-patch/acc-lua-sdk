@@ -3,4 +3,5 @@
 ---@param table T
 ---@vararg table
 ---@return T
+---@nodiscard
 function table.chain(table, ...) end

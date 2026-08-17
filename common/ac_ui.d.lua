@@ -114,3 +114,10 @@ function _uiDWriteFont:allowRealSizes(allow) end
 ---@return self
 function _uiDWriteFont:allowEmoji(allow) end
 
+---Added in 0.3.0-preview121. Allows to tune spacing between characters. Not available before Windows 8.
+---@param leading number @The spacing before each character, in reading order.
+---@param trailing number @The spacing after each character, in reading order.
+---@param minimumAdvanceWidth number @The minimum advance of each character, to prevent characters from becoming too thin or zero-width. This must be zero or greater.
+---@return self
+function _uiDWriteFont:spacing(leading, trailing, minimumAdvanceWidth) end
+

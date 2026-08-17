@@ -1,17 +1,5 @@
 require('./ac_struct_item')
 
--- function __script.connectionOnlineCallback(key, carIndex)
---   local car = ac.getCar(carIndex)
---   local registered = _created[tonumber(key)]
---   if registered == nil then
---     ac.error(string.format('Unexpected Lua online event: key=%s', key))
---     return
---   end
---   for i = 1, #registered.callbacks do
---     __util.cbCall(registered.callbacks[i], car, registered.readProxy)
---   end
--- end
-
 ---Creates a new type of online event to exchange between scripts running on different clients in an online
 ---race. Example:
 ---```
@@ -43,6 +31,8 @@ require('./ac_struct_item')
 ---- At least 200 ms should pass between sending messages. 
 ---- UDP messages are not available (those require `ac.getSim().directUDPMessagingAvailable` flag). 
 ---- Don’t use this system to exchange data too often: it uses chat messages to transfer data, so it’s far from optimal.
+---
+---When sending UDP packets, consider adding a byte for packet index and checking it upon receiving: UDP packets might arrive out-of-order and more.
 ---@generic T
 ---@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Alternatively, you can pass a string for the body of the structure here, but be careful with it.
 ---@param callback fun(sender: ac.StateCar|nil, message: T) @Callback that will be called when a new message of this type is received. Note: it would be called even if message was sent from this script. Use `sender` to check message origin: if it’s `nil`, message has come from the server, if its `.index` is 0, message has come from this client (and possibly this script).

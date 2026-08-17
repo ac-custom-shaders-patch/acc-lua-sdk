@@ -1,7 +1,37 @@
+---Table with headers. Numbers will be turned into strings, booleans encoded as 0 or 1. Pass an array of strings as a value, and it’ll turn into a single comma-separated value (so, `['Access-Control-Allow-Methods'] = {'GET', 'POST'}` is the same as `['Access-Control-Allow-Methods'] = 'GET, POST`).
+---
+---Note: array support was added in 0.3.0-preview451.
+---
+---Header keys can’t use “:”, so there are special values with “:” prefix to tweak a request further:
+---
+---- Use `[':headers-only'] = true` if you don’t need actual response, and only need the response headers (for the servers without proper support of HEAD method);
+---
+---- Add `[':https-certificate'] = string|true` for HTTPS pinning (added in 0.2.10). If set to `true`, `WebResponse` will have a `certificate` field with SHA256 fingerprint of the leaf certificate of the first request. Alternatively, you can set it to the fingerprint value, and request will fail if certificate doesn’t match. In 0.3.0-preview451, more options were added (you can list the via comma, or pass all of them in a table): 
+---  - `collect`: collect detailed information about certificates (returned `certificate` field will store a table instead of a string); 
+---  - `chain`: check the entire certificate chain, not just the leaf certificate;
+---  - `publicKey`: check SHA256 checksums of public keys as well;
+---  - `first`: check certificates of the initial request;
+---  - `middle`: check certificates of the intermediate redirecting requests;
+---  - `last`: check certificates of the final request;
+--- 
+---  If none of `first`, `middle` or `last` flags set, CSP will check certificates of the first request only, raising an error if there is a mismatch.
+---  Also, with preview499 update, CSP allows to pass multiple checksums to compare against, and filters out non-hex characters out of them, so you can
+---  copy-paste a SHA256 fingerprint from Firefox, for example, directly.
+---
+---- Add `[':https-ignore-errors'] = {…}` to ignore certain HTTPS errors (added in 0.3.0-preview451). Together with `':https-certificate'`, this allows to pin to
+---self-signed HTTPS certificates. Available values to list:
+---  - `ca`: allow an invalid certificate authority (basically, self-signed certificates);
+---  - `date`: allow an invalid certificate date, that is, an expired or not-yet-effective certificate;
+---  - `name`: allow an invalid common name (when host name doesn’t match the one in certificate);
+---  - `usage`: allow a certificate of incorrect type, for example, a non-server certificate;
+---  - `any`: ignore errors that are possible to ignore;
+---@alias web.Headers table<string, string|string[]|number|boolean>
+
 ---@class WebResponse
 ---@field status integer
 ---@field headers table<string, string>
 ---@field body string
+---@field certificate string|table? @Filled with some configurations of `':https-certificate'` headed. See `web.Headers` for more information.
 local _webResponse = {}
 
 ---Two possible ways to present payload: either as a string with data, or a table with a key `'filename'`.

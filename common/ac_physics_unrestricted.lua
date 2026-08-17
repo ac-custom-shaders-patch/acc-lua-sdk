@@ -1,6 +1,8 @@
 __source 'lua/api_physics_unrestricted.cpp'
 __namespace 'physics'
 
+--[[? if (ctx.ldoc) out(]]
+
 ---Physics namespace. Note: most functions here are accessible only if track has expicitly allowed it with its
 ---extended CSP physics.
 ---
@@ -19,3 +21,5 @@ __namespace 'physics'
 ---WAV_PITCH=extended-0
 ---```
 physics = {}
+
+--[[) ?]]

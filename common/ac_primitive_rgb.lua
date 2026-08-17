@@ -257,8 +257,8 @@ local ctrgb = ffi.typeof('rgb')
     luminance = rgbLuminance,
     getLuminance = rgbLuminance,
 
-    hsv = function(v) return hsv(v:hue(), v:saturation(), v:value()) end,
-    toHsv = function(v) return hsv(v:hue(), v:saturation(), v:value()) end,
+    hsv = function(v, o) return (o or hsv()):set(v:hue(), v:saturation(), v:value()) end,
+    toHsv = function(v, o) return (o or hsv()):set(v:hue(), v:saturation(), v:value()) end,
     rgbm = function(v, m) return rgbm(v.r, v.g, v.b, __util.num_or(m, 1)) end,
     toRgbm = function(v, m) return rgbm(v.r, v.g, v.b, __util.num_or(m, 1)) end,
     vec3 = function(v) return vec3(v.r, v.g, v.b) end,

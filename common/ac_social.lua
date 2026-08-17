@@ -4,7 +4,7 @@
 ---@field color rgbm @User name color. Could be derived from custom color set via `ac.DriverTags` (or `ac.setDriverChatNameColor()`), turns reddish if driver is muted, or uses custom driver tag from CM if any is set, or turns greenish if driver is marked as a friend (in CSP or CM). For the player entry it will always be yellow.
 ---@field friend boolean @Friend tag, uses CSP and CM databases.
 ---@field muted boolean @Muted tag, if set messages in chat will be hidden.
----@constructor fun(driverName: string): ac.DriverTags
+---@return ac.DriverTags
 function ac.DriverTags(driverName)
   __util.lazy('lib_social')
   return ac.DriverTags(driverName)

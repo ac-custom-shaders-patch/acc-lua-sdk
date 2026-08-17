@@ -56,6 +56,17 @@ ui.MouseCursor = __enum({ cpp = 'ImGuiMouseCursor' }, {
   ResizeNESW = 5,        -- When hovering over the bottom-left corner of a window
   ResizeNWSE = 6,        -- When hovering over the bottom-right corner of a window
   Hand = 7,              -- Unused by default controls. Use for e.g. hyperlinks
+
+  Cross = 9,
+  UpArrow = 10,
+  Size = 11,
+  Icon = 12,
+  No = 13,
+  Wait = 14,
+  AppStarting = 15,
+  Help = 16,
+  Pin = 17,
+  Person = 18,
 })
 
 ui.MouseButton = __enum({ override = 'ui.*/mouseButton:integer' }, {
@@ -138,6 +149,7 @@ ui.StyleVar = __enum({ cpp = 'ImGuiStyleVar' }, {
   ButtonTextAlign = 21, -- Expects a `vec2` value.
   SelectableTextAlign = 22, -- Expects a `vec2` value.
   SelectablePadding = 23, -- Expects a `vec2` value.
+  SliderTextAlign = 24, -- Expects a `vec2` value. Added in 0.2.8.
 })
 
 ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
@@ -191,13 +203,6 @@ ui.StyleColor = __enum({ cpp = 'ImGuiCol' }, {
   ModalWindowDimBg = 47,
   TextHovered = 48,
   TextActive = 49
-})
-
-ui.Icons = __enum({ override = 'ui.*/*conID:string', underlying = 'string' }, {
-  LoadingSpinner = 'fx:loading',
-  --[[? out($.readText(`${process.env['CSP_ROOT']}/source/imgui/icons.h`).split('\n')
-    .map(x => /ICON_24_(\w+)/.test(x) && RegExp.$1).filter(x => x)
-    .map(x => `${x.toLowerCase().replace(/^(?:gps|fm|qr|vip)$|(?<=^|_)[a-z]/g, _ => _.toUpperCase()).replace(/_/g, '')} = "${x}", -- ![Icon](https://acstuff.ru/images/icons_24/${x.toLowerCase()}.png)`).join('\n')) ?]]
 })
 
 ui.ButtonFlags = __enum({ cpp = 'ImGuiButtonFlags' }, {
@@ -288,7 +293,8 @@ ui.InputTextFlags = __enum({ cpp = 'ImGuiInputTextFlags' }, {
   CharsScientific        = 0x20000,   -- Allow “0123456789.+-*/eE” (Scientific notation input)
   Placeholder            = 0x400000,  -- Show label as a placeholder
   ClearButton            = 0x800000,  -- Add button erasing text
-  RetainSelection        = 0x1000000  -- Do not lose selection when Enter is pressed, do not select all with focusing in code
+  RetainSelection        = 0x1000000, -- Do not lose selection when Enter is pressed, do not select all with focusing in code
+  FocusByDefault         = 0x2000000, -- Automatically focus on input when it appears
 })
 
 ui.SelectableFlags = __enum({ cpp = 'ImGuiSelectableFlags' }, {
@@ -319,6 +325,14 @@ ui.TabItemFlags = __enum({ cpp = 'ImGuiTabItemFlags' }, {
   UnsavedDocument                  = 0x1,   -- Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. Also: tab is selected on closure and closure is deferred by one frame to allow code to undo it without flicker.
   SetSelected                      = 0x2,   -- Trigger flag to programmatically make the tab selected when calling BeginTabItem()
   NoCloseWithMiddleMouseButton     = 0x4,   -- Disable behavior of closing tabs (that are submitted with p_open !   = NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open    = false.
+})
+
+ui.ColumnsFlags = __enum({ cpp = 'ImGuiColumnsFlags' }, {
+  None                                    = 0,
+  NoBorder              = 1,  -- Disable column dividers
+  NoResize              = 2,  -- Disable resizing columns when clicking on the dividers
+  NoPreserveWidths      = 4,  -- Disable column width preservation when adjusting columns
+  NoForceWithinWindow   = 8,  -- Disable forcing columns to fit within window
 })
 
 ui.TreeNodeFlags = __enum({ cpp = 'ImGuiTreeNodeFlags' }, {

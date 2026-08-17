@@ -168,8 +168,9 @@ function rgb:luminance() end
 function rgb:rgbm(mult) end
 
 ---Returns HSV color of rgb*mult.
+---@param out hsv? @If set, assigns result to given `hsv` instead of creating a new one. Added in 0.2.10.
 ---@return hsv
-function rgb:hsv() end
+function rgb:hsv(out) end
 
 ---Returns rgb*mult turned to vec3.
 ---@return vec3

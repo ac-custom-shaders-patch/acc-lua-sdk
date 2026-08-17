@@ -6,10 +6,10 @@ __namespace 'io'
 ffi.cdef[[ 
 
 typedef struct { 
-  int64_t fileSize;
-  int64_t creationTime;
-  int64_t lastAccessTime;
-  int64_t lastWriteTime;
+  double fileSize;
+  double creationTime;
+  double lastAccessTime;
+  double lastWriteTime;
   bool exists;
   bool isDirectory;
   bool isHidden;
@@ -17,14 +17,17 @@ typedef struct {
   bool isEncrypted;
   bool isCompressed;
   bool isReparsePoint;
+  bool isArchive;
+  bool isSystem;
+  bool isTemporary;
 } lua_file_attributes; 
 
 typedef struct { 
   lua_string_ref name__;
-  int64_t fileSize;
-  int64_t creationTime;
-  int64_t lastAccessTime;
-  int64_t lastWriteTime;
+  double fileSize;
+  double creationTime;
+  double lastAccessTime;
+  double lastWriteTime;
   bool exists;
   bool isDirectory;
   bool isHidden;
@@ -32,6 +35,9 @@ typedef struct {
   bool isEncrypted;
   bool isCompressed;
   bool isReparsePoint;
+  bool isArchive;
+  bool isSystem;
+  bool isTemporary;
 } lua_dir_scan; 
 
 ]]
@@ -53,7 +59,7 @@ typedef struct {
 ---@param callback fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: TCallbackData): TReturn? @Callback which will be ran for every file in directory fitting mask until it would return a non-nil value.
 ---@param callbackData TCallbackData? @Callback data that will be passed to callback as third argument, to avoid creating a capture.
 ---@return TReturn? @First non-nil value returned by callback.
----@overload fun(directory: string, callback: fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: any), callbackData: any): any
+---@overload fun(directory: string, callback: (fun(fileName: string, fileAttributes: io.FileAttributes, callbackData: any): any), callbackData: any): any
 ---@overload fun(directory: string, mask: string|nil): string[] @This overload just returns the list
 function io.scanDir(directory, mask, callback, callbackData)
   if type(directory) ~= 'string' then error('First argument has to be a string with path to a directory', 2) end

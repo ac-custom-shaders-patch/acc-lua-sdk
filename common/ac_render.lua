@@ -180,6 +180,7 @@ ac.SimpleMesh = {}
 ---@param carIndex integer @0-based car index.
 ---@param includeDriver boolean? @Set to `true` to include simplified driver model as well. Default value: `false`.
 ---@return ac.SimpleMesh
+---@nodiscard
 function ac.SimpleMesh.carShape(carIndex, includeDriver)
   return (carIndex < 0 or carIndex > 255) and -1 or (includeDriver and carIndex + 256 or carIndex)
 end
@@ -188,6 +189,7 @@ end
 ---@param carIndex integer @0-based car index.
 ---@param actualCollider boolean? @Set to `true` to draw actual physics collider (might differ due to some physics alterations).
 ---@return ac.SimpleMesh
+---@nodiscard
 function ac.SimpleMesh.carCollider(carIndex, actualCollider)
   return (carIndex < 0 or carIndex > 255) and -1 or carIndex + (actualCollider and 768 or 512)
 end
@@ -197,6 +199,7 @@ end
 ---@param absolute number? @Width in meters. Default value: 10.
 ---@param relative number? @Width relative to track width. Default value: 0. Final width is a sum of the two.
 ---@return ac.SimpleMesh
+---@nodiscard
 function ac.SimpleMesh.trackLine(lineType, absolute, relative)
   return {lineType = lineType or 0, absolute = absolute or 10, relative = relative or 0}
 end
@@ -273,27 +276,30 @@ function render.mesh(params)
     end
   end
   if ffi.istype('noderef*', params.mesh) then
-    ffi.C.lj_cshader_mesh__scene(dc, -2, params.mesh, tr, nil)
+    ffi.C.lj_cshader_mesh__render(dc, -2, params.mesh, tr, nil)
   elseif type(params.mesh) == 'number' then
-    ffi.C.lj_cshader_mesh__scene(dc, params.mesh, nil, tr, nil)
+    ffi.C.lj_cshader_mesh__render(dc, params.mesh, nil, tr, nil)
   elseif type(params.mesh) == 'table' and params.mesh.lineType then
     local v = vec4.tmp():set(params.mesh.absolute, params.mesh.relative, 0, 0)
-    ffi.C.lj_cshader_mesh__scene(dc, 20000 + params.mesh.lineType, nil, tr, v)
+    ffi.C.lj_cshader_mesh__render(dc, 20000 + params.mesh.lineType, nil, tr, v)
   else
     error('Incorrect `mesh` parameter', 2)
   end
   return true
 end
 
+---Measure CPU and GPU time it took to execute `drawFn`. Result of a measurement will be shown
+---in Render Stats app.
 ---@param key string
----@param drawFn fun()
-function render.measure(key, drawFn)
+---@param drawFn fun(...)
+---@param ... any[] @Arguments to pass to `drawFn`. Added in 0.3.0-preview259.
+function render.measure(key, drawFn, ...)
   local p = ffi.C.lj_measureGPUPerformance_0__render(tostring(key))
   if p == nil then
-    drawFn()
+    drawFn(...)
   else
     using(drawFn, function ()
       ffi.C.lj_measureGPUPerformance_1__render(p)
-    end)
+    end, ...)
   end
 end

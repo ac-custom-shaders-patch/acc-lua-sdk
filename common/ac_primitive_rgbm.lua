@@ -76,7 +76,7 @@ local ctrgbm = ffi.typeof('rgbm')
     set = function(v, rgb, mult)
       if rgbm.isrgbm(rgb) then rgb, mult = rgb.rgb, rgb.mult end
       v.rgb = rgb
-      v.mult = mult
+      v.mult = mult or 1
       return v
     end,
 

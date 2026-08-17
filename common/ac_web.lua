@@ -8,15 +8,16 @@ web = {}
 ---@param connect integer? @Time in milliseconds for establishing connection. Default value: 10000 ms.
 ---@param send integer? @Time in milliseconds for sending data. Default value: 30000 ms.
 ---@param receive integer? @Time in milliseconds for receiving data. Default value: 30000 ms.
-function web.timeouts(resolve, connect, send, receive)
-  __util.native('web.timeouts', tonumber(resolve), tonumber(connect), tonumber(send), tonumber(receive))
+---@param threads integer? @If set, overrides maximum number of simultaneous requests. Default limit: 2. Maximum allowed value is 32.
+function web.timeouts(resolve, connect, send, receive, threads)
+  __util.native('web.timeouts', tonumber(resolve), tonumber(connect), tonumber(send), tonumber(receive), tonumber(threads))
 end
 
 ---Sends a GET HTTP or HTTPS request. Note: you can only have two requests running at once, mostly to make sure
 ---a faulty script wouldn’t spam a remote server or overload internet connection (that’s how I lost access
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param url string @URL.
----@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
+---@param headers web.Headers? @Optional headers.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(url: string, callback: fun(err: string, response: WebResponse))
 function web.get(url, headers, callback)
@@ -28,7 +29,7 @@ end
 ---a faulty script wouldn’t spam a remote server or overload internet connection (that’s how I lost access
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param url string @URL.
----@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
+---@param headers web.Headers? @Optional headers.
 ---@param data WebPayload? @Optional data.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(url: string, data: string, callback: fun(err: string, response: WebResponse))
@@ -45,7 +46,7 @@ end
 ---to one of my API tokens for some time, accidentally sending a request each frame).
 ---@param method "'GET'"|"'POST'"|"'PUT'"|"'HEAD'"|"'DELETE'"|"'PATCH'"|"'OPTIONS'" @HTTP method.
 ---@param url string @URL.
----@param headers table<string, string|number|boolean>? @Optional headers. Use special `[':headers-only'] = true` header if you only need to load headers (for servers without proper support of HEAD method).
+---@param headers web.Headers? @Optional headers.
 ---@param data WebPayload? @Optional data.
 ---@param callback fun(err: string, response: WebResponse)
 ---@overload fun(method: string, url: string, data: string, callback: fun(err: string, response: WebResponse))
@@ -62,7 +63,7 @@ end
 
 ---Open a WebSocket connection.
 ---@param url string @URL.
----@param headers table<string, string|number|boolean>? @Optional headers.
+---@param headers web.Headers? @Optional headers.
 ---@param callback nil|fun(data: binary)
 ---@param params web.SocketParams?
 ---@return web.Socket

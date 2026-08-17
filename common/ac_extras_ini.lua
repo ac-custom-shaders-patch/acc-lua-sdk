@@ -23,7 +23,7 @@ ac.INIConfig.OptionalList = {}
 ---Parse INI config from a string.
 ---@param data string @Serialized INI data.
 ---@param format ac.INIFormat? @Format to parse. Default value: `ac.INIFormat.Default`.
----@param includeFolders ('@cars'|'@tracks'|string)[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). Use special values `'@cars'` and `'@tracks'` for car or track configs.
+---@param includeFolders ('@cars'|'@tracks'|string)[]? @Optional folders to include files from (only for `ac.INIFormat.ExtendedIncludes` format). Use special values `'@cars'` and `'@tracks'` for car or track configs. Pass `'@car:N'` or `'@track'`, such as `'@car:0', to not only include corresponding configs, but also for “read()” queries, such as `read('data/tyres.ini/FRONT/RIM_RADIUS', 0.2)`, to work property.
 ---@return ac.INIConfig
 function ac.INIConfig.parse(data, format, includeFolders)
   -- ffi.C.lj_parse_ini(data and tostring(data) or nil, tonumber(format) or 0, includeFolders and table.concat(includeFolders, '\n') or nil)
@@ -60,7 +60,7 @@ function ac.INIConfig.carData(carIndex, fileName)
   return  _iniss[k]
 end
 
----Load track data INI file. Can be used by track scripts which might not always  have access to those files directly.
+---Load track data INI file. Can be used by track scripts which might not always have access to those files directly.
 ---
 ---Returned file can’t be saved.
 ---@param fileName string @Car data file name, such as `'tyres.ini'`.
@@ -71,6 +71,14 @@ function ac.INIConfig.trackData(fileName)
   if _iniss[k] then return _iniss[k] end
   _iniss[k] = ac.INIConfig(1, __util.native('lj_load_trackdata_ini', fileName), nil)
   return _iniss[k]
+end
+
+---Load system surfaces INI file.
+---
+---Returned file can’t be saved.
+---@return ac.INIConfig
+function ac.INIConfig.systemSurfacesData(fileName)
+  return ac.INIConfig(1, __util.native('lj_load_surfaces_ini'), nil)
 end
 
 ---Returns CSP config for a car. Might be slow: some of those configs are huge. Make sure to cache the resulting value if you need to reuse it.
@@ -104,7 +112,7 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.raceConfig()
-  return ac.INIConfig(10, __util.native('lj_load_race_ini'), nil)
+  return ac.INIConfig(0, __util.native('lj_load_race_ini'), nil)
 end
 
 ---Returns video config (`cfg/video.ini`).
@@ -112,7 +120,7 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.videoConfig()
-  return ac.INIConfig(10, __util.native('lj_load_video_ini'), nil)
+  return ac.INIConfig(0, __util.native('lj_load_video_ini'), nil)
 end
 
 ---Returns controls config (`cfg/controls.ini`).
@@ -120,7 +128,17 @@ end
 ---Returned file can’t be saved.
 ---@return ac.INIConfig
 function ac.INIConfig.controlsConfig()
-  return ac.INIConfig(10, __util.native('lj_load_controls_ini'), nil)
+  return ac.INIConfig(0, __util.native('lj_load_controls_ini'), nil)
+end
+
+---Returns current setup INI file (either previously loaded or saved). Any changes in actual setup in pits won’t be reflected in the returned
+---data unless file was saved.
+---
+---Returned file can be saved. Use `ac.onSetupFile()` to listen to data changes and either read extra data from setup file, or change the contents after file has been saved.
+---@return ac.INIConfig
+function ac.INIConfig.currentSetup()
+  local data, filename = __util.native('lj_load_currentsetup_ini')
+  return ac.INIConfig(0, data, filename)
 end
 
 ---Load config of a CSP module by its name.

@@ -9,7 +9,7 @@ __namespace = function(name) end
 __post_cdef = function(cb) end
 
 __definitions = function(arg) end
-__enum = function(params, values) end
+__enum = function(params, values, fbValues) end
 __carindex__ = 0
 __cfgSection__ = 0
 __mode__ = nil

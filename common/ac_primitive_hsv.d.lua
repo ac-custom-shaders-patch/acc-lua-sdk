@@ -43,5 +43,6 @@ function hsv:type() end
 function hsv:set(h, s, v) end
 
 ---Returns RGB color.
+---@param out rgb? @If set, assigns result to given `rgb` instead of creating a new one. Added in 0.2.10.
 ---@return rgb
-function hsv:rgb() end
+function hsv:rgb(out) end

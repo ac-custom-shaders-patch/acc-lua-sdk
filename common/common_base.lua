@@ -1,4 +1,4 @@
-__script = {}
+-- Available to all, loads first
 
 --[[? ctx.flags.targetPreprocessor = true; ?]]
 
@@ -43,16 +43,17 @@ end
 ---
 ---Any error thrown by `fn()` will be raised and not captured, but `dispose()` will be called either way.
 ---@generic T
----@param fn fun(): T?
+---@param fn fun(...): T?
 ---@param dispose fun()? @CSPs before 0.2.5 require non-nil argument.
+---@param ... any @Arguments to pass to `fn` (added in 0.3.0-preview259).
 ---@return T|nil
-function using(fn, dispose)
+function using(fn, dispose, ...)
   local r1, r2, r3
   if not dispose then
-    r1, r2, r3 = fn()
+    r1, r2, r3 = fn(...)
   else
     __util.pushEnsureToCall(dispose)
-    r1, r2, r3 = fn()
+    r1, r2, r3 = fn(...)
     __util.popEnsureToCall()
   end
   return r1, r2, r3
@@ -66,6 +67,7 @@ local _dbg = debug.getinfo
 ---Note: performance might be a problem if you are calling it too much, consider caching the result.
 ---@param path string
 ---@return string
+---@nodiscard
 function package.relative(path)
   return '.'.._dbg(2).source:sub(#__dirname + 2):match('.*[/\\\\]')..path
 end
@@ -76,6 +78,7 @@ end
 ---Note: performance might be a problem if you are calling it too much, consider caching the result.
 ---@param path string
 ---@return string
+---@nodiscard
 function io.relative(path)
   return _dbg(2).source:sub(2):match('.*[/\\\\]')..path
 end
@@ -102,30 +105,4 @@ end
 function ac.stringToFFIStruct(src, dst, size)
   if not string.find(tostring(ffi.typeof(dst)), 'char', 1, false) then error('Can’t be used with something other than a string', 2) end
   ffi.C.lj_stringToFFIStruct_inner(src, dst, size)
-end
-
-do
-
-local _cdfl = {}
-
----Returns ordered list of data file names (not full paths, just the names) of a certain car. Works for both packed and unpacked cars. If failed,
----returns empty list.
----@param index integer @0-based car index.
----@return string[]
-function ac.getCarDataFiles(index)
-  local k = 1e3 + index
-  if not _cdfl[k] then _cdfl[k] = __util.native('ac.getCarDataFiles', tonumber(index) or 0) or {} end
-  return _cdfl[k]
-end
-
----Returns list of car colliders.
----@param index integer @0-based car index.
----@param actualColliders boolean? @Set to `true` to draw actual physics colliders (might differ due to some physics alterations).
----@return {position: vec3, size: vec3}[]
-function ac.getCarColliders(index, actualColliders)
-  local k = 2e3 + index + (actualColliders and 0.5 or 0)
-  if not _cdfl[k] then _cdfl[k] = __util.native('ac.getCarColliders', tonumber(index) or 0, actualColliders) or {} end
-  return _cdfl[k]
-end
-
 end

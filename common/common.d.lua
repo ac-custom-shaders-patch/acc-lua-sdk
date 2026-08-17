@@ -4,13 +4,17 @@
 ---@type string
 __dirname = nil
 
+---If set to `true`, app is being viewed in Lua Debug app. Could be a good condition for calling `ac.debug()`, if you want for script to run as fast as possible.
+---@type boolean
+__monitored = false
+
 ---A filename, either absolute or relative. If relative, will be resolved against AC root folder. Use `os.setCurrentFolder()` to change current folder.
 ---@alias path string
 
 ---Could be either a string, a number or a boolean value (will be converted into string).
 ---String can store any binary data including zero bytes. Could also be an FFI struct and it will
 ---be processed as its binary form.
----@alias binary string|number|boolean
+---@alias binary string|any
 
 ---Could be either a string, a number, a boolean value or a table (without circular references or any non-serializable
 ---items). Will be serialized here and deserialized in a different script. String can store any binary data including zero bytes.
@@ -18,6 +22,8 @@ __dirname = nil
 
 ---Main CSP namespace.
 ac = {}
+
+---@class ac.FFIStruct
 
 ---FFI-accelerated list, acts like a regular list (consequent items, size and capacity, automatically growing, etc.)
 ---Doesn’t store nil values to act more like a Lua table.

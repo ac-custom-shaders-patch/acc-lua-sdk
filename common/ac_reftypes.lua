@@ -17,7 +17,7 @@ refbool = ffi.metatype(ctrefbool, { __index = {
   ---@param newValue boolean
   ---@return refbool
   set = function (s, newValue) s.value = newValue return s end
-}, __call = function(s) return s.value end })
+}, __call = function(s) return s.value end, __tostring = function(s) return string.format('ref(%s)', s.value) end })
 
 ---Stores a numerical value and can be used as a reference to it.
 ---@class refnumber
@@ -30,5 +30,5 @@ refnumber = ffi.metatype(ctrefnumber, { __index = {
   ---@param newValue number
   ---@return refnumber
   set = function (s, newValue) s.value = newValue return s end
-}, __call = function(s) return s.value end })
+}, __call = function(s) return s.value end, __tostring = function(s) return string.format('ref(%s)', s.value) end })
 

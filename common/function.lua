@@ -12,7 +12,7 @@ do
           if #a == 0 then
             return s
           end
-          local i = _dgi(s)
+          local i = _dgi(s, 'u')
           if not i.isvararg then
             if i.nparams == 0 then return s end
             if i.nparams == 1 then return function() return s(a[1]) end end

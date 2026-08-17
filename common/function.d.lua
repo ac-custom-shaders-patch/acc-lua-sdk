@@ -1,0 +1,3 @@
+-- This annotation merges into the global 'function' primitive type
+---@class function
+---@field bind fun(self: function, ...: any): function

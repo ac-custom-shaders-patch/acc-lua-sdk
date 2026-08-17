@@ -1,9 +1,10 @@
-local function hsvToRgb(t)
+local function hsvToRgb(t, out)
   local v = t.v 
-  if t.s <= 0 then return rgb(v, v, v) end
+  if not out then out = rgb() end
+  if t.s <= 0 then return out:set(v, v, v) end
 
   local e = t.h
-  if e >= 360 then e = 0 end
+  if e < 0 or e >= 360 then e = 0 end
 
   e = e / 60
   local i = math.floor(e)
@@ -12,12 +13,12 @@ local function hsvToRgb(t)
   local q = v * (1 - t.s * u)
   local t = v * (1 - t.s * (1 - u))
 
-  if i == 0 then return rgb(v, t, p) end
-  if i == 1 then return rgb(q, v, p) end
-  if i == 2 then return rgb(p, v, t) end
-  if i == 3 then return rgb(p, q, v) end
-  if i == 4 then return rgb(t, p, v) end
-  return rgb(v, p, q)
+  if i == 0 then return out:set(v, t, p) end
+  if i == 1 then return out:set(q, v, p) end
+  if i == 2 then return out:set(p, v, t) end
+  if i == 3 then return out:set(p, q, v) end
+  if i == 4 then return out:set(t, p, v) end
+  return out:set(v, p, q)
 end
 
 local vHtmp1

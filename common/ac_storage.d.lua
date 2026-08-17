@@ -7,6 +7,9 @@ function _ac_StoredValue:get() end
 ---@param value string|number|boolean|vec2|vec3|vec4|rgb|rgbm
 function _ac_StoredValue:set(value) end
 
+---@type table<string, string>
+ac.storage = {}
+
 ---Storage function. Easiest way to use is to pass it a table with default values — it would give you a table back
 ---which would load values on reads and save values on writes. Values have to be either strings, numbers, booleans,
 ---vectors or colors. Example:

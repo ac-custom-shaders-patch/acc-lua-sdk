@@ -14,6 +14,10 @@ do
     __tostring = function(v)
       return string.format('(%s,\n %s,\n %s)', v.row1, v.row2, v.row3)
     end,
+    __eq = function(v, o)
+			if not ffi.istype(ctmat3x3, v) or not ffi.istype(ctmat3x3, o) then return false end
+      return v.row1 == o.row1 and v.row2 == o.row2 and v.row3 == o.row3
+    end,
     __index = {
       ismat3x3 = function(x) return ffi.istype(ctmat3x3, x) end,
       set = function(s, o)
@@ -27,7 +31,9 @@ do
         return mat3x3(s.row1, s.row2, s.row3)
       end,
       identity = function ()
-        return mat3x3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1))
+        local ret = mat3x3()
+        ret.row1.x, ret.row2.y, ret.row3.z = 1, 1, 1
+        return ret
       end,
       tmp = function ()
         if _tm3 == nil then _tm3 = mat3x3() end
@@ -53,6 +59,10 @@ do
     __mul = function(v, u)
       return v:mul(u)
     end,
+    __eq = function(v, o) 
+			if not ffi.istype(ctmat4x4, v) or not ffi.istype(ctmat4x4, o) then return false end
+      return v.row1 == o.row1 and v.row2 == o.row2 and v.row3 == o.row3 and v.row4 == o.row4
+    end,
     __index = {
       ismat4x4 = function(x) return ffi.istype(ctmat4x4, x) end,
       set = function(s, o)
@@ -65,6 +75,11 @@ do
       end,
       clone = function(s)
         return mat4x4(s.row1, s.row2, s.row3, s.row4)
+      end,
+      getEuler = function (s)
+        local t = vec3.tmp()
+        ffi.C.lj_mat_toeuler(s, t)
+        return t.x, t.y, t.z
       end,
       inverse = function(s)
         if s == nil then return nil end
@@ -136,7 +151,9 @@ do
         return s:transformTo(vec4(), vec)
       end,
       identity = function ()
-        return mat4x4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1))
+        local ret = mat4x4()
+        ret.row1.x, ret.row2.y, ret.row3.z, ret.row4.w = 1, 1, 1, 1
+        return ret
       end,
       translation = function (vec)
         return ffi.C.lj_mat_translation(__util.ensure_vec3(vec))

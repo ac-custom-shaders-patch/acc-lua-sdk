@@ -1,5 +1,5 @@
 __source 'lua/api_gameplay.cpp'
-__source 'lua/api_replay_extension.cpp'
+__source 'extensions/track_adjustments/ac_ext_track_adjustments.cpp'
 __allow 'gp'
 __namespace 'ui'
 

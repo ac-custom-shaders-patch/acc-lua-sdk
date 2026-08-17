@@ -3,6 +3,7 @@ ac.PhysicsDebugLines = __enum({ cpp = 'phys_debug_lines_switches' }, {
   Tyres = 1,         -- Tyres raycasting
   WetSkidmarks = 2,  -- Marks left by tyres reducing grip in rain
   Script = 4,        -- Lines drawn by custom physics script
+  CosmicBodies = 8,  -- Outlines for extra bodies of cosmic suspensions
   RainLane = 65536,  -- Alternative AI lane for rain
 })
 

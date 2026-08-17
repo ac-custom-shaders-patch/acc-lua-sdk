@@ -1,7 +1,5 @@
 __source 'lua/api_ui.cpp'
 __source 'lua/api_ui_ac.cpp'
-__source 'lua/api_ui_gif.cpp'
-__source 'lua/api_ui_shared.cpp'
 __namespace 'ui'
 
 require './ac_render_shader'
@@ -200,6 +198,19 @@ local function endThinScrollbarChild()
   ui.endChild()
 end
 
+---Set `columns` above 1 to start a column layout. Set it back to 1 to stop the layout. Since 0.3.0, there is a new override
+---taking flags. When layouting columns, use `ui.nextColumn()` to switch to the next column, or row if current column is the last one.
+---@param columns integer? @Default value: 1.
+---@param border boolean? @Default value: `true`.
+---@param id string|nil @Default value: `nil`.
+---@overload fun(columns: integer, flags: ui.ColumnsFlags, id: string?)
+function ui.columns(columns, border, id)
+  if type(border) ~= 'number' then
+    border = border ~= false and 0 or 1
+  end
+  ffi.C.lj_columns_1__ui(tonumber(columns) or 1, border, __util.str_opt(id))
+end
+
 ---Draw a child window: perfect for clipping content, for scrolling lists, etc. Think of it more like
 ---a HTML div with overflow set to either scrolling or hidden, for example.
 ---@generic T
@@ -223,11 +234,13 @@ function ui.childWindow(id, size, border, flags, content)
     flags = bit.bor(bit.bxor(flags, ui.WindowFlags.ThinScrollbar), ui.WindowFlags.NoScrollbar)
   end
   if ui.beginChild(id, size, border, flags) then
-    if thinScrollbar then
-      ui.thinScrollbarBegin(true)
-      return using(content, endThinScrollbarChild)
-    else
+    if not thinScrollbar then
       return using(content, ui.endChild)
+    else
+      local horizontalScroll = bit.band(flags, ui.WindowFlags.HorizontalScrollbar) ~= 0
+      if horizontalScroll then ui.setWindowMouseScrollAxis(true) end
+      ui.thinScrollbarBegin(true, horizontalScroll)
+      return using(content, endThinScrollbarChild)
     end
   else
     ui.endChild()
@@ -590,6 +603,12 @@ function ui.DWriteFont:allowEmoji(allow)
   return self
 end
 
+function ui.DWriteFont:spacing(leading, trailing, minimumAdvanceWidth)
+  self._spacing = string.format(';Spacing=%f,%f,%f', leading or 0, trailing or 0, math.max(minimumAdvanceWidth or 0, 0))
+  self._fullName = nil
+  return self
+end
+
 local _fontTable = {}
 
 function ui.DWriteFont:__tostring()
@@ -616,8 +635,9 @@ function ui.DWriteFont:__tostring()
       end
     end
 
-    if self._allowRealSizes then t[n + 1] = ';AnyFontSize' end
-    if self._allowEmoji == false then t[n + 1] = ';NoEmoji' end
+    if self._allowRealSizes then t[n + 1], n = ';AnyFontSize', n + 1 end
+    if self._allowEmoji == false then t[n + 1], n = ';NoEmoji', n + 1 end
+    if self._spacing then t[n + 1], n = self._spacing, n + 1 end
 
     ret = table.concat(t, '')
     self._fullName = ret
@@ -690,22 +710,25 @@ end
 function ui.drawCarIcon(iconID, color, hint)
   local pos = vec2()
   local size = vec2()
-  local opacity = ffi.C.lj_draw_car_icon__ui(pos, size)
+  local opacity = ffi.C.lj_draw_car_icon__ui(pos, size, hint and tostring(hint) or nil)
   if opacity > 0 then
     local color4 = color and rgbm.new(color) or rgbm.colors.white
     color4.mult = color4.mult * opacity
     local pos2 = pos + size
-    ui.drawImage('extension/textures/gui/car_indicator_bg.png', pos, pos2, color4)
+    ui.drawImage('?textures/gui/car_indicator_bg.png', pos, pos2, color4)
     local cur = ui.getCursor()
+    local sizeMult = 1 / ac.getUI().uiScale
     if type(iconID) == 'function' then
       local curNew = pos + size / 2 - 18
       ui.setCursor(curNew)
+      ui.beginScale()
       ui.pushClipRect(curNew, curNew + 36)
       iconID(36)
       ui.popClipRect()
+      ui.endPivotScale(sizeMult, pos + size / 2)
     else
       ui.setCursor(pos)
-      ui.icon(iconID, size, rgbm(0, 0, 0, opacity), 24)
+      ui.icon(iconID, size, rgbm(0, 0, 0, opacity), 24 * sizeMult)
     end
     if hint and ui.rectHovered(pos, pos2) and not ui.windowHovered(ui.HoveredFlags.AnyWindow) then
       ui.setTooltip(hint)
@@ -714,10 +737,11 @@ function ui.drawCarIcon(iconID, color, hint)
   end
 end
 
----Generates ID to use with `ui.icon()` to draw an icon from an atlas.
+---Generates ID to use with `ui.icon()` to draw an icon from an atlas. Might be faster to safe the result
+---of the call and reuse that, although it’s not that expensive if you only need to render a couple of icons.
 ---@param filename string @Texture filename.
----@param uv1 vec2 @UV coordinates of the upper left corner.
----@param uv2 vec2 @UV coordinates of the bottom right corner.
+---@param uv1 number|vec2 @UV coordinates of the upper left corner in 0…1 range, 0 for the top left corner.
+---@param uv2 number|vec2 @UV coordinates of the bottom right corner in 0…1 range, 0 for the top left corner.
 ---@return ui.Icons @Returns an ID to be used as an argument for `ui.icon()` function.
 function ui.atlasIconID(filename, uv1, uv2)
   return string.format('at:%s\n%s,%s,%s,%s', filename,
@@ -1157,7 +1181,7 @@ function ui.ExtraCanvas(resolution, mips, antialiasingMode, textureFormat, flags
     antialiasingMode, textureFormat = textureFormat, antialiasingMode
   end
 
-  return ffi.gc(ffi.C.lj_uirt_new__ui(resolution.x, resolution.y, tonumber(mips) or 1, tonumber(antialiasingMode) or 0,
+  return ffi.gc(ffi.C.lj_uirt_new__ui(resolution.x, resolution.y, math.min(tonumber(mips) or 1, 999), tonumber(antialiasingMode) or 0,
     tonumber(textureFormat) or 28, tonumber(flags) or 0), ffi.C.lj_uirt_gc__ui)
 end
 
@@ -1178,6 +1202,12 @@ ffi.metatype('uirt', {
     ---Disposes canvas and releases resources.
     dispose = function(s)
       return ffi.C.lj_uirt_dispose__ui(s)
+    end,
+
+    ---Returns space taken by texture in bytes.
+    ---@return integer
+    memoryFootprint = function(s)
+      return ffi.C.lj_uirt_datasize__ui(s)
     end,
 
     ---Return explicit MIP to use as an image. If called with index of 0, returns texture similar to main one, but only with a single MIP.
@@ -1434,7 +1464,7 @@ ffi.metatype('uirt', {
 
     ---Downloads data from GPU to CPU asyncronously (usually takes about 0.15 ms to get the data). Resulting data can be
     ---used to access colors of individual pixels or upload it back to CPU restoring original state.
-    ---@param callback fun(err: string, data: ui.ExtraCanvasData)
+    ---@param callback fun(err: string?, data: ui.ExtraCanvasData?)
     ---@return ui.ExtraCanvas @Returns itself for chaining several methods together.
     accessData = function(s, callback)
       if not callback then return end
@@ -1701,135 +1731,8 @@ function ui.endSubgroup()
   ui.endGroup()
 end
 
--- GIF player
-
-ffi.cdef [[
-typedef struct {
-  int _id;
-  bool _required;
-  bool _has_anything;
-  bool _is_valid;
-  bool keepRunning;
-  const vec2 _resolution;
-} gifholder;
-]]
-
----@param source string|{width: number, height: number, decompress: boolean?} @URL, filename or binary data.
----@return ui.GIFPlayer
-function ui.GIFPlayer(source)
-  if type(source) == 'table' and type(source.width) == 'number' and type(source.height) == 'number' then
-    return ffi.gc(ffi.C.lj_gifholder_new__ui(__util.blob(__util.json(source)), true), ffi.C.lj_gifholder_gc__ui)
-  end
-  return ffi.gc(ffi.C.lj_gifholder_new__ui(__util.blob(source), false), ffi.C.lj_gifholder_gc__ui)
-end
-
----GIF player can be used to display animated GIFs. Also supports regular and animated WEBP images.
----@class ui.GIFPlayer
----@field keepRunning boolean @By default GIFs stop playing if they are not actively used in rendering. If you need them to keep running in background, set this property to `true`.
----@explicit-constructor ui.GIFPlayer
-ffi.metatype('gifholder', {
-  __tostring = function(s)
-    return string.format('$ui.GIFPlayer://?id=%d', s._id)
-  end,
-  __index = {
-    ---Get GIF resolution. If GIF is not yet loaded, returns zeroes.
-    ---@return vec2 @Width and height in pixels.
-    resolution = function(s)
-      return s._resolution
-    end,
-
-    ---Push new bitmap data to a live-updating image.
-    ---@param data binary
-    ---@return boolean @Returns `false` if data doesn’t fit.
-    push = function(s, data)
-      return ffi.C.lj_gifholder_push__ui(s, __util.blob(data))
-    end,
-
-    ---Rewinds GIF back to beginning.
-    ---@return boolean
-    rewind = ffi.C.lj_gifholder_rewind__ui,
-
-    ---Checks if GIF is loaded and ready to be drawn.
-    ---@return boolean
-    ready = function(s)
-      if not s._has_anything then s._required = true end
-      return s._has_anything
-    end,
-
-    ---Returns `false` if GIF decoding has failed.
-    ---@return boolean
-    valid = function(s)
-      return s._is_valid
-    end
-  }
-})
-
--- Shared textures
-
-ffi.cdef [[
-typedef struct {
-  uint64_t _handle;
-  int _id;
-  int __rc;
-  const vec2 _resolution;
-  bool _has_anything;
-} sharedtex;
-]]
-
----@param handle integer @Shared texture handle. Can be either a `D3D11_RESOURCE_MISC_SHARED` handle or a handle from `:sharedHandle()` of an extra canvas.
----@param ntMode nil|integer|boolean? @Set to `true` if the handle is NT handle. Alternatively, set to an integer with source process ID. Default value: `false`. Note: for NT handles it’s better to use the named textures and pass it as a string instead (with the overload).
----@return ui.SharedTexture
----@overload fun(name: string) @Overload using name of a shared NT texture, works a lot better.
-function ui.SharedTexture(handle, ntMode)
-  local s
-  if type(handle) == 'string' then
-    s = ffi.C.lj_sharedtex_newnamed__ui(handle)
-  elseif ntMode then
-    s = ffi.C.lj_sharedtex_new__ui(tonumber(handle) or 0, true, ntMode ~= true and tonumber(ntMode) or 0)
-  else
-    s = ffi.C.lj_sharedtex_new__ui(tonumber(handle) or 0, false, 0)
-  end
-  return ffi.gc(s, ffi.C.lj_sharedtex_gc__ui)
-end
-
----A wrapper for accessing textures shared by other Lua scripts or even by other applications. For the latter, textures need to have `D3D11_RESOURCE_MISC_SHARED` flag and be on the same GPU.
----@class ui.SharedTexture
----@explicit-constructor ui.SharedTexture
-ffi.metatype('sharedtex', {
-  __tostring = function(s)
-    return string.format('$ui.SharedTexture://?id=%d', s._id)
-  end,
-  __index = {
-    ---Dispose texture and release its view. Call this method if remote texture is being destroyed.
-    dispose = ffi.C.lj_sharedtex_dispose__ui,
-
-    ---Sets texture name for debugging. Textures with set name appear in Lua Debug App, allowing to monitor their state.
-    ---@param name string? @Name to display texture as. If set to `nil` or `false`, name will be reset and texture will be hidden.
-    ---@return self @Returns itself for chaining several methods together.
-    setName = function(s, name)
-      ffi.C.lj_sharedtex_setname__ui(s, name and tostring(name) or nil)
-      return s
-    end,
-
-    ---Get texture handle used for creating a texture. If texture has failed to load, returns 0. If texture is loaded by name and loaded properly, returns 1.
-    ---@return integer
-    handle = function(s)
-      return s._handle
-    end,
-
-    ---Get texture resolution. If texture has failed to load, returns zeroes.
-    ---@return vec2 @Width and height in pixels.
-    resolution = function(s)
-      return s._resolution
-    end,
-
-    ---Returns `false` if access to a shared texture has failed.
-    ---@return boolean
-    valid = function(s)
-      return s._has_anything
-    end,
-  }
-})
+__util.lazyfn('lib_ui_gif', ui, 'GIFPlayer')
+__util.lazyfn('lib_ui_shared', ui, 'SharedTexture')
 
 -- Thing for capturing input
 
@@ -1874,6 +1777,70 @@ function ui.interactiveArea(id, size)
   return r ~= nil and r or nil, iabr.value
 end
 
+---@class ui.CapturedKeyboard
+---@field pressedCount integer @Number of buttons in `.pressed` array.
+---@field pressed integer[] @Zero-based array of pressed buttons with direct access (be careful).
+---@field repeated integer[] @Zero-based array of flags if pressed buttons are repeated (the same size as `pressed`).
+---@field releasedCount integer @Number of buttons in `.released` array.
+---@field released integer[] @Zero-based array of released buttons with direct access (be careful).
+ffi.metatype('uicapturedinput', {
+  __len = function(s)
+    return s.__queue.p1
+  end,
+  __tostring = function(s)
+    return s:queue()
+  end,
+  __index = {
+    ---Characters being typed. Automatically takes into account keyboard layout, held shift and all that stuff.
+    ---@return string @Empty string if there were no characters.
+    queue = function(s)
+      if s.__queue.p1 == 0 then return '' end
+      return __util.strrefr(s.__queue)
+    end,
+
+    ---@return boolean
+    down = function(s, index)
+      return index > 0 and index < 256 and s.__down[index]
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrl = function(s, button)
+      return s.__down[17] and not s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyShift = function(s, button)
+      return not s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyAlt = function(s, button)
+      return not s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrlShift = function(s, button)
+      return s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrlAlt = function(s, button)
+      return s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+
+    ---@param button ui.KeyIndex?
+    ---@return boolean
+    hotkeyCtrlShiftAlt = function(s, button)
+      return s.__down[17] and s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
+    end,
+  }
+})
+
 local acpp
 
 ---Create a new popup. Function `callback()` will be called each frame to render its content until popup is closed. Pass `title` in parameters to create
@@ -1887,8 +1854,7 @@ function ui.popup(callback, params)
   local opened, children = params.title ~= nil, {}
   local listener
   local lastFrameDrawn = -1
-  local id = (params.title and '\1w' .. tostring(params.title) .. '###' or '\1') ..
-  tostring(math.randomKey())                                                                             -- '\1' prefix makes IDs for popups absolute
+  local id = (params.title and '\1w'..tostring(params.title)..'###' or '\1')..tostring(math.randomKey()) -- '\1' prefix makes IDs for popups absolute
   local rb = params.title and refbool(true)
   local sizeSet, positionSet = false, false
 
@@ -1970,70 +1936,6 @@ function ui.popup(callback, params)
   end
 end
 
----@class ui.CapturedKeyboard
----@field pressedCount integer @Number of buttons in `.pressed` array.
----@field pressed integer[] @Zero-based array of pressed buttons with direct access (be careful).
----@field repeated integer[] @Zero-based array of flags if pressed buttons are repeated (the same size as `pressed`).
----@field releasedCount integer @Number of buttons in `.released` array.
----@field released integer[] @Zero-based array of released buttons with direct access (be careful).
-ffi.metatype('uicapturedinput', {
-  __len = function(s)
-    return s.__queue.p1
-  end,
-  __tostring = function(s)
-    return s:queue()
-  end,
-  __index = {
-    ---Characters being typed. Automatically takes into account keyboard layout, held shift and all that stuff.
-    ---@return string @Empty string if there were no characters.
-    queue = function(s)
-      if s.__queue.p1 == 0 then return '' end
-      return __util.strrefr(s.__queue)
-    end,
-
-    ---@return boolean
-    down = function(s, index)
-      return index > 0 and index < 256 and s.__down[index]
-    end,
-
-    ---@param button ui.KeyIndex?
-    ---@return boolean
-    hotkeyCtrl = function(s, button)
-      return s.__down[17] and not s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
-    end,
-
-    ---@param button ui.KeyIndex?
-    ---@return boolean
-    hotkeyShift = function(s, button)
-      return not s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
-    end,
-
-    ---@param button ui.KeyIndex?
-    ---@return boolean
-    hotkeyAlt = function(s, button)
-      return not s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
-    end,
-
-    ---@param button ui.KeyIndex?
-    ---@return boolean
-    hotkeyCtrlShift = function(s, button)
-      return s.__down[17] and s.__down[16] and not s.__down[18] and (not button or ui.keyboardButtonPressed(button))
-    end,
-
-    ---@param button ui.KeyIndex?
-    ---@return boolean
-    hotkeyCtrlAlt = function(s, button)
-      return s.__down[17] and not s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
-    end,
-
-    ---@param button ui.KeyIndex?
-    ---@return boolean
-    hotkeyCtrlShiftAlt = function(s, button)
-      return s.__down[17] and s.__down[16] and s.__down[18] and (not button or ui.keyboardButtonPressed(button))
-    end,
-  }
-})
-
 local _uilCache = {}
 
 ---Creates a new layer with user icons. Use `carN::special::driver` to draw an icon of a driver in a certain car (replace N with 0-based car index).
@@ -2084,7 +1986,11 @@ function ui.itemRect()
   return ir1, ir2
 end
 
----Adds a new settings item in settings list in apps.
+---Adds a new settings item in settings list in apps. Category can be changed though, so, it’s more of a function allowing to create
+---new windows live.
+---Special commands:
+---- `backgroundColor:…`: change background color live;
+---- `notifications:…`: change notifications counter.
 --[[@tableparam params {
   icon: ui.Icons = ui.Icons.Settings "Settings icon",
   name: string "Name of the settings item (name of a script by default).",
@@ -2093,6 +1999,9 @@ end
   padding: vec2 = nil "Custom padding for the window.",
   backgroundColor: rgbm = nil "Custom background color for the window.",
   category: 'settings'|'main'|'developer'|nil = nil "Optionally, this function can be used for simply creating new apps.",
+  flags: string[]|nil = nil "Optional list of window flags, similar to flags of windows of regular Lua apps.",
+  tags: string[]|nil = nil "Optional list of tags for search to find the app.",
+  parent: string = nil "ID of a parent window. If set, and parent window is found, `category` will be ignored.",
   onOpen: fun() = nil "Callback called when the tool is opened",
   onClose: fun() = nil "Callback called when the tool is closed",
   onMenu: fun() = nil "Callback for extra items in context menu opening from taskbar.",

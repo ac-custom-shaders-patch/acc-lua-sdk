@@ -63,7 +63,7 @@ function string.findIgnoreCase(self, needle, index) end
 ---Searches and replaces all the substrings.
 ---@param self string @String to find `replacee` and replace with `replacer` in.
 ---@param replacee string @String to find.
----@param replacer string? @String to replace. Default value: ``.
+---@param replacer string? @String to replace. Default value: `''` (empty string, fixed in 0.3.0).
 ---@param limit integer? @Maximum number of found strings to replace. Default value: `math.huge`.
 ---@param ignoreCase boolean? @Option for case-incensitive search. Default value: `false`.
 ---@return string, integer @Second value returned is for the number of replacements.
@@ -87,7 +87,7 @@ function string.codePointAt(self, start) end
 ---@param self string @String to search emojis in.
 ---@param start integer @Index (starts with 1, if below counts from the end).
 ---@return integer? @Returns 1-based starting index of an emojis, or `nil` if no emojis have been found.
----@return integer? @Returns 1-based ending index, or `nil` if no emojis have been found.
+---@return integer? @Returns 1-based starting index plus the length of the emoji, or `nil` if no emojis have been found.
 function string.nextEmoji(self, start) end
 
 ---Encodes URL argument.
@@ -95,6 +95,12 @@ function string.nextEmoji(self, start) end
 ---@param plusForSpaces boolean? @Use `'+'` for space symbol (works for URLs, but if a regular URL encoding is needed, might be getting in a way). Default value: `true`.
 ---@return string
 function string.urlEncode(self, plusForSpaces) end
+
+---Decodes URL argument. Added in 0.3.0-preview238.
+---@param self string
+---@param plusForSpaces boolean? @Use `'+'` for space symbol (works for URLs, but if a regular URL encoding is needed, might be getting in a way). Default value: `true`.
+---@return string
+function string.urlDecode(self, plusForSpaces) end
 
 ---Checks if the beginning of a string matches another string. If string to match is longer than the first one, always returns `false`.
 ---@param self string @String to check the beginning of.
@@ -106,7 +112,7 @@ function string.startsWith(self, another, offset) end
 ---Checks if the end of a string matches another string. If string to match is longer than the first one, always returns `false`.
 ---@param self string @String to check the end of.
 ---@param another string @String to match.
----@param offset integer? @Optional offset for the matching end. Default value: `0`.
+---@param offset integer? @Optional offset from the end for the matching end. Default value: `0`.
 ---@return boolean
 function string.endsWith(self, another, offset) end
 
@@ -142,6 +148,12 @@ function string.multiply(self, count) end
 ---@param direction integer? @Direction to pad to, 1 for padding at the end, -1 for padding at the start, 0 for padding from both ends centering string. Default value: `1`.
 ---@return string
 function string.pad(self, targetLength, pad, direction) end
+
+---Xor two strings together. Works fastest if length of `key` is a multiple of 8. Input and output strings can contain zero bytes.
+---@param self string @String to XOR.
+---@param key string @Xoring key.
+---@return string @Xored string.
+function string.xor(self, key) end
 
 ---Similar to `string.find()`: looks for the first match of `pattern` and returns indices, but uses regular expressions.
 ---
@@ -182,7 +194,7 @@ function string.reggmatch(self, pattern, ignoreCase) end
 ---Note: regular expressions currently are in ECMAScript format, so backtracking is not supported. Also, in most cases they are slower than regular Lua patterns.
 ---@param self string @String to search in.
 ---@param pattern string @Regular expression.
----@param repl    string|table|function @Replacement value. Used in the same way as with `string.gsub()`, could be a table or a function.
+---@param repl    string|table|function @Replacement value. Used in the same way as with `string.gsub()`, could be a table or a function. If you want to insert groups, use `$1` (regular expressions style) instead of `%1` (Lua patterns style).
 ---@param limit integer? @Limit maximum number of replacements. Default value: `math.huge`.
 ---@param ignoreCase boolean? @Set to `true` to make search case-insensitive. Default value: `false`.
 ---@return string @String with found entries replaced.

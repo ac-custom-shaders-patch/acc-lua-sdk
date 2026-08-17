@@ -50,12 +50,33 @@ function __util.lazy(id)
   if not r then
     local bffi, suc = ffi, nil
     ffi = _F
+    _lz[id] = true
     suc, r = pcall(__util.nativf, 2458846151 --[[ lazy ]], id)
     ffi = bffi
     if not suc then error(r, 2) end
-    _lz[id] = r
+    if r then _lz[id] = r end
   end
   return r
+end
+
+function __util.lazyfn(id, core, fn)
+  -- local f
+  -- f = function(...)
+  --   __util.lazy(id)
+  --   if core[fn] == f then error(string.format('Malformed lib: %s, %s', id, fn), 2) end
+  --   return core[fn](...)
+  -- end
+  -- core[fn] = f
+  core[fn] = function(...)
+    __util.lazy(id)
+    return core[fn](...)
+  end
+end
+
+function __util.lazymod(id, core, fns)
+  for i = 1, #fns do
+    __util.lazyfn(id, core, fns[i])
+  end
 end
 
 function __util.argblob(data)
@@ -502,11 +523,12 @@ function __util.ensure_rgbm_nil(arg)
   return rgbm.isrgbm(arg) and arg or nil
 end
 
-local tb = debug.traceback
-local gmt = debug.getmetatable
+local _tremove = table.remove
+local _tb = debug.traceback
+local _gmt = debug.getmetatable
 
-function __util.cbCall(fn, ...)
-  local s, err = xpcall(fn, tb, ...)
+function __util.callCallback(fn, ...)
+  local s, err = xpcall(fn, _tb, ...)
   if not s then
     if worker then
       worker.__error = tostring(err)
@@ -516,41 +538,26 @@ function __util.cbCall(fn, ...)
 end
 
 -- a cheap way to get simple replies from asynchronous calls
-local __lastReplyID = 0
-
-local __replyListeners = {}
+local __replyListeners, __lastReplyID = {}, 10
 function __util.expectReply(callback)
   if not callback then return 0 end
   local replyID = __lastReplyID + 1
   __lastReplyID = replyID
-  table.insert(__replyListeners, { replyID = replyID, callback = callback })
+  __replyListeners[replyID] = callback
   return replyID
 end
 function __script.processReply(replyID, ...)
-  for i = #__replyListeners, 1, -1 do
-    local l = __replyListeners[i]
-    if l.replyID == replyID then
-      __util.cbCall(l.callback, ...)
-      table.remove(__replyListeners, i)
-      return
-    end
-  end
-end
-
-local __callbackListeners = {}
-function __util.expectImmediateReply(callback)
-  if not callback then return 0 end
-  local replyID = __lastReplyID + 1
-  __lastReplyID = replyID
-  table.insert(__callbackListeners, { replyID = replyID, callback = callback })
-  return replyID
+  local l = __replyListeners[replyID]
+  if not l then return end
+  __replyListeners[replyID] = nil
+  __util.callCallback(l, ...)
 end
 
 function __util.callable(x)
   if type(x) == 'function' then
     return
   elseif type(x) == 'table' then
-    local mt = gmt(x)
+    local mt = _gmt(x)
     if type(mt) == 'table' and type(mt.__call) == 'function' then return end
   elseif type(x) == 'cdata' then
     if tostring(x):find('(', nil, true) ~= nil then return end
@@ -564,7 +571,7 @@ function __util.setCallback(callback)
   local replyID
   if __setCallbacksEmpty and #__setCallbacksEmpty > 0 then
     replyID = __setCallbacksEmpty[#__setCallbacksEmpty]
-    table.remove(__setCallbacksEmpty, #__setCallbacksEmpty)
+    _tremove(__setCallbacksEmpty, #__setCallbacksEmpty)
   else
     replyID = #__setCallbacks + 1
   end
@@ -576,9 +583,8 @@ function __script.processCallback(replyID, ...)
   if cb then return cb(...) end
 end
 function __script.forgetCallback(replyID)
-  -- ac.log('FORGET CALLBACK', replyID)
   if replyID == #__setCallbacks then
-    table.remove(__setCallbacks, replyID)
+    _tremove(__setCallbacks, replyID)
   else
     if not __setCallbacksEmpty then
       __setCallbacksEmpty = {replyID}
@@ -605,24 +611,23 @@ function __util.tunw_nn(x)
   return x.x, x.y
 end
 
+local _timeoutID = 0
+local _timeouts = {}
+local _timeoutsN = 0 -- number of active timeouts
+local _timeoutsR = 0 -- 1 if sorting is neeed, 2 if timeouts are currently running (bit flags)
+
 function __util.awaitingCallback()
-  return __util.timersLeft() > 0 or next(__replyListeners) ~= nil
+  return _timeoutsN > 0 or next(__replyListeners) ~= nil
 end
 
 local __toDispose, __toDisposeN = {}, 0
-function __script.handleError()
-  for i = __toDisposeN, 1, -1 do
-    pcall(__toDispose[i])
-  end
-  __toDisposeN = 0
-end
 
 function __util.pushEnsureToCall(fn)
   local n = __toDisposeN + 1
   __toDispose[n], __toDisposeN = fn, n
 end
 
-function __util.popEnsureToCall(fn)
+function __util.popEnsureToCall()
   local n = __toDisposeN
   if n > 0 then
     __toDispose[n]()
@@ -656,6 +661,140 @@ end
 
 function __util.jsonParse(str)
   return __util.lazy('lib_jsonparse')(str)
+end
+
+local function setTimeoutImpl(callback, delay, uniqueKey, repeating)
+  if uniqueKey ~= nil then
+    for i = 1, _timeoutsN do
+      if _timeouts[i].k == uniqueKey then return _timeouts[i].id end
+    end
+  end
+  local nextTime, id, n = math.max(os.preciseClock() + delay, -37000), _timeoutID, _timeoutsN + 1
+  _timeouts[n], _timeoutsN, _timeoutID = { id = id, callback = callback, nextTime = nextTime, period = repeating and delay or nil, k = uniqueKey }, n, _timeoutID + 1
+  -- table.sort(_timeouts, )
+  ffi.C.lj_set_timer_next(nextTime, false)
+  _timeoutsR = bit.bor(_timeoutsR, 1)
+  return id
+end
+
+---Runs callback after certain time. Returns cancellation ID.
+---Note: all callbacks will be ran before `update()` call,
+---and they would only ran when script runs. So if your script is executed each frame and AC runs at 60 FPS, smallest interval
+---would be 0.016 s, and anything lower that you’d set would still act like 0.016 s. Also, intervals would only be called once
+---per frame.
+---@param callback fun()
+---@param delay number? @Delay time in seconds. Default value: 0.
+---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
+---@return integer
+function setTimeout(callback, delay, uniqueKey)
+  return setTimeoutImpl(callback, delay or 0, uniqueKey, false)
+end
+
+---Repeteadly runs callback after certain time. Returns cancellation ID.
+---Note: all callbacks will be ran before `update()` call,
+---and they would only ran when script runs. So if your script is executed each frame and AC runs at 60 FPS, smallest interval
+---would be 0.016 s, and anything lower that you’d set would still act like 0.016 s. Also, intervals would only be called once
+---per frame.
+---@param callback fun(): function? @Return `clearInterval` (actual function) to clear interval.
+---@param period number? @Period time in seconds. Default value: 0.
+---@param uniqueKey any? @Unique key: if set, timer wouldn’t be added unless there is no more active timers with such ID.
+---@return integer
+function setInterval(callback, period, uniqueKey)
+  return setTimeoutImpl(callback, period or 0, uniqueKey, true)
+end
+
+-- local _clearPostponed, _clearStorage = nil, nil
+
+---Stops timeout. If called with an ID from `setInterval`, works as well.
+---@param cancellationID integer @Value earlier retuned by `setTimeout()`. If a non-numerical value is passed (like a `nil`), call is ignored and returns `false`.
+---@return boolean @True if timeout with such ID has been found and stopped.
+function clearTimeout(cancellationID)
+  if type(cancellationID) ~= 'number' then return false end
+  local i = 1
+  local m = math.huge
+  local r = false
+  while i <= _timeoutsN do
+    local t = _timeouts[i]
+    if t.nextTime ~= -37001 then -- if event is not already cleared…
+      if t.id == cancellationID then
+        r = t.period ~= nil or t.nextTime ~= -37002 -- returning `true` if it’s an interval or if it’s not running now
+        if bit.band(_timeoutsR, 2) == 2 then
+          t.nextTime = -37001
+        else
+          _timeoutsN = _timeoutsN - 1
+          _tremove(_timeouts, i)
+        end
+        goto next
+      end
+      m = math.min(m, t.nextTime)
+    end
+    i = i + 1
+    ::next::
+  end
+  ffi.C.lj_set_timer_next(m, true)
+  return r
+end
+
+---Stops interval. Return this value from a callback to cancel out an interval.
+---If called with an ID from `setTimeout`, works as well.
+---@param cancellationID integer @Value earlier retuned by `setInterval()`. If a non-numerical value is passed (like a `nil`), call is ignored and returns `false`.
+---@return boolean @True if interval with such ID has been found and stopped.
+function clearInterval(cancellationID)
+  return clearTimeout(cancellationID)
+end
+
+local function sortTimeouts(a, b)
+  return a.nextTime < b.nextTime
+end
+
+function __script.updateInner(fn, ...)
+  if _timeoutsR == 1 then
+    table.sort(_timeouts, sortTimeouts)
+  end
+  _timeoutsR = 2
+  ffi.C.lj_set_timer_next(math.huge, true) -- we reset first, so if there is a new fast timer set in a timer callback, we’d have next time updated properly
+  local i, N = 1, _timeoutsN
+  while i <= N do
+    local t = _timeouts[i]
+    local n = t.nextTime
+    if n < os.preciseClock() then
+      t.nextTime = -37002 -- invalidating, in case `t.callback()` raises an error
+      local ret = n == -37001 or n == -37002 --[[ this one threw last time it was called ]] or t.callback() == clearInterval or not t.period
+      if ret then
+        N = N - 1
+        _timeoutsN = _timeoutsN - 1 -- we might have added more timers, so this value would be bigger. Either way, we’re not calling those now
+        _tremove(_timeouts, i) -- we’re skipping the increment by going to `next`
+        goto next
+      end
+      if t.nextTime ~= -37001 then -- if it wasn’t cancelled just now…
+        n = n + t.period
+        t.nextTime = n
+        ffi.C.lj_set_timer_next(n, false)
+        _timeoutsR = 3 -- we’ll need to re-sort on the next frame
+      end
+      i = i + 1
+    else
+      ffi.C.lj_set_timer_next(n, false)
+      break
+    end
+    ::next::
+  end
+  _timeoutsR = bit.bxor(_timeoutsR, 2) -- leaving 1 flag: there could be new timers that need sorting
+  if fn then
+    fn(...)
+  end
+end
+
+function __script.handleError()
+  if _timeoutsR >= 2 then
+    -- If we crashed when processing timeouts, make sure next step will re-sort them and try to go through
+    ffi.C.lj_set_timer_next(-1e9, true)
+    _timeoutsR = 1
+  end
+  for i = __toDisposeN, 1, -1 do
+    pcall(__toDispose[i])
+  end
+  __toDisposeN = 0
 end
 
 end

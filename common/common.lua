@@ -2,37 +2,6 @@
 
 ac.skipSaneChecks = function() end
 
----Stores value in session shared Lua/Python storage. This is not a long-term storage, more of a way for
----different scripts to exchange data. Note: if you need to exchange a lot of data between Lua scripts,
----consider using ac.connect instead.
----
----Data string can contain zeroes.
----@param key string
----@param value string|number
-function ac.store(key, value)
-  key = tostring(key or "")
-  if type(value) == 'number' then
-    ffi.C.lj_store_number(key, value)
-  else
-    ffi.C.lj_store_string(key, value and __util.blob(value) or nil)
-  end
-end
-
----Reads value from session shared Lua/Python storage. This is not a long-term storage, more of a way for
----different scripts to exchange data. Note: if you need to exchange data between Lua scripts,
----use `ac.connect()` instead. And if despite that you need to exchange data between car scripts, make sure to add
----car index to the key.
----@param key string
----@return nil|string|number
-function ac.load(key)
-  key = tostring(key or "")
-  if ffi.C.lj_has_number(key) then
-    return ffi.C.lj_load_number(key)
-  else
-    return __util.strrefp(ffi.C.lj_load_string(key))
-  end
-end
-
 do
 
 local releaseCallbacks = nil

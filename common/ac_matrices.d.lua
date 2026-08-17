@@ -78,6 +78,12 @@ function mat4x4.ortho(extentMin, extentMax) end
 ---@return mat4x4
 function mat4x4:set(value) end
 
+---Get Euler angles from a matrix. Should work in symmetry with `mat4x4.euler()` and if not, please report and it’ll be fixed.
+---@return number @Heading angle in radians.
+---@return number @Pitch angle in radians.
+---@return number @Roll angle in radians.
+function mat4x4:getEuler() end
+
 ---@param destination vec3
 ---@param vec vec3
 ---@return vec3

@@ -91,7 +91,7 @@ typedef struct {
   bool lookLeft;
   bool lookRight;
   bool lookBack;
-  bool _pad;
+  bool combineAxis;
   bool gearUp;
   bool gearDown;
   int8_t drs;
@@ -123,6 +123,7 @@ typedef struct {
 
 ---A helper structure to simulate some inputs for controlling the car.
 ---@class ac.CarControlsInput
+---@field combineAxis boolean @Added in 0.3.0-preview125. Set to `false` to entirely override original pedal and handbrake values instead of combining. Default value: `true`.
 ---@field gearUp boolean @Set to `true` to activate a flag for the next physics step.
 ---@field gearDown boolean @Set to `true` to activate a flag for the next physics step.
 ---@field brakeBalanceUp boolean @Set to `true` to activate a flag for the next physics step.

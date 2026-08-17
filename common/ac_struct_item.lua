@@ -185,6 +185,15 @@ function ac.StructItem.transform(compactPosition, compactRotation, rangeFrom, ra
   }
 end
 
+---Simply create a new FFI structure with a given layout. Doesn’t connect to anything.
+---@generic T : ac.FFIStruct
+---@param layout T @A table containing fields of structure and their types. Use `ac.StructItem` methods to select types. Alternatively, you can pass a string for the body of the structure here, but be careful with it.
+---@return T
+function ac.StructItem.build(layout)
+  local s_name = __util.__si_ffi(layout, true)
+  return __util.__si_proxy(layout, ffi.new(s_name))
+end
+
 local __slTypes = {
   [-0.08] = { 'int8_t %s;', 1, function (v) return v / 127 end, function (v) return math.max(math.min(v, 1), -1) * 127 end, false, 3 },
   [0.08] = { 'uint8_t %s;', 1, function (v) return v / 255 end, function (v) return math.max(math.min(v, 1), 0) * 255 end, false, 4 },

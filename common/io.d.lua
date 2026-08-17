@@ -12,5 +12,8 @@
 ---@field isEncrypted boolean @A file or directory that is encrypted. For a file, all data streams in the file are encrypted. For a directory, encryption is the default for newly created files and subdirectories.
 ---@field isCompressed boolean @A file or directory that is compressed. For a file, all of the data in the file is compressed. For a directory, compression is the default for newly created files and subdirectories.
 ---@field isReparsePoint boolean @A file or directory that has an associated reparse point, or a file that is a symbolic link.
+---@field isArchive boolean @A file or directory that is an archive file or directory. Applications typically use this attribute to mark files for backup or removal. Added in CSP 0.3.0.
+---@field isSystem boolean @A file or directory that the operating system uses a part of, or uses exclusively. Added in CSP 0.3.0.
+---@field isTemporary boolean @A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed. Added in CSP 0.3.0.
 ---@cpptype lua_file_attributes
 local _fileAttributes = {}

@@ -27,7 +27,9 @@ function __script.__secure__()
       typeinfo = { type = "function", name = "nil", source = "=[C]", what = "C" },
       typeof = { type = "function", name = "nil", source = "=[C]", what = "C" },
   ]]
-  ffi = {
+  _F = table.clone(ffi)
+  table.clear(ffi)
+  table.assign(ffi, {
     abi = _F.abi,
     -- cast = _F.cast,
     -- copy = _F.copy,
@@ -46,10 +48,12 @@ function __script.__secure__()
     typeof = _F.typeof,
     arch = 'x64',
     os = 'Windows',
-  }
+  })
 
   -- Remove everything from debug module
+  local _traceback = debug.traceback
   table.clear(debug)
+  debug.traceback = _traceback
 
   -- Just a small precaution
   collectgarbage = function () return 0 end
@@ -135,4 +139,6 @@ function __script.__secure__()
     if not _F.istype(charPtr, dst + 0) then error('Not allowed', 2) end
     return _stfs(src, dst, size)
   end
+
+  return _F
 end

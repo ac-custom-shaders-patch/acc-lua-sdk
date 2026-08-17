@@ -61,7 +61,8 @@ function display.text(params)
   if textLen == 0 then return end
   
   local actualWidth = letter.x * textLen + (textLen > 0 and spacing * (textLen - 1) or 0)
-  if width > actualWidth then
+  if width > actualWidth and pos then
+    pos = vec2.tmp():set(pos.x, pos.y)
     pos.x = pos.x + (width - actualWidth) * alignment
   end
 

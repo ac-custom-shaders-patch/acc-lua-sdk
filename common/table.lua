@@ -5,6 +5,8 @@ local _tclear = require('table.clear')
 local _tclone = require('table.clone')
 local _tnkeys = require('table.nkeys')
 local _tnew = require('table.new')
+
+-- See table.isArray
 local function __isArray(t, N)
   -- return type(t) == 'table' and _tisarray(t)
   -- return type(t) == 'table' and N == _tnkeys(t)  -- alternative implementation. note: table.nkeys iterates over all elements for counting 🙄
@@ -21,24 +23,37 @@ local function __requireArray(t, N)
   error('Array is required', 3)
 end
 
-local function __deepCopy(t)
-  if type(t) ~= 'table' then return t end
+local function __cloneCDataSafely(t)
+  return t:clone()
+end
+
+local function __deepCopy(t, f)
+  if type(t) ~= 'table' then
+    if f and type(t) == 'cdata' then
+      local s, v = pcall(__cloneCDataSafely, t)
+      if s then return v end
+    end
+    return t
+  end
   local r, n = {}, #t
   if __isArray(t, n) then
     for i = next(t) or 1, n do
-      r[i] = __deepCopy(t[i])
+      r[i] = __deepCopy(t[i], f)
     end
   else
     for key, value in pairs(t) do
-      r[key] = __deepCopy(value)
+      r[key] = __deepCopy(value, f)
     end
   end
   return r
 end
 
----Checks if table is an array or not. Arrays are tables that only have consequtive numeric keys.
+---Checks if table is an array or not. Arrays are tables that only have consecutive numeric keys. If this function returns `true`, it doesn’t mean
+---underlying LuaJIT structure is exactly a dense array, but it does mean that it could be. For example, `{[2]=2, [1]=1}` is not a dense array from
+---LuaJIT POV, but semantically it is, and so `table.isArray()` would return `true`.
 ---@param t table|any[]
 ---@return boolean
+---@nodiscard
 function table.isArray(t)
   if type(t) ~= 'table' then return false end
   local N = #t
@@ -49,6 +64,7 @@ end
 ---@param arrayElements integer @How many elements the table will have as a sequence.
 ---@param mapElements integer @How many other elements the table will have.
 ---@return table
+---@nodiscard
 function table.new(arrayElements, mapElements)
   return _tnew(arrayElements, mapElements)
 end
@@ -63,18 +79,20 @@ end
 ---Returns the total number of elements in a given Lua table (i.e. from both the array and hash parts combined).
 ---@param t table
 ---@return integer
+---@nodiscard
 function table.nkeys(t)
   return _tnkeys(t)
 end
 
----Clones table using a fast LuaJIT call.
+---Clones table using a fast LuaJIT call. Doesn’t clone any vectors or colors inside, but it is fast.
 ---@generic T
 ---@param t T
----@param deep boolean? @Set to `true` for deep cloning. Default value: `false`.
+---@param deep nil|boolean|'full' @Set to `true` for deep cloning. Default value: `false`. Since 0.2.10, set to `'full'` to clone vectors or colors as well.
 ---@return T
+---@nodiscard
 function table.clone(t, deep)
   if deep then
-    return __deepCopy(t)
+    return __deepCopy(t, deep == 'full')
   else
     return _tclone(t)
   end
@@ -134,6 +152,7 @@ end
 ---@param t table<any, T>
 ---@param item T
 ---@return boolean
+---@nodiscard
 function table.contains(t, item)
   local N = #t
   if __isArray(t, N) then
@@ -158,11 +177,12 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param filteringCallback nil|fun(item: T, key: TKey, callbackData: TCallbackData): boolean
 ---@param filteringCallbackData TCallbackData?
 ---@param randomDevice nil|fun(): number @Optional callback for generating random numbers. Needs to return a value between 0 and 1. If not set, default `math.random` is used.
 ---@return T
+---@nodiscard
 function table.random(t, filteringCallback, filteringCallbackData, randomDevice)
   local mrandom = randomDevice or math.random
   local N = #t
@@ -205,9 +225,10 @@ end
 ---with both array and non-array tables.
 ---@generic T
 ---@generic TKey
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param item T
 ---@return TKey|nil
+---@nodiscard
 function table.indexOf(t, item)
   local n = #t
   if __isArray(t, n) then
@@ -232,6 +253,7 @@ end
 ---@param t2 table?
 ---@param deep boolean? @Default value: `true`.
 ---@return boolean
+---@nodiscard
 function table.same(t1, t2, deep)
   if t1 == t2 then
     return true
@@ -268,7 +290,7 @@ function table.same(t1, t2, deep)
       end
     end
     for i, _ in pairs(t2) do
-      if not t1[i] then
+      if t1[i] == nil then
         return false
       end
     end
@@ -287,7 +309,7 @@ local _tjsp, _tjsn = {}, 0
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param itemsJoin string? @Default value: ','.
 ---@param keyValueJoin string? @Default value: '='.
 ---@param toStringCallback nil|fun(item: T, key: TKey, callbackData: TCallbackData): string
@@ -295,6 +317,7 @@ local _tjsp, _tjsn = {}, 0
 ---@overload fun(t: table, itemsJoin: string, toStringCallback: fun(item: any, key: any, callbackData: any), toStringCallbackData: any)
 ---@overload fun(t: table, toStringCallback: fun(item: any, key: any, callbackData: any), toStringCallbackData: any)
 ---@return TKey|nil
+---@nodiscard
 function table.join(t, itemsJoin, keyValueJoin, toStringCallback, toStringCallbackData)
   if type(itemsJoin) == 'function' then
     itemsJoin, keyValueJoin, toStringCallback, toStringCallbackData = nil, nil, itemsJoin, keyValueJoin
@@ -357,6 +380,7 @@ end
 ---@param to integer? @Ending index.
 ---@param step integer? @Step.
 ---@return T[]
+---@nodiscard
 function table.slice(t, from, to, step)
   local N = #t
   __requireArray(t, N)
@@ -378,6 +402,7 @@ end
 ---@generic T
 ---@param t T[]
 ---@return T[]
+---@nodiscard
 function table.reverse(t)
   local N = #t
   local ret = _tnew(N, 0)
@@ -400,10 +425,11 @@ end
 ---@generic TCallbackData
 ---@generic TReturnKey
 ---@generic TReturnValue
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback (fun(item: T, index: TKey, callbackData: TCallbackData): TReturnValue, TReturnKey?)|nil @Mapping callback.
 ---@param callbackData TCallbackData?
----@return table<TReturnKey, TReturnValue>
+---@return {[TReturnKey]: TReturnValue}
+---@nodiscard
 function table.map(t, callback, callbackData)
   local ret = {}
   local N = #t
@@ -445,11 +471,12 @@ end
 ---@generic TKey
 ---@generic TCallbackData
 ---@generic TData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param startingValue TData
 ---@param callback fun(data: TData, item: T, index: TKey, callbackData: TCallbackData): TData @Reduction callback.
 ---@param callbackData TCallbackData?
 ---@return TData
+---@nodiscard
 function table.reduce(t, startingValue, callback, callbackData)
   local N = #t
   if __isArray(t, N) then
@@ -469,10 +496,11 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): any @Filtering callback.
 ---@param callbackData TCallbackData?
----@return table<TKey, T>
+---@return {[TKey]: T}
+---@nodiscard
 function table.filter(t, callback, callbackData)
   local ret = {}
   local N = #t
@@ -500,10 +528,11 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): boolean
 ---@param callbackData TCallbackData?
 ---@return boolean
+---@nodiscard
 function table.every(t, callback, callbackData)
   local N = #t
   if __isArray(t, N) then
@@ -529,10 +558,11 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): boolean
 ---@param callbackData TCallbackData?
 ---@return boolean
+---@nodiscard
 function table.some(t, callback, callbackData)
   local n = #t
   if __isArray(t, n) then
@@ -556,10 +586,11 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback nil|fun(item: T, index: TKey, callbackData: TCallbackData): boolean @If not set, all elements will be counted.
 ---@param callbackData TCallbackData?
 ---@return integer
+---@nodiscard
 function table.count(t, callback, callbackData)
   local n, r = #t, 0
   if __isArray(t, n) then
@@ -583,10 +614,11 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): boolean
 ---@param callbackData TCallbackData?
 ---@return integer
+---@nodiscard
 function table.sum(t, callback, callbackData)
   local n, r = #t, 0
   if __isArray(t, n) then
@@ -612,17 +644,17 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): boolean
 ---@param callbackData TCallbackData?
 ---@return T, TKey
+---@nodiscard
 function table.findFirst(t, callback, callbackData)
   local n = #t
   if __isArray(t, n) then
     for i = next(t) or 1, n do
-      local e = t[i]
-      if callback(e, i, callbackData) then
-        return e, i
+      if callback(t[i], i, callbackData) then
+        return t[i], i
       end
     end
   else
@@ -639,17 +671,17 @@ end
 ---found, returns `nil`.
 ---@generic T
 ---@generic TKey
----@param t table<TKey, T>
----@param key string
----@param value any
+---@param t {[TKey]: T}
+---@param key TKey
+---@param value T
 ---@return T, TKey
+---@nodiscard
 function table.findByProperty(t, key, value)
   local n = #t
   if __isArray(t, n) then
     for i = next(t) or 1, n do
-      local e = t[i]
-      if e[key] == value then
-        return e, i
+      if t[i][key] == value then
+        return t[i], i
       end
     end
   else
@@ -667,26 +699,37 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
----@param callback fun(item: T, index: TKey, callbackData: TCallbackData): number
+---@param t {[TKey]: T}
+---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): number?
 ---@param callbackData TCallbackData?
 ---@return T, TKey
+---@nodiscard
 function table.maxEntry(t, callback, callbackData)
   local r, k = nil, nil
   local v = -1/0
   local n = #t
   if __isArray(t, n) then
     for i = next(t) or 1, n do
-      local l = callback and callback(t[i], i, callbackData) or t[i]
-      if l > v then
+      local l
+      if callback then
+        l = callback(t[i], i, callbackData)
+      else
+        l = t[i]
+      end
+      if l and l > v then
         v = l
         r, k = t[i], i
       end
     end
   else
     for key, value in pairs(t) do
-      local l = callback and callback(value, key, callbackData) or value
-      if l > v then
+      local l
+      if callback then
+        l = callback(value, key, callbackData)
+      else
+        l = value
+      end
+      if l and l > v then
         v = l
         r, k = value, key
       end
@@ -700,26 +743,37 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
----@param callback fun(item: T, index: TKey, callbackData: TCallbackData): number
+---@param t {[TKey]: T}
+---@param callback fun(item: T, index: TKey, callbackData: TCallbackData): number?
 ---@param callbackData TCallbackData?
 ---@return T, TKey
+---@nodiscard
 function table.minEntry(t, callback, callbackData)
   local r, k = nil, nil
   local v = 1/0
   local n = #t
   if __isArray(t, n) then
     for i = next(t) or 1, n do
-      local l = callback and callback(t[i], i, callbackData) or t[i]
-      if l < v then
+      local l
+      if callback then
+        l = callback(t[i], i, callbackData)
+      else
+        l = t[i]
+      end
+      if l and l < v then
         v = l
         r, k = t[i], i
       end
     end
   else
     for key, value in pairs(t) do
-      local l = callback and callback(value, key, callbackData) or value
-      if l < v then
+      local l
+      if callback then
+        l = callback(value, key, callbackData)
+      else
+        l = value
+      end
+      if l and l < v then
         v = l
         r, k = value, key
       end
@@ -732,7 +786,7 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
+---@param t {[TKey]: T}
 ---@param callback fun(item: T, key: TKey, callbackData: TCallbackData)
 ---@param callbackData TCallbackData?
 ---@return table
@@ -755,10 +809,11 @@ end
 ---@generic T
 ---@generic TKey
 ---@generic TCallbackData
----@param t table<TKey, T>
----@param callback nil|fun(item: T, key: TKey, callbackData: TCallbackData): any
+---@param t {[TKey]: T}
+---@param callback nil|fun(item: T, key: TKey, callbackData: TCallbackData): any|nil
 ---@param callbackData TCallbackData?
----@return table<TKey, T>
+---@return {[TKey]: T}
+---@nodiscard
 function table.distinct(t, callback, callbackData)
   local N = #t
   local d = {}
@@ -767,7 +822,12 @@ function table.distinct(t, callback, callbackData)
     local I = 1
     for key = next(t) or 1, N do
       local value = t[key]
-      local u = callback and callback(value, key, callbackData) or value
+      local u
+      if callback then
+        u = callback(value, key, callbackData)
+      else
+        u = value
+      end
       if u ~= nil then
         if not d[u] then
           d[u] = true
@@ -778,7 +838,12 @@ function table.distinct(t, callback, callbackData)
     end
   else
     for key, value in pairs(t) do
-      local u = callback and callback(value, key, callbackData) or value
+      local u
+      if callback then
+        u = callback(value, key, callbackData)
+      else
+        u = value
+      end
       if u ~= nil then
         if not d[u] then
           d[u] = true
@@ -873,6 +938,7 @@ end
 ---@param t any[]
 ---@param maxLevel integer? @Default value: 1.
 ---@return any[]
+---@nodiscard
 function table.flatten(t, maxLevel)
   local N = #t
   __requireArray(t, N)
@@ -906,6 +972,7 @@ end
 ---@return T[]
 ---@overload fun(endingIndex: integer, callback: (fun(index: integer, callbackData: any): any, integer|string?), callbackData: any)
 ---@overload fun(endingIndex: integer, startingIndex: integer, callback: (fun(index: integer, callbackData: any): any, integer|string?), callbackData: any)
+---@nodiscard
 function table.range(endingIndex, startingIndex, step, callback, callbackData)
   if type(startingIndex) == 'function' then startingIndex, step, callback, callbackData = 1, 1, startingIndex, step
   elseif type(step) == 'function' then step, callback, callbackData = 1, step, callback end
@@ -919,20 +986,22 @@ end
 
 ---Creates a new table from iterator. Supports iterators returning one or two values (if two values are returned, first is considered the key,
 ---if not, values are simply added to a list).
+---
+---Example:
+---```
+---local t = table.build(ipairs({1, 2, 3, 4})) -- t is `{1, 2, 3, 4}`
+---local t = table.build(pairs({a = 1, b = 2})) -- t is `{a = 1, b = 2}`
+---```
 ---@generic T
 ---@param iterator fun(...): T
 ---@return T[]
-function table.build(iterator, k, v)
+---@nodiscard
+function table.build(iterator, state, nextKey)
   local ret = {}
+  local v
   while true do
-    k, v = iterator(k, v)
-    if not k then return ret end
-    if v then
-      ret[k] = v
-    elseif k then
-      table.insert(ret, k)
-    else
-      return ret
-    end
+    nextKey, v = iterator(state, nextKey)
+    if not v then return ret end
+    ret[nextKey] = v
   end
 end

@@ -10,13 +10,15 @@ typedef struct {
   int flip;
   bool isMonitor;
   bool useMonitorShader;
-  int role;
+  const bool notDrivenByUser;
+  const bool correctMirror;
   vec2 monitorShaderScale;
   float monitorShaderSkew;
   float monitorShaderType;
   float monitorBrightness;
   vec3 monitorCameraPosition;
   vec3 monitorCameraLook;
+  uint8_t role;
 } realmirrorparams;
 ]]
 
@@ -28,6 +30,8 @@ typedef struct {
 ---@field flip ac.MirrorPieceFlip @Optional texture mapping flip parameter.
 ---@field isMonitor boolean @Monitor mirrors don’t reflect car they’re in.
 ---@field useMonitorShader boolean @Monitor shader has brightness that works slightly differently, a bit of color distortion at steep view angles (depends on monitor type) and a pixel grid if viewed really close.
+---@field notDrivenByUser boolean @By default, set to `false`. Once `ac.setRealMirrorParams()` with `userDriven` set to `false` is called, switches to `true`. In that case, mirror is controlled by something like a car script, not by a user. Can’t be changed directly.
+---@field correctMirror boolean @If set to `true`, correct projection is used. In that case, unless mirror is in monitor mode, `flip` and `aspectMultiplier` is ignored. Consider keeping `fov` at 10°: with this value, mirrors will be the most accurate. Can’t be changed directly.
 ---@field role ac.MirrorPieceRole @Role of mirror piece. Used by adaptive virtual mirrors.
 ---@field monitorShaderScale vec2 @Scale of pixels grid for monitor shader. Automatically guessed value: `vec2(600, 150)`. Think of it as display resolution.
 ---@field monitorShaderSkew number @Skew of pixels grid to align pixels with tilted monitors.
@@ -164,28 +168,9 @@ function ac.CarAudioTweak.replaceAudioEvent(eventID, newEventKey)
   ffi.C.lj_setCarAudioTweak_p__carc(tonumber(eventID) or 0, 7, tostring(newEventKey), 0)
 end
 
-ffi.cdef [[ 
-typedef struct {
-  mat4x4 transform;
-  float fov;
-  float exposure;
-  bool externalSound;
-} carcameradef;
-]]
-
----Stores parameters for a car camera (enabled with F6).
----@class ac.CarCameraParams
----@field transform mat4x4 @Transformation relative to car model. Note: due to some techical reasons direction `.look` is facing backwards.
----@field fov number @Field of view angle in degrees, automatically guessed value: 10.
----@field exposure number @Exposure.
----@field externalSound boolean @Should internal or external audio be used.
-ffi.metatype('carcameradef', { __index = {} })
-
 ---@param cameraIndex integer @0-based camera index (use `car.carCamerasCount` to get the number of cameras).
 ---@return ac.CarCameraParams? @Returns `nil` if there is no camera with such index.
 function ac.accessCarCamera(cameraIndex)
-  local r = ffi.C.lj_accessCarCamera_inner__carc(tonumber(cameraIndex) or 0)
-	return r ~= nil and r or nil
+  return __util.lazy('lib_carcameradef')(cameraIndex)
 end
-
 

@@ -75,7 +75,8 @@ end
   inheritEnvironment: boolean = nil "Set to `true` to inherit AC environment variables before adding custom ones",
   stdin: string = nil "Optional data to pass to a process in stdin pipe",
   separateStderr: boolean = nil "Store stderr data in a separate string",
-  terminateWithScript: boolean = nil "Terminate process if this Lua script were to terminate (for example, during reload)",
+  terminateWithScript: boolean|'disposable' = nil "Terminate process if this Lua script were to terminate (for example, during reload). Since 0.2.10, pass `'disposable'` instead to get `ac.Disposable` back, allowing to terminate the process manually.",
+  assignJob: boolean = nil "Set to `false` to stop CSP from tying the process to AC process (doing so ensures child process would shut down with AC closing)",
   dataCallback: fun(err: boolean, data: string) = nil "If set to a function, data written in stdout and stderr will be passed to the function instead as it arrives"
 }]]
 ---@param callback nil|fun(err: string, data: os.ConsoleProcessResult)
@@ -92,6 +93,9 @@ function os.runConsoleProcess(params, callback)
     r = ffi.C.lj_run_console__os(__util.json(params), __util.expectReply(callback), 0)
   end
   if r ~= 0 then
+    if params.terminateWithScript == 'disposable' then
+      return __util.disposable(r)
+    end
     return function (data)
       ffi.C.lj_run_console_post_stdin__os(r, __util.blob(data))
     end

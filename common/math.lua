@@ -1,7 +1,20 @@
 -- To make things simpler, Lua’s math module is extended here
 
-local function __clamp(value, min, max)
+local function __clampOld(value, min, max)
   return value < min and min or value > max and max or value
+end
+
+local mmin, mmax = math.min, math.max
+local function __clamp(value, min, max)
+  -- compatible with the old `return value < min and min or value > max and max or value`, but fast
+  if type(max) ~= 'number' and (value < min or max) then return mmax(min, value) end
+  if min and type(min) ~= 'number' then return mmin(max, value) end
+  if min > max and value > min then return max end
+  return mmax(mmin(value, max), min)
+end
+
+local function __saturate(value, min, max)
+  return mmax(mmin(value, 1), 0)
 end
 
 ---Takes value with even 0…1 distribution and remaps it to recreate a distribution
@@ -10,6 +23,7 @@ end
 ---@param x number @Value to adjust.
 ---@param k number @Bell curvature parameter.
 ---@return number
+---@nodiscard
 function math.gaussianAdjustment(x, k)
   -- https://jsfiddle.net/9g03fkxm/
   k = k or 0.52
@@ -22,6 +36,7 @@ end
 ---@param size integer @Number of points.
 ---@param tileMode boolean? @If set to `true`, resulting points would be tilable without breaking poisson distribution.
 ---@return vec2[]
+---@nodiscard
 function math.poissonSamplerSquare(size, tileMode)
   size = math.floor(tonumber(size) or 0)
   if size < 1 then return {} end
@@ -36,6 +51,7 @@ end
 ---Builds a list of points arranged in a circle with poisson distribution.
 ---@param size integer @Number of points.
 ---@return vec2[]
+---@nodiscard
 function math.poissonSamplerCircle(size)
   size = math.floor(tonumber(size) or 0)
   if size < 1 then return {} end
@@ -49,6 +65,7 @@ end
 
 ---Generates a random number in [0, INT32_MAX) range. Can be a good argument for `math.randomseed()`.
 ---@return integer
+---@nodiscard
 function math.randomKey()
   return ffi.C.lj_random_seed()
 end
@@ -56,6 +73,7 @@ end
 ---Generates random number based on a seed.
 ---@param seed integer|boolean|string @Seed.
 ---@return number @Random number from 0 to 1.
+---@nodiscard
 function math.seededRandom(seed)
   if type(seed) == 'string' then 
     seed = ffi.C.lj_checksumXXH(seed)
@@ -69,6 +87,7 @@ end
 ---@param number number
 ---@param decimals number? @Default value: 0 (rounding to a whole number).
 ---@return integer
+---@nodiscard
 function math.round(number, decimals)
   local c = 2^52 + 2^51
   if decimals then
@@ -86,14 +105,14 @@ end
 ---@param min number
 ---@param max number
 ---@return number
-function math.clampN(value, min, max)
-  return value < min and min or value > max and max or value
-end
+---@nodiscard
+function math.clampN(value, min, max) return __clamp(value, min, max) end
 
 ---Clamps a number value between 0 and 1.
 ---@param value number
 ---@return number
-function math.saturateN(value) return value < 0 and 0 or value > 1 and 1 or value end
+---@nodiscard
+function math.saturateN(value) return __saturate(value) end
 
 --[[ …V functions are meant to work with vectors only, slightly faster ]]
 
@@ -103,21 +122,24 @@ function math.saturateN(value) return value < 0 and 0 or value > 1 and 1 or valu
 ---@param min any
 ---@param max any
 ---@return T
+---@nodiscard
 function math.clampV(value, min, max) return value:clone():clamp(min, max) end
 
 ---Clamps a copy of a vector between 0 and 1. To avoid making copies, use `vec:saturate()`.
 ---@generic T
 ---@param value T
 ---@return T
+---@nodiscard
 function math.saturateV(value) return value:clone():saturate() end
 
 ---Clamps value between `min` and `max`, returning `min` if `x` is below `min` or `max` if `x` is above `max`. Universal version, so might be slower.
 ---Also, if given a vector or a color, would make a copy of it.
 ---@generic T
 ---@param x T
----@param min any
----@param max any
+---@param min T|number
+---@param max T|number
 ---@return T
+---@nodiscard
 function math.clamp(x, min, max)
   if type(x) == 'number' then
     return __clamp(x, min, max)
@@ -143,8 +165,8 @@ function math.clamp(x, min, max)
     end
   end
 
-  local b = bn and min or x:type().new(min) 
-  local t = bt and max or x:type().new(max) 
+  local b = bn and x.tmp():set(min) or min
+  local t = bt and x.tmp():set(max) or max
 
   if vec3.isvec3(x) then 
     return vec3(__clamp(x.x, b.x, t.x), __clamp(x.y, b.y, t.y), __clamp(x.z, b.z, t.z)) 
@@ -162,7 +184,7 @@ function math.clamp(x, min, max)
     return rgbm(__clamp(x.r, b.r, t.r), __clamp(x.g, b.g, t.g), __clamp(x.b, b.b, t.b), __clamp(x.mult, b.mult, t.mult)) 
   end
 
-  return __clamp(x, min, max)
+  return __clampOld(x, min, max)
 end
 
 ---Clamps value between 0 and 1, returning 0 if `x` is below 0 or 1 if `x` is above 1. Universal version, so might be slower.
@@ -170,11 +192,33 @@ end
 ---@generic T
 ---@param x T
 ---@return T
-function math.saturate(x) return math.clamp(x, 0, 1) end
+---@nodiscard
+function math.saturate(x) 
+  if type(x) == 'number' then
+    return __saturate(x)
+  end
+  if vec3.isvec3(x) then 
+    return vec3(__saturate(x.x), __saturate(x.y), __saturate(x.z)) 
+  end  
+  if vec2.isvec2(x) then 
+    return vec2(__saturate(x.x), __saturate(x.y)) 
+  end  
+  if vec4.isvec4(x) then 
+    return vec4(__saturate(x.x), __saturate(x.y), __saturate(x.z), __saturate(x.w)) 
+  end  
+  if rgb.isrgb(x) then 
+    return rgb(__saturate(x.r), __saturate(x.g), __saturate(x.b)) 
+  end  
+  if rgbm.isrgbm(x) then 
+    return rgbm(__saturate(x.r), __saturate(x.g), __saturate(x.b), __saturate(x.mult))
+  end
+  return __clampOld(x, 0, 1)
+end
 
 ---Returns a sing of a value, or 0 if value is 0.
 ---@param x number
 ---@return integer
+---@nodiscard
 function math.sign(x) if x > 0 then return 1 elseif x < 0 then return -1 else return 0 end end
 
 ---Linear interpolation between `x` and `y` using `mix` (x * (1 - mix) + y * mix).
@@ -183,6 +227,7 @@ function math.sign(x) if x > 0 then return 1 elseif x < 0 then return -1 else re
 ---@param y T
 ---@param mix number
 ---@return T
+---@nodiscard
 function math.lerp(x, y, mix) return x * (1 - mix) + y * mix end
 
 ---Returns 0 if value is less than v0, returns 1 if it’s more than v1, linear interpolation in-between.
@@ -190,6 +235,7 @@ function math.lerp(x, y, mix) return x * (1 - mix) + y * mix end
 ---@param min number
 ---@param max number
 ---@return number
+---@nodiscard
 function math.lerpInvSat(value, min, max) return math.saturate((value - min) / (max - min)) end
 
 ---Returns `newA` if `value` equals to `oldA`, `newB` if `value` is `oldB`, applies linear interpolation for other input values. Doesn’t apply clamping.
@@ -199,75 +245,91 @@ function math.lerpInvSat(value, min, max) return math.saturate((value - min) / (
 ---@param newA number
 ---@param newB number
 ---@return number
+---@nodiscard
 function math.remap(value, oldA, oldB, newA, newB) return (value - oldA) / (oldB - oldA) * (newB - newA) + newA end
 
 ---Smoothstep operation. More about it in [wiki](https://en.wikipedia.org/wiki/Smoothstep).
 ---@param x number
 ---@return number
+---@nodiscard
 function math.smoothstep(x) return x * x * (3 - 2 * x) end
 
 ---Like a smoothstep operation, but even smoother.
 ---@param x number
 ---@return number
+---@nodiscard
 function math.smootherstep(x) return x * x * x * (x * (x * 6 - 15) + 10) end
 
 ---Creates a copy of a vector and normalizes it. Consider using a method `vec:normalize()` instead when you can change the original vector to save on performanceMeter.
 ---@generic T
 ---@param x T
 ---@return T
+---@nodiscard
 function math.normalize(x) return x:clone():normalize() end
 
 ---Creates a copy of a vector and runs a cross product on it. Consider avoiding making a copy with `vec:cross(otherVec)`.
 ---@param x vec3
 ---@return vec3
+---@nodiscard
 function math.cross(x, y) return x:clone():cross(y) end
 
 ---Calculates dot product of two vectors.
 ---@param x vec2|vec3|vec4
 ---@return number
+---@nodiscard
 function math.dot(x, y) return x:dot(y) end
 
 ---Calculates angle between vectors in radians.
 ---@param x vec2|vec3|vec4
 ---@return number @Radians.
+---@nodiscard
 function math.angle(x, y) return x:angle(y) end
 
 ---Calculates distance between vectors.
 ---@param x vec2|vec3|vec4
 ---@return number
+---@nodiscard
 function math.distance(x, y) return x:distance(y) end
 
 ---Calculates squared distance between vectors (slightly faster without taking a square root).
 ---@param x vec2|vec3|vec4
 ---@return number
+---@nodiscard
 function math.distanceSquared(x, y) return x:distanceSquared(y) end
 
 ---Creates a copy of a vector and projects it onto a different vector. Consider avoiding making a copy with `vec:project(otherVec)`.
 ---@generic T
 ---@param x T
 ---@return T
+---@nodiscard
 function math.project(x, y) return x:clone():project(y) end
 
+---@nodiscard
 function math.radians(x) return x * math.pi / 180 end
+
+---@nodiscard
 function math.degress(x) return x * 180 / math.pi end
 
 ---Checks if value is not-a-number.
 ---@param x number
 ---@return boolean
-function math.isnan(x) return x ~= x end
+---@nodiscard
+function math.isnan(x) return not (x >= 0 or x <= 1) end
 
 ---Checks if value is positive or negative infinity.
 ---@param x number
 ---@return boolean
+---@nodiscard
 function math.isinf(x) return x == math.huge or x == -math.huge end
 
 ---Checks if value is finite (not infinite or nan).
 ---@param x number
 ---@return boolean
+---@nodiscard
 function math.isfinite(x) x = tonumber(x) return x ~= nil and not math.isnan(x) and not math.isinf(x) end
 
 ---@type number
-math.nan = 0/0
+math.nan = math.sqrt(-1)
 
 ---@type number
 math.tau = math.pi * 2
@@ -284,16 +346,20 @@ math.NaN = 0/0
 ---@param lag number
 ---@param dt number
 ---@return number
+---@nodiscard
 function math.lagMult(lag, dt)
   return math.saturateN((1.0 - lag) * dt * 60)
 end
 
 ---Perlin noise for given input. Returns value within -1…1 range, or outside of it if `octaves` is above 1. If you’re using octaves, make sure `input`
 ---won’t overflow when being multiplied by two multiple times.
+---
+---Consider using `math.simplex` instead, it might be a better alternative.
 ---@param input number|vec2|vec3
 ---@param octaves integer? @Pass number greater than 1 to generate octave noise instead (sum `octaves` noise functions together increasing input and multiplying amplitude by `persistence` each step). Default value: 1.
 ---@param persistence number? @Persistance for octave noise. Used only if `octaves` is above 1. Default value: 0.5.
 ---@return number
+---@nodiscard
 function math.perlin(input, octaves, persistence)
   octaves = tonumber(octaves) or 1
   persistence = tonumber(persistence) or 0.5
@@ -308,6 +374,33 @@ function math.perlin(input, octaves, persistence)
   error('number, 2D or 3D vector is required', 1)
 end
 
+---Simplex noise for given input. Returns value within -1…1 range (unlike `math.perlin`, always). If you’re using octaves, make sure `input`
+---won’t overflow when being multiplied by two multiple times.
+---@param input number|vec2|vec3
+---@param octaves integer? @Pass number greater than 1 to generate octave noise instead (sum `octaves` noise functions together increasing input and multiplying amplitude by `persistence` each step). Default value: 1.
+---@param lacunarity number? @Frequency increase for subsequent octaves. Used only if `octaves` is above 1. Default value: 2.
+---@param persistence number? @Persistance for octave noise. Used only if `octaves` is above 1. Usually set to `1 / lacunarity`. Default value: 0.5.
+---@return number
+---@nodiscard
+function math.simplex(input, octaves, lacunarity, persistence)
+  octaves = tonumber(octaves) or 1
+  if octaves > 1 then
+    lacunarity = tonumber(lacunarity) or 2
+    persistence = tonumber(persistence) or 0.5
+  else
+    lacunarity, persistence = 0, 0
+  end
+  local inputNum = tonumber(input)
+  if inputNum then
+    return ffi.C.lj_simplex_1(inputNum, octaves, lacunarity, persistence)
+  elseif vec2.isvec2(input) then
+    return ffi.C.lj_simplex_2(input, octaves, lacunarity, persistence)
+  elseif vec3.isvec3(input) then
+    return ffi.C.lj_simplex_3(input, octaves, lacunarity, persistence)
+  end
+  error('number, 2D or 3D vector is required', 1)
+end
+
 ---Roughly convert HDR value to LDR using conversion hints provided by current WeatherFX style. Doesn’t apply nothing like tonemapping or exposure
 ---correction, simply adjusts for a case where WeatherFX style uses small brightness multiplier or linear color space.
 ---
@@ -316,6 +409,7 @@ end
 ---@param input T @Value to convert.
 ---@param toLDR boolean? @Pass `true` to do the reverse and convert LDR to HDR. Default value: `false`.
 ---@return T
+---@nodiscard
 function math.convertHDR(input, toLDR)
   toLDR = toLDR == true
   local inputNum = tonumber(input)
@@ -341,6 +435,7 @@ end
 ---@param lag number
 ---@param dt number
 ---@return T
+---@nodiscard
 function math.applyLag(value, target, lag, dt) 
   if lag <= 0 then return target end
   if type(value) == 'number' then

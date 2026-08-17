@@ -20,3 +20,4 @@ ac.AudioDSP = __enum({ underlying = 'string' }, {
 	Pan = "pan",                --- Pans the signal, possibly upmixing or downmixing as well.
 	ThreeEQ = "threeeq",           --- Is a three-band equalizer.
 })
+
