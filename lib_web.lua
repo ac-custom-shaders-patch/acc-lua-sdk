@@ -6,7 +6,10 @@ local function encodeHeaders(headers)
   if headers == nil then return nil end
   local ret = nil
   for key, value in pairs(headers) do
-    ret = (ret ~= nil and ret..'\n' or '')..key..'='..(value ~= nil and (type(value) == 'boolean' and (value and '1' or '0') or tostring(value)) or '')
+    ret = (ret ~= nil and ret..'\n' or '')..key..'='..(value ~= nil and (
+      type(value) == 'boolean' and (value and '1' or '0')
+      or type(value) == 'table' and table.concat(value, ',')
+      or tostring(value)) or '')
   end
   return ret
 end
@@ -23,8 +26,18 @@ end
 
 local function requestCallback(callback)
   if callback == nil then return 0 end
-  return __util.expectReply(function (err, status, headers, response)
-    callback(err, { status = status, headers = parseHeaders(headers), body = response })
+  return __util.expectReply(function (err, status, headers, response, certificate)
+    if not certificate or #certificate == 0 then
+      certificate = nil
+    elseif string.byte(certificate, 1) == 123 then
+      certificate = stringify.parse(certificate)
+    end
+    callback(err, { 
+      status = status,
+      headers = parseHeaders(headers),
+      body = response,
+      certificate = certificate
+    })
   end)
 end
 

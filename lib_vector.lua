@@ -211,7 +211,6 @@ local VectorT__mt = {
         self.raw, self._size, self._cap = self.__alloc:allocate(reserve), data, reserve
       elseif type(data) == 'cdata' then
         self.raw, self._size, self._cap = data, reserve, reserve
-        print('rawraw', self.raw)
       else
         error('Unsupported initialization data', 2)
       end

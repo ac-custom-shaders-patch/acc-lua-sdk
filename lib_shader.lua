@@ -159,6 +159,10 @@ local function createRsData2(params, templateCache)
   end
   if params.values and next(params.values) then
     local items = table.map(params.values, function (v, k)
+      if type(v) == 'table' and type(v.t) == 'table' and type(v.t.array) == 'number' 
+          and v.t.type.t == vec4.tmp() and params.directValuesExchange == true then
+        return { key = k, size = v.t.array, type = 'float4', ffiType = 'vec4', array = v.t.array }
+      end
       if type(v) == 'number' or type(v) == 'boolean' then return { key = k, size = 1, type = 'float', ffiType = 'float' } end
       if vec2.isvec2(v) then return { key = k, size = 2, type = 'float2', ffiType = 'vec2' } end
       if vec3.isvec3(v) then return { key = k, size = 3, type = 'float3', ffiType = 'vec3' } end
@@ -183,14 +187,19 @@ local function createRsData2(params, templateCache)
     for i = 1, #items do
       local item = items[i]
       if item then
-        si[#si + 1] = string.format('%s %s;', item.type, item.key)
-        fi[#fi + 1] = string.format('%s %s;', item.ffiType, item.key)
+        if not item.array then
+          si[#si + 1] = string.format('%s %s;', item.type, item.key)
+          fi[#fi + 1] = string.format('%s %s;', item.ffiType, item.key)
+        else
+          si[#si + 1] = string.format('%s %s[%d];', item.type, item.key, item.array)
+          fi[#fi + 1] = string.format('%s %s[%d];', item.ffiType, item.key, item.array)
+        end
         onItemAdded(item.key, currentPos, item.size)
         if item.size == 3 then
           local holePlugged = false
           for j = i + 1, #items do
             local plugItem = items[j]
-            if plugItem and plugItem.size == 1 then
+            if plugItem and plugItem.size == 1 and not plugItem.array then
               si[#si + 1] = string.format('%s %s;', plugItem.type, plugItem.key)
               fi[#fi + 1] = string.format('%s %s;', plugItem.ffiType, plugItem.key)
               onItemAdded(item.key, currentPos + 3, 1)

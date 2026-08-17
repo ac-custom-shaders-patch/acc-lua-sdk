@@ -172,11 +172,13 @@ ${fields.map((x, i) => `      out[ptr + ${i * 2 + 1}] = tostring(obj.${x})\n    
 
   -- can’t really stringify these, but let’s at least give back something
   local fallback
-  if objType == 'function' then
-    local info = (debug and debug.getinfo or _dbg)(obj)
+  if objType ~= 'function' then
+    fallback = string.format(lineBreak and '{ type = %q, tostring = %q }' or '{type=%q,tostring=%q}', objType, tostring(obj))
+  elseif debug and debug.getinfo then
+    local info = debug and debug.getinfo(obj)
     fallback = string.format(lineBreak and '{ type = "function", name = %q, source = %q, what = %q }' or '{type="function",name=%q,source=%q,what=%q}', info.name, info.source, info.what)
   else
-    fallback = string.format(lineBreak and '{ type = %q, tostring = %q }' or '{type=%q,tostring=%q}', objType, tostring(obj))
+    fallback = '{ type = "function", name = "nil", source = "", what = "" }' or '{type="function",name="nil",source="",what=""}'
   end
   out[ptr] = fallback
   return ptr + 1

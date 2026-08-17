@@ -80,7 +80,7 @@ return function (layout, callback, namespace, udp, params)
   ffi.C.lj_connectonline_listen(key, baseFlags, readObj, size, __util.setCallback(function (carIndex)
     local car = ac.getCar(carIndex)
     for i = 1, #created.callbacks do
-      __util.cbCall(created.callbacks[i], car, created.readProxy)
+      __util.callCallback(created.callbacks[i], car, created.readProxy)
     end
   end))
 

@@ -89,4 +89,4 @@ ffi.metatype('hashspace', { __index = {
 
 __definitions()
 
-return function(cellSize) return ffi.gc(ffi.C.lj_hashspace_new(tonumber(cellSize) or 10), ffi.C.lj_hashspace_gc) end
+return ac.HashSpace
